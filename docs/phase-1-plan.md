@@ -142,7 +142,8 @@ uv run trishul policy compile policies/
 ## 9. Risk register
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
-| FastMCP ≥2.9 proxy/middleware API differs from docs | Gateway design in Phase 2 | Phase 1 installs fastmcp and pins verified symbols in an integration test + notes |
+| FastMCP resolved to 4.0.10: `FastMCP.as_proxy` absent; real API is `fastmcp.server.create_proxy` / `FastMCPProxy`, `Middleware.on_call_tool`, deny via `ToolError` | Gateway design in Phase 2 | Verified end-to-end in `tests/integration`; pin an upper bound before Phase 2 (see docs/fastmcp-notes.md) |
+| Mandate `max_uses`/nonce replay and approval/mandate signatures not enforced by evaluator | Replay / forged approvals if context is caller-supplied | Phase 2: gateway builds `EvalContext` only from trusted stores; Ed25519 verification + nonce ledger |
 | Z3 translation of `ConsentCovers`/set predicates | Proof coverage gaps | Keep AST first-order; model sets as finite enumerations |
 | Kleene UNKNOWN-fires produces excess STEP_UP | UX friction | Emit `unknown=True` in reasons; measure in Phase 2 |
 | Label source-set growth over long chains | Memory/latency | Cap + summarise into `kind:*` in Phase 2, never drop level/tags |
