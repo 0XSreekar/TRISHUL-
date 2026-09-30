@@ -1,0 +1,13 @@
+{
+  "schema": {
+    "file": "string: path to media file",
+    "kind": "enum: bonafide|replay|tts_clone - media classification",
+    "language": "string: ISO 639-1 language code (en, hi, te, etc.)",
+    "speaker_consent": "boolean: speaker has consented to use",
+    "model": "string: name of speech/voice model used",
+    "model_version": "string: version of the model",
+    "license": "string: license type (e.g., CC-BY-4.0)",
+    "notes": "string: additional metadata or notes"
+  },
+  "entries": []
+}

@@ -1,0 +1,52 @@
+{
+  "consents": [
+    {
+      "consent_id": "cn_0104200001",
+      "principal_id": "C-1042",
+      "category": "customer_data",
+      "purposes": ["order_support"],
+      "exp": "2027-12-31T00:00:00Z",
+      "withdrawn_at": null
+    },
+    {
+      "consent_id": "cn_0118700002",
+      "principal_id": "C-1187",
+      "category": "customer_data",
+      "purposes": ["order_support"],
+      "exp": "2027-12-31T00:00:00Z",
+      "withdrawn_at": null
+    },
+    {
+      "consent_id": "cn_0123100003",
+      "principal_id": "C-1231",
+      "category": "customer_data",
+      "purposes": ["payment_processing"],
+      "exp": "2027-12-31T00:00:00Z",
+      "withdrawn_at": null
+    },
+    {
+      "consent_id": "cn_0131100004",
+      "principal_id": "C-1311",
+      "category": "customer_data",
+      "purposes": ["payment_reminders"],
+      "exp": "2027-12-31T00:00:00Z",
+      "withdrawn_at": null
+    },
+    {
+      "consent_id": "cn_0150200005",
+      "principal_id": "C-1502",
+      "category": "customer_data",
+      "purposes": ["marketing"],
+      "exp": "2027-12-31T00:00:00Z",
+      "withdrawn_at": "2026-09-01T00:00:00Z"
+    },
+    {
+      "consent_id": "cn_0160000006",
+      "principal_id": "C-1600",
+      "category": "customer_data",
+      "purposes": ["order_support", "payment_processing"],
+      "exp": "2027-12-31T00:00:00Z",
+      "withdrawn_at": null
+    }
+  ]
+}

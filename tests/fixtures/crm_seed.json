@@ -1,0 +1,64 @@
+{
+  "customers": [
+    {
+      "id": "C-1042",
+      "name": "Rajesh Kumar Singh",
+      "email": "rajesh.kumar@example.com",
+      "phone": "+919876543210",
+      "pan": "ABCPS5678K",
+      "aadhaar": "234567890120",
+      "order_status": "completed",
+      "city": "Bangalore"
+    },
+    {
+      "id": "C-1187",
+      "name": "Priya Sharma",
+      "email": "priya.sharma@example.com",
+      "phone": "+918765432109",
+      "pan": "DEFPQ1234M",
+      "aadhaar": "345678901233",
+      "order_status": "completed",
+      "city": "Mumbai"
+    },
+    {
+      "id": "C-1231",
+      "name": "Amit Patel",
+      "email": "amit.patel@example.com",
+      "phone": "+919654321098",
+      "pan": "GHIJP9876N",
+      "aadhaar": "456789012341",
+      "order_status": "pending",
+      "city": "Delhi"
+    },
+    {
+      "id": "C-1311",
+      "name": "Neha Gupta",
+      "email": "neha.gupta@example.com",
+      "phone": "+917654321087",
+      "pan": "KLMNT5432P",
+      "aadhaar": "567890123457",
+      "order_status": "completed",
+      "city": "Pune"
+    },
+    {
+      "id": "C-1502",
+      "name": "Vikram Reddy",
+      "email": "vikram.reddy@example.com",
+      "phone": "+916543210976",
+      "pan": "UVWPA1234J",
+      "aadhaar": "678901234569",
+      "order_status": "cancelled",
+      "city": "Hyderabad"
+    },
+    {
+      "id": "C-1600",
+      "name": "Sunaina Verma",
+      "email": "sunaina.verma@example.com",
+      "phone": "+919543210876",
+      "pan": "XYZPB5678L",
+      "aadhaar": "789012345676",
+      "order_status": "completed",
+      "city": "Chennai"
+    }
+  ]
+}
