@@ -1,0 +1,18 @@
+{
+  "backends": {
+    "df-arena": {
+      "reason": "package not importable or weights not in local HF cache",
+      "status": "unavailable"
+    },
+    "faster-whisper": {
+      "reason": "package not importable or weights not in local HF cache",
+      "status": "unavailable"
+    },
+    "mlx-whisper": {
+      "reason": "package not importable or weights not in local HF cache",
+      "status": "unavailable"
+    }
+  },
+  "reason": "no ASR or spoof backend available locally; nothing measured",
+  "status": "unavailable"
+}
