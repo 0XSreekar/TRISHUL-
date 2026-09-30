@@ -221,3 +221,16 @@ def test_console_served_read_only(csrf) -> None:
     assert c.get("/console/Trishul-Console.dc.html").status_code == 200
     assert c.post("/console/Trishul-Console.dc.html", json={}).status_code in (403, 405)
     assert c.get("/console/../CLAUDE.md").status_code == 404
+
+
+def test_bodyless_console_posts_need_allowed_origin(csrf) -> None:
+    """The console's /prove and /consent/{id}/withdraw send no body and no Content-Type."""
+    c, be = csrf
+    same = {"Origin": "http://localhost:8787"}
+    assert c.post("/prove", headers=same).status_code == 200
+    assert c.post("/consent/k1/withdraw", headers=same).status_code == 200
+    evil = {"Origin": "https://evil.example"}
+    calls = len(be.calls)
+    assert c.post("/prove", headers=evil).status_code == 403
+    assert c.post("/consent/k1/withdraw", headers=evil).status_code == 403
+    assert len(be.calls) == calls

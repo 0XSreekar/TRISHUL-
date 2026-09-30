@@ -76,14 +76,16 @@ def build_api(
     def guarded(
         handler: Callable[[Request], Awaitable[Response]],
     ) -> Callable[[Request], Awaitable[Response]]:
-        """CSRF defence for state-changing routes: a present Origin must be allowlisted and the
-        body must be declared JSON (forces a CORS preflight from browsers). No Origin = CLI."""
+        """CSRF defence for state-changing routes: a present Origin must be allowlisted (browsers
+        always send Origin on cross-origin POSTs) and a non-empty body must be declared JSON
+        (defence in depth: forces a CORS preflight). Bodyless POSTs such as the console's
+        /prove and /consent/{id}/withdraw rely on the Origin check alone. No Origin = CLI."""
 
         async def wrapper(request: Request) -> Response:
             if not _origin_ok(request.headers.get("origin"), origins):
                 return _err(403, "forbidden_origin")
             ctype = request.headers.get("content-type", "").split(";")[0].strip().lower()
-            if ctype != "application/json":
+            if ctype != "application/json" and await request.body():
                 return _err(415, "unsupported_media_type")
             return await handler(request)
 
