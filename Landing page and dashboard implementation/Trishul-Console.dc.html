@@ -461,9 +461,9 @@ class DevReplaySource{
     if(this.closed)return;this.log=log;this.begin();
   }
   begin(){
-    // Events are tagged origin:'dev-replay'. The demo's audit_hash and log.proof are
-    // synthetic and are deliberately NOT forwarded (UI must not show them as real).
-    const evs=this.log.events.map(e=>{const c={...e,origin:'dev-replay'};delete c.audit_hash;return c;}).sort((a,b)=>Date.parse(a.ts)-Date.parse(b.ts));
+    // Events are tagged origin:'dev-replay'. The demo's audit_hash, audit_verify results and
+    // log.proof are synthetic and are deliberately NOT forwarded (UI must not show them as real).
+    const evs=this.log.events.filter(e=>e.type!=='audit_verify').map(e=>{const c={...e,origin:'dev-replay'};delete c.audit_hash;return c;}).sort((a,b)=>Date.parse(a.ts)-Date.parse(b.ts));
     this.q=evs;this.i=0;this.vStart=Date.parse(evs[0].ts)-1500;this.real=performance.now();
     this.h.reset({name:this.log.name||'recorded session',consent:(this.log.consent||[]).map(c=>({...c}))});
   }
@@ -764,7 +764,7 @@ class Component extends DCLogic {
 
     return {
       scale:s.scale,plane,cvRef:el=>{this.cv=el;},
-      calls:ev.length.toLocaleString('en-IN'),blocked:den,attacks:att,p99:fmt(p99),p99u:p99==null?'':' ms',latState:p99==null?'unavailable':'measured',connState:live?(s.conn==='open'?'live':s.conn):(s.conn==='noreplay'?'error':'replay-dev'),
+      calls:ev.length.toLocaleString('en-IN'),blocked:den,attacks:att,p99:fmt(p99),p99u:p99==null?'':' ms',latState:p99==null?'unavailable':live?'measured':'synthetic',connState:live?(s.conn==='open'?'live':s.conn):(s.conn==='noreplay'?'error':'replay-dev'),
       auditText:!s.audit.ok?'TAMPERED ✗':live?(s.audit.known?'VERIFIED ✓':'UNAVAILABLE'):'SYNTHETIC',auditColor:!s.audit.ok?C.red:live&&s.audit.known?C.blue:C.muted,rootColor:s.audit.ok?(live?C.teal:C.muted):C.red,auditState:live?(s.audit.known?(s.audit.ok?'verified':'tampered'):'unavailable'):'synthetic',
       auditAnim:s.audit.ok?'none':'flick 1.1s steps(2,end) infinite',
       root:lastCall&&lastCall.audit_hash?lastCall.audit_hash.slice(0,12)+'…':(live?'—':'— (replay)'),

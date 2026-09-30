@@ -56,6 +56,7 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-09-30 | Remove Claude watermarks (badges, README.md) | ✅ Complete | Deleted README.md, removed badges from CLAUDE.md; no Co-Authored-By trailer on new commits |
 | 2026-09-30 | Phase 1 foundation: contracts, label lattice, policy YAML→AST→pure evaluator, redaction, CLI | ✅ Complete | See docs/phase-1-plan.md; 111 tests pass, mypy strict + ruff clean |
 | 2026-09-30 | Console UI integration seams + dev-replay honesty fixes | ✅ Complete | data-trishul-* hooks, TrishulEventSource adapter; replay proof/audit root shown as synthetic |
+| 2026-09-30 | Phase 1 gate re-verification (clean clone) | ✅ Complete | All checks green from fresh clone; fixed replay forwarding synthetic audit_verify (fake TAMPERED) and latency marked measured in replay |
 | TBD | Phase 2 (audit log, FastMCP gateway, domains) | ⏳ Awaiting go-ahead | Order in docs/phase-1-plan.md §10 |
 
 ---
