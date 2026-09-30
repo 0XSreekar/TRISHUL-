@@ -59,22 +59,46 @@ the operator token file is written to the `/data` volume (`/data/operator.token`
 
 ## Evidence
 
-`bench/results.json` (produced by `trishul bench`) is the only source of quoted numbers:
-India suite, 49 attacks and 34 benign cases: attack success 0.0 with TRISHUL (0 of 49; 0.9167 unprotected
-over the 36 attacks that have an OFF endpoint), benign utility 0.8529 (29 of 34; unprotected 0.8966),
-p99 total pipeline latency 2.103 ms (in-process, scripted ASR/spoof). Ablation ASR: rules_only 0.0,
-rules_classifier 0.0, full 0.0 (voice payments now always need out-of-band approval, so the five
-legitimate voice benign cases B-VOI-01..05 are blocked pending approval and count against utility).
-The voice ablation uses dataset-scripted spoof scores, not live detector output. AgentDojo:
-`not_run`. Voice EER: null (no bonafide human clips).
+Every number below is copied from `bench/results.json` (commit a924c5b, clean tree, seed 42,
+Apple M5) or `bench/voice_eer.json`; regenerate with `uv run trishul bench --seed 42`.
+
+| Measure | Without TRISHUL | With TRISHUL |
+|---|---|---|
+| India suite attack success (49 attacks; 36 have an OFF path) | 0.9167 | **0.0** (0/49) |
+| India suite benign utility (34 tasks) | 0.8966 | 0.8529 (29/34; the 5 misses are voice payments waiting for approval by design) |
+| AgentDojo banking subset, local qwen3:8b (8 user tasks × 4 injections) | ASR 0.2188, utility 0.375 | ASR **0.0**, utility 0.25 |
+| Gate decision latency, in-process (750 samples) | — | p50 0.837 ms, p99 1.754 ms (ML on); p99 1.798 ms (ML off) |
+
+Ablation (rules only / rules + classifier / full): identical ASR 0.0 and utility 0.8529. The rules
+decide this suite; the ML adds nothing measurable here, so it is not credited.
+
+Voice anti-spoof (DF_Arena 1B, 134 real clips: LibriSpeech English, FLEURS Hindi and Telugu, one
+owner clip; 90 content-matched macOS TTS clips), at the production threshold 0.5:
+
+| Channel | Real voices wrongly flagged | TTS accepted | EER |
+|---|---|---|---|
+| Clean 16 kHz | 2.2 % | 0 % | 0.0 |
+| Synthetic phone (8 kHz μ-law) | 19.4 % (Hindi 40 %, Telugu 40 %) | 0 % | 0.0 |
+
+EER 0.0 only says Apple TTS is easy to separate (at a threshold near 0.99); it says nothing about
+neural voice clones, which were not tested.
 
 ## Honest limitations
 
-- Voice-initiated payments always require a fresh nonce plus out-of-band approval, whatever the
-  anti-spoof score; this costs utility (see Evidence) and removes the detector as a single point of failure.
-- Voice language coverage: English reliable; Hindi weak; Telugu fails auto-detect (`docs/phase-2-report.md`).
-- Phone-codec degradation of the anti-spoof detector is untested.
-- AgentDojo: banking subset only (16 user tasks x 6 of 9 injection tasks, local qwen3:8b); ASR 0.1667 -> 0.0, clean utility 0.5 -> 0.4375 (see `bench/results.json`). Workspace/slack not run. Voice EER is null (TTS-only corpus). DF_Arena is non-commercial licence and is loaded with `trust_remote_code=True` from a reviewed, pinned local snapshot only (`trishul/domains/voice_adapters.py`).
+- Voice-initiated payments always need a fresh nonce plus out-of-band approval, whatever the
+  detector says, so the detector is never the only barrier. That is also why the India suite has 0
+  voice bypasses.
+- Real-voice false rejects are high on phone-quality audio (19.4 %, 40 % for Hindi/Telugu), and the
+  project owner's WhatsApp voice note was flagged as a spoof (0.91). Fail-closed, but real users get
+  DENY. The detector is miscalibrated for 0.5 (clean separation sits near 0.99).
+- Speech recognition: Telugu auto-detect picks Tamil (10/10, CER 0.94); forcing Telugu gives CER 0.22.
+  Hindi WER 0.36 auto vs 0.19 forced. Production should pass the user's language.
+- Not measured: neural voice clones, real VoIP codecs (Opus/AMR), live callers. The English real set is
+  one LibriSpeech speaker.
+- AgentDojo: banking only, 8 of 16 user tasks × 4 of 9 injections; only money-moving tools are
+  guarded. Workspace and Slack suites were not run.
+- DF_Arena is non-commercial and is loaded with `trust_remote_code=True`, only from a reviewed,
+  pinned local snapshot (`trishul/domains/voice_adapters.py`).
 
 ## Demo quickstart
 

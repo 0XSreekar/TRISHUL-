@@ -63,7 +63,7 @@ re-read the file if you need a fresher figure.
   `tests/unit/test_ui_safety.py::test_console_and_landing_have_no_html_injection_sinks`.
 
 ## What was measured
-From `bench/results.json` (India suite `india_v1`, 49 attacks / 34 benign, seed 42, Apple M5, in-process pipeline):
+From `bench/results.json` regenerated 2026-09-30T21:51:37Z at commit a924c5b (clean tree, seed 42, Apple M5, in-process pipeline), plus `bench/voice_eer.json`:
 
 | Metric | Value |
 |---|---|
@@ -71,13 +71,14 @@ From `bench/results.json` (India suite `india_v1`, 49 attacks / 34 benign, seed 
 | Benign utility with TRISHUL | 0.8529 (29 of 34) |
 | Attack success rate without TRISHUL (OFF namespace) | 0.9167 (36 attacks measured; voice scenarios have no OFF endpoint and are excluded) |
 | Benign utility without TRISHUL | 0.8966 (29 measured) |
-| Total pipeline latency, ML on | p50 1.26 ms, p99 2.103 ms |
-| Total pipeline latency, ML off | p50 1.255 ms, p99 2.049 ms |
+| Gate decision latency, ML on | p50 0.837 ms, p99 1.754 ms (pre-execution; see addendum #2) |
+| Gate decision latency, ML off | p50 0.825 ms, p99 1.798 ms |
 | Latency samples | 750 (5 repeats) |
 | Ablation (rules_only / rules_classifier / full) | ASR 0.0 and utility 0.8529 in all three |
 | Benign blocked (the 5 failures) | B-VOI-01..05: legitimate voice payments wait for out-of-band approval by design |
-| Voice (`bench/voice.json`) | status `partial`; EER null; accuracy null; bonafide clips 0; spoof clips 4; spoof recall 1.0; mean ASR WER 0.4203 |
-| AgentDojo (banking subset) | status `ok`; qwen3:8b via Ollama, ctx 16384, temp 0, seed 42, attack `important_instructions`; 16/16 user tasks x 6/9 injection tasks. ASR 0.1667 (16/96) without -> 0.0 with TRISHUL; clean utility 0.5 (8/16) -> 0.4375 (7/16); utility under attack 0.4271 both sides. The one lost task (user_task_0) was denied by PAYSHIELD.MANDATE.PAYEE / TAINT.UNTRUSTED_PAYEE (pays a payee read from a file). |
+| Voice anti-spoof (DF_Arena 1B, 134 real / 90 TTS) | clean: real flagged 2.2 %, TTS accepted 0 %, accuracy 0.9866, EER 0.0; phone 8 kHz mu-law: real flagged 19.4 % (hi/te 40 %), accuracy 0.8839. 500M: clean 24.6 % real flagged. Owner WhatsApp clip scored 0.91 (flagged). |
+| ASR hi/te (mlx-whisper, 10 clips each) | Hindi WER 0.36 auto / 0.19 forced; Telugu CER 0.94 auto (detected as Tamil 10/10) / 0.22 forced |
+| AgentDojo (banking subset) | status `ok`; qwen3:8b via Ollama, temp 0, seed 42, attack `important_instructions`; 8/16 user tasks x 4/9 injection tasks (default subset of this run; an earlier uncommitted-tree run used 16 x 6 and is superseded). ASR 0.2188 without -> 0.0 with TRISHUL; clean utility 0.375 -> 0.25; utility under attack 0.2188 both sides. |
 
 The ablation being identical across configs means the India suite is decided by the rules, not the ML signals;
 do not present the ML as contributing to these numbers.
@@ -136,7 +137,7 @@ timeout test showing UNKNOWN is never reported as UNSAT (`::test_timeout_is_unkn
   (per-task secret pins, voice approval minted only on liveness match, nonce bound to call digest, lock-safe timeout)
   with tests in `tests/integration/test_voice_replay.py` and `tests/unit/test_review_fixes.py`. Residual risk: an
   approved digest's single retry is by design; concurrency covered by test, not by formal proof.
-- Voice EER is null: there are no bonafide clips (`bonafide_clips: 0`); the corpus is synthetic TTS only, so no
+- (superseded by the addendum: real clips now measured) Voice EER was null: there were no bonafide clips; the corpus was synthetic TTS only, so no
   detector accuracy claim is supportable. Spoof recall 1.0 is on 4 clips and is not accuracy.
 - AgentDojo coverage: banking subset only; only money-moving tools are guarded (`update_password`,
   `update_user_info` pass through). Do not cite it as general prompt-injection coverage.
@@ -180,3 +181,35 @@ uv run trishul demo reset --seed 42     # restore clean state; verify returns ok
 docker compose up -d --build            # token: docker compose exec gateway cat /data/operator.token
 docker compose down
 ```
+
+
+## Phase 3 audit addendum (2026-10-01)
+
+A post-completion audit (browser click-through of the live console plus a code review against the
+Phase 3 brief) found and fixed the following. Commits: b554679, fccf54d, a924c5b and the bench commit.
+
+| # | Finding | Impact | Fix | Evidence |
+|---|---|---|---|---|
+| 1 | Moments 3-6 ran UNGUARDED if the presenter skipped moment 2 (mode still OFF) | Guarded demo silently unprotected | Moments >= 3 switch ON explicitly (visible `mode` event, `mode_forced_on` in response) | `test_moment_3_after_moment_1_forces_on_and_never_runs_unguarded` |
+| 2 | "Decision latency" (`latency_ms`, console P99) included upstream tool execution: ~0.9-1.4 s stdio subprocess spawn on ALLOW/OFF | Headline latency wrong by ~1000x | `latency_ms` = time to audited decision; new `total_ms`; OFF has `latency_ms: null`; console excludes OFF | `test_latency_ms_is_decision_latency_and_off_has_none`; live: guarded events 0.9-1.9 ms |
+| 3 | Console page refresh emptied feed and counters | Stage risk | Client sends `resume_from: 0` on first connect (ring replay) | browser check; server path covered by `test_ws_stream_and_resume` |
+| 4 | Stale cached console served after edits | Rehearsal fixes hidden | `Cache-Control: no-cache` on `/console` | `test_console_static_is_revalidated_every_load` |
+| 5 | Console said "open the URL printed by `trishul start`" but none was printed | Operator buttons unusable on stage | `start` prints a command that expands `#op=` from the token file (token never printed) | manual |
+| 6 | Landing "Benchmark results" link 404 when served by the gateway | Broken link | `/console/bench/results.json` alias | `test_bench_results_reachable_from_console_relative_link` |
+| 7 | Voice models warmed in a separate process only; first in-gateway DF_Arena call took ~93 s (MPS compile) and permanently downgraded 1B -> 500M | Voice moment times out; worse detector (500M FRR 24.6 % vs 2.2 %) | In-process background warm-up at `start`, model lock, warm-up timings discarded; `/readyz` shows `warming` | `test_warmup_*`, `test_dfarena_warmup_does_not_record_latency` |
+| 8 | Approved voice retry reported `liveness: mismatch` (raw re-check of the consumed nonce) | Moment 6 success looked like failure | Reports `match` + `resumed_after_approval: true` (execution still requires the same nonce to have matched for this exact call digest + valid approval) | `test_d_live_voice_never_allows_high_risk_sink` (real models) |
+| 9 | Real-model voice test was stale vs the Phase 3 "voice always needs approval" rule and was silently skipped | Security test not exercised | Test follows STEP_UP -> approve -> exact retry; voice extras installed, all 5 real-model tests now run | 491 passed, 0 skipped |
+| 10 | `bench/results.json` came from a dirty tree at an older commit; README contradicted itself on AgentDojo | Traceability | Regenerated at a clean commit; README rewritten from the file | `git_dirty: false` |
+
+
+### Test status after the addendum
+`uv run pytest -q`: 491 passed, 0 skipped (the 5 real-model voice tests now run: `uv sync --all-extras`
+with locally cached mlx-whisper and DF_Arena). `ruff check`, `ruff format --check`, `mypy trishul` (strict): clean.
+AT-07/AT-08 real-model variants: PASS (`tests/integration/test_voice_real.py`).
+
+### Still not run / still risky
+- Browser clicks of operator-token actions (approve, prove, red-team kill, demo buttons) were verified
+  through the same REST endpoints, not by clicking; the auditor was not given the token.
+- Neural voice clones and real VoIP codecs; AgentDojo workspace/slack suites and the remaining banking tasks.
+- Spoof threshold 0.5 is miscalibrated for real phone audio (see measured FRR). Next step: calibrate on
+  in-domain bonafide calls and pass the user's language to ASR.

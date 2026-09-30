@@ -1,8 +1,8 @@
 # Demo runbook
 
 All commands run from the repo root with `uv run`. Numbers quoted here come from `bench/results.json`
-(India suite: 49 attacks / 34 benign; with TRISHUL attack success 0.0 = 0/49, utility 0.8529 = 29/34; p99 total
-2.103 ms in-process). Never quote a number that is not in that file.
+(India suite: 49 attacks / 34 benign; with TRISHUL attack success 0.0 = 0/49, utility 0.8529 = 29/34; gate
+decision latency p99 1.754 ms in-process). Never quote a number that is not in that file.
 
 ## 1. Hardware and browser
 - Apple Silicon Mac (measured on Apple M5), 16 GB+ RAM, charger connected, Do Not Disturb on.
@@ -81,7 +81,13 @@ fresh nonce and an out-of-band approval whatever the detector says, so on our In
 succeed, at the cost of benign utility 0.8529 because legitimate voice payments wait for approval."
 
 **Moment 6 (4:15-5:00) Voice, audit tamper, DPDP.** Voice fixture: DENY `VOICETRUST.SPOOF.HIGH` (real DF_Arena)
-or STEP_UP (deterministic adapter, labelled); replayed recording: nonce mismatch DENY. Then
+or STEP_UP (deterministic adapter, labelled). Real voice: speak the nonce phrase -> STEP_UP -> approve in the
+console -> the exact retry runs (summary shows `liveness: match`, `resumed_after_approval: true`). Replayed
+recording: nonce mismatch DENY. Check `/readyz` shows `voice_models: available` (not `warming`) before this
+moment; the gateway warms the models itself at start (about 90 s on a cold Mac).
+If asked about accuracy: "On clean audio 2 % of real voices get flagged; over a phone line it is 19 %, and 40 %
+for Hindi and Telugu. That is why the detector can only escalate: a real person gets an approval prompt, never
+a silent payment." Then
 `uv run trishul demo tamper --idx 2` and `uv run trishul verify` -> exact `bad_index`. Download the DPDP report.
 Say: "Every decision is in a signed Merkle log. Flip one byte and we tell you which record. Consent withdrawal
 takes effect immediately and the DPDP report is generated from the same log."

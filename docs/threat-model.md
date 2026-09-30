@@ -32,22 +32,25 @@ counterexample (`POST /prove {policy:"unsafe_fixture"}`), and the live policy is
 properties over code paths (I3, I6, I7) are property-tested with Hypothesis, which is evidence, not proof.
 I1 excludes ALLOW resting on a valid human approval for the exact call (documented trade-off).
 
-## Measured results (from `bench/results.json`)
-India suite (`india_v1`): 49 attacks, 34 benign. With TRISHUL: attack success 0.0, benign utility 0.8529 (29/34).
-Unprotected (OFF namespace, 36 measured attacks): attack success 0.9167. Ablation ASR: rules_only 0.0,
-rules_classifier 0.0, full 0.0 (voice ablation uses dataset-scripted spoof scores). In-process p99 total
-2.103 ms (ML on).
+## Measured results (from `bench/results.json`, commit a924c5b, and `bench/voice_eer.json`)
+India suite (`india_v1`): 49 attacks, 34 benign. With TRISHUL: attack success 0.0 (0/49), benign
+utility 0.8529 (29/34). Unprotected (OFF namespace, 36 attacks with an OFF path): 0.9167. Ablation:
+identical across rules_only / rules_classifier / full. Gate decision latency p99 1.754 ms (ML on).
+AgentDojo banking subset (8 user tasks × 4 injections, local qwen3:8b): ASR 0.2188 -> 0.0, utility
+0.375 -> 0.25.
 
-**Measured fact: with TRISHUL on, 2 of 49 attacks succeed, both cloned-voice detector-evasion cases
-(A-VCL-06 score 0.05, A-VCL-07 score 0.1). Voice is currently the one domain whose safety depends on
-ML correctness.** Cloned-voice category attack success: 2/7 (0.2857).
+Earlier drafts reported 2/49 cloned-voice successes (A-VCL-06/07). Those are now blocked because every
+voice-initiated payment needs a fresh nonce and out-of-band approval, so voice no longer depends on
+the detector being right.
 
 ## Honest limitations
-- Voice language coverage: English is reliable; Hindi is weak; Telugu language auto-detect fails (see `docs/phase-2-report.md`; not in `bench/results.json`).
-- Phone-codec degradation of the spoof detector is not measured.
+- Voice language coverage: Telugu auto-detect picks Tamil (CER 0.94; forced language 0.22); Hindi WER
+  0.36 auto, 0.19 forced (`bench/voice_eer.json`).
+- Phone codec: real-voice false rejects rise from 2.2 % (clean) to 19.4 % (synthetic 8 kHz μ-law),
+  40 % for Hindi/Telugu. Real VoIP codecs (Opus/AMR) are not modelled.
 - AgentDojo: banking subset only (see `bench/results.json` `suites.agentdojo.subset_note`); only money-moving tools are guarded, so this is not a general prompt-injection claim.
-- Voice EER: null. Corpus is TTS-only (4 spoof clips, 0 bonafide), so only spoof recall 1.0 on TTS is shown;
-  false-reject on real humans and real clone detection are unmeasured.
+- Voice EER 0.0 on 134 real vs 90 content-matched TTS clips. That shows TTS is separable, not that
+  neural clones are; clones and live callers are unmeasured, and the English real set is one speaker.
 - DF_Arena models are non-commercial research licence.
 - Approvals/tasks REST require the operator bearer token; the token file is as sensitive as the approval key.
 - Docker-published ports mitigate, not replace, authentication; do not expose the API beyond loopback except the public red-team route via a tunnel.

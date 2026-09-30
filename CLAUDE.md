@@ -63,6 +63,9 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-10-01 | Phase 3 benchmarks (`trishul bench` -> bench/results.json) | ✅ Complete | India 49 attacks/34 benign ASR 0.0 on vs 0.9167 off; AgentDojo banking subset (qwen3:8b local) ASR 0.1667 -> 0.0, clean utility 0.5 -> 0.4375 |
 | 2026-10-01 | Phase 3 console + landing wired to real WS/REST, vendored React/Babel | ✅ Complete | Headless-Chrome checked feed + bench panel; not every drawer clicked |
 | 2026-10-01 | Opus gates: 13 backend fixes + task-pin/voice-nonce fixes; Docker, runbook, README, threat model, phase-3-report | ✅ Complete | 479 passed/5 skipped, 22 invariants UNSAT, docker compose smoke OK, pip-audit clean |
+| 2026-10-01 | Phase 3 audit: 10 fixes (demo order safety, decision-latency semantics, console refresh/cache, operator URL, voice warm-up, resumed liveness, stale real-voice test, results traceability) | ✅ Complete | 491 passed / 0 skipped; addendum in docs/phase-3-report.md |
+| 2026-10-01 | Real-voice evaluation (LibriSpeech + FLEURS hi/te + owner clip vs content-matched TTS) | ✅ Complete | bench/voice_eer.json: DF_Arena 1B real flagged 2.2 % clean / 19.4 % phone (hi/te 40 %); Telugu auto-ASR detects Tamil, forced language CER 0.22 |
+| 2026-10-01 | bench/results.json regenerated at clean commit a924c5b | ✅ Complete | India ASR 0.0 (0/49), AgentDojo banking 8x4 subset ASR 0.2188 -> 0.0, decision p99 1.754 ms |
 
 ---
 
@@ -172,5 +175,5 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
 
 ---
 
-**Last Updated**: 2026-10-01 (Phase 3 showcase complete)
+**Last Updated**: 2026-10-01 (Phase 3 audit fixes + real-voice evaluation)
 **Update Frequency**: After every task (MANDATORY)

@@ -1017,6 +1017,8 @@ class Component extends DCLogic {
       ?[L('status','ok'),L('model',ag.model),L('suites run',(ag.suites_run||[]).join(', ')),L('with TRISHUL',pc((ag.with_trishul||{}).asr)+' asr · '+pc((ag.with_trishul||{}).utility)+' utility'),L('without',pc((ag.without||{}).asr)+' asr · '+pc((ag.without||{}).utility)+' utility'),L('subset',ag.subset_note)]
       :[L('status','not run',null,C.amber),L('reason',ag.reason),...(ag.subset_note?[L('subset when run',ag.subset_note)]:[])]});
     out.push({title:'VOICE · '+(vo.source||''),lines:[L('status',vo.status,vo.detector||'',vo.status==='measured'?C.teal:C.amber),L('eer',vo.eer==null?'not measured':pc(vo.eer)),L('accuracy',vo.accuracy==null?'not measured':pc(vo.accuracy)),
+      ...(vo.at_threshold_0_5?[L('real voices flagged · clean',pc(vo.at_threshold_0_5.frr_real_flagged),'threshold 0.5',C.amber)]:[]),
+      ...(vo.phone_codec?[L('real voices flagged · phone',pc(vo.phone_codec.frr_real_flagged),'8 kHz mu-law',C.amber)]:[]),
       ...(vo.spoof_recall!=null?[L('spoof recall',pc(vo.spoof_recall),(vo.spoof_clips!=null?vo.spoof_clips+' spoof clips':''))]:[]),...(vo.bonafide_clips!=null?[L('bonafide clips',vo.bonafide_clips)]:[]),L('note',vo.note)]});
     out.push({title:'ABLATION',lines:(j.ablation||[]).map(a=>L(a.config,pc(a.asr)+' asr',pc(a.utility)+' utility'))});
     out.push({title:'FAILURES · '+((j.failures||[]).length),lines:(j.failures||[]).map(f=>L(f.id+' · '+f.kind,f.detail,f.mode,C.amber))});
