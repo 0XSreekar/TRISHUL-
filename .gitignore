@@ -53,3 +53,6 @@ __pycache__/
 *.db-wal
 *.db-shm
 bench/audio/
+
+# operator secret written by `trishul start`
+operator.token

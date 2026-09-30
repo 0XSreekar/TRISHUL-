@@ -271,6 +271,9 @@ agent = Agent(tools=MCPServer("http://localhost:<span style="color:#D7B4FF">8787
           </sc-for>
         </div>
         <span style="font-size:12px;letter-spacing:.04em;color:#767E90">{{ caption }}</span>
+        <sc-for list="{{ notes }}" as="nt" hint-placeholder-count="2">
+          <p style="margin:0;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;color:#767E90;max-width:900px">{{ nt.text }}</p>
+        </sc-for>
       </div>
     </sc-if>
     <sc-if value="{{ statsMissing }}" hint-placeholder-val="{{ false }}">
@@ -331,14 +334,14 @@ const STATS=[
   {key:'benign_utility',label:'Benign tasks still working (%)',suffix:'%'},
   {key:'p99_latency_ms',label:'p99 decision latency (ms)',suffix:''}
 ];
-const CODE='# before\nagent = Agent(tools=MCPServer("http://localhost:9000"))\n# after: through TRISHUL\nagent = Agent(tools=MCPServer("http://localhost:8787"))';
+const CODE='# before\nagent = Agent(tools=MCPServer("http://localhost:9000"))\n# after: through TRISHUL\nagent = Agent(tools=MCPServer("http://127.0.0.1:8788/mcp"))';
 const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
 const seg=(p,a,b)=>clamp((p-a)/(b-a));
 const ez=t=>1-Math.pow(1-t,3);
 const eio=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 
 class Component extends DCLogic {
-  state={hover:-1,copied:false,saved:false,stats:[],statsMissing:false,caption:''};
+  state={hover:-1,copied:false,saved:false,stats:[],statsMissing:false,caption:'',notes:[]};
 
   componentDidMount(){
     this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -414,11 +417,11 @@ class Component extends DCLogic {
     E.face.style.opacity=String(1-seg(p,.5,.68));
   }
   loadStats(){
-    fetch('bench/results.json',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(j=>{
+    fetch('/bench/results.json',{cache:'no-store'}).then(r=>r.ok?r:fetch('bench/results.json',{cache:'no-store'})).catch(()=>fetch('bench/results.json',{cache:'no-store'})).then(r=>r.ok?r.json():Promise.reject()).then(j=>{
       const list=STATS.filter(s=>typeof j[s.key]==='number').map(s=>({...s,target:j[s.key]}));
       if(!list.length) return this.setState({statsMissing:true});
       const show=k=>list.map(s=>({...s,shown:this.fmt(s,s.target*k)}));
-      this.setState({stats:show(this.reduced?1:0),caption:j.suite||'AgentDojo + India attack suite'},()=>{
+      this.setState({stats:show(this.reduced?1:0),caption:(j.suite||'India attack suite')+(j.git_commit?' · commit '+String(j.git_commit).slice(0,8):''),notes:this.notes(j)},()=>{
         const el=document.querySelector('[data-stats]'); if(!el||this.reduced) return;
         this.sio=new IntersectionObserver(x=>{
           if(!x[0].isIntersecting) return; this.sio.disconnect();
@@ -429,6 +432,12 @@ class Component extends DCLogic {
         this.sio.observe(el);
       });
     }).catch(()=>this.setState({statsMissing:true}));
+  }
+  notes(j){
+    const out=[],su=j.suites||{},ag=su.agentdojo,vo=j.voice;
+    if(ag) out.push({text:ag.status==='ok'?'AgentDojo: run ('+(ag.model||'local model')+')':'AgentDojo: not run. '+(ag.reason||'no reason recorded')});
+    if(vo) out.push({text:'Voice: '+(vo.status||'unknown')+(vo.eer==null?' · EER not measured':' · EER '+vo.eer)+(vo.note?' · '+vo.note:'')});
+    return out;
   }
   fmt(s,v){const d=Number.isInteger(s.target)?0:1;return v.toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d})+s.suffix;}
   slide(dir){ if(!this.sc) return; const c=this.sc.firstElementChild; this.sc.scrollBy({left:dir*((c?c.offsetWidth:400)+24),behavior:'smooth'}); }
@@ -444,7 +453,7 @@ class Component extends DCLogic {
       prev:()=>this.slide(-1), next:()=>this.slide(1), scRef:el=>{this.sc=el;},
       copy:()=>{navigator.clipboard&&navigator.clipboard.writeText(CODE);this.setState({copied:true});clearTimeout(this.ct);this.ct=setTimeout(()=>this.setState({copied:false}),1600);},
       copyLabel:s.copied?'Copied':'Copy',
-      stats:s.stats, hasStats:s.stats.length>0, statsMissing:s.statsMissing, caption:s.caption,
+      stats:s.stats, hasStats:s.stats.length>0, statsMissing:s.statsMissing, caption:s.caption, notes:s.notes,
       team, saved:s.saved, notSaved:!s.saved,
       submit:e=>{e.preventDefault();const fd=new FormData(e.target);try{const k='trishul-updates';const l=JSON.parse(localStorage.getItem(k)||'[]');l.push({name:fd.get('name'),email:fd.get('email'),at:new Date().toISOString()});localStorage.setItem(k,JSON.stringify(l));}catch(err){}this.setState({saved:true});}
     };

@@ -1,0 +1,12 @@
+.git
+.claude
+.venv
+**/__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.db
+*.db-wal
+*.db-shm
+CLAUDE.md
+operator.token

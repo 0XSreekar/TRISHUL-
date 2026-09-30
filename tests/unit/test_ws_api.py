@@ -27,7 +27,7 @@ class FakeBackend:
             raise RuntimeError("secret internal path /etc/passwd")
         return {"id": approval_id, "decision": decision}
 
-    def prove(self):
+    def prove(self, policy="live"):
         return {"proved": True}
 
     def bind_task(self, payload):
@@ -234,3 +234,85 @@ def test_bodyless_console_posts_need_allowed_origin(csrf) -> None:
     assert c.post("/prove", headers=evil).status_code == 403
     assert c.post("/consent/k1/withdraw", headers=evil).status_code == 403
     assert len(be.calls) == calls
+
+
+# --- AT-17: reconnect/resume + CLI `ml off` pushes a live ml_state -----------------------------
+
+
+def _dbpath(conn) -> str:
+    return next(r[2] for r in conn.execute("PRAGMA database_list") if r[1] == "main")
+
+
+def test_at17_ws_reconnect_resumes_after_last_seq(tmp_path):
+    from tests.integration.test_gateway_harness import make_env_sync
+
+    gw, *_ = make_env_sync(tmp_path)
+    with TestClient(gw.api(allowed_origins=["null"])) as c:
+        gw.bus.publish({"type": "mode", "mode": "on"})
+        with c.websocket_connect("/events") as ws:
+            ws.send_json({"resume_from": 0})
+            first = ws.receive_json()
+        last = first["seq"]
+        gw.bus.publish({"type": "ml_state", "ml": False, "enabled": False})  # while disconnected
+        gw.bus.publish({"type": "mode", "mode": "off"})
+        with c.websocket_connect("/events") as ws:
+            ws.send_json({"resume_from": last})
+            got = [ws.receive_json(), ws.receive_json()]
+        assert [g["seq"] for g in got] == [last + 1, last + 2]
+        assert got[0]["type"] == "ml_state" and got[0]["enabled"] is False
+
+
+def test_at17_cli_ml_off_is_pushed_live_via_control_table(tmp_path, capsys):
+    from tests.integration.test_gateway_harness import make_env_sync
+    from trishul.cli.main import main
+
+    gw, conn, *_ = make_env_sync(tmp_path)
+    with TestClient(gw.api(allowed_origins=["null"])) as c, c.websocket_connect("/events") as ws:
+        ws.send_json({"resume_from": gw.bus.seq})
+        assert main(["ml", "off", "--db", _dbpath(conn)]) == 0
+        capsys.readouterr()
+        assert gw.pipeline.ml_enabled() is False  # CLI applied it durably
+        assert gw.backend.poll_control() == 1  # the gateway's 500 ms poll, run once
+        while (m := ws.receive_json())["type"] != "ml_state":
+            pass
+        assert m["ml"] is False and m["enabled"] is False
+        assert gw.backend.poll_control() == 0  # rows are applied exactly once
+        assert main(["ml", "on", "--db", _dbpath(conn)]) == 0
+        gw.backend.poll_control()
+        while (m := ws.receive_json())["type"] != "ml_state":
+            pass
+        assert m["enabled"] is True
+
+
+async def test_at17_control_poller_task_publishes_within_interval(tmp_path):
+    import asyncio
+
+    from tests.integration.test_gateway_harness import make_env_sync
+    from trishul.cli.main import main
+
+    gw, conn, *_ = make_env_sync(tmp_path)
+    seen: list[dict] = []
+    sub = gw.bus.subscribe(gw.bus.seq)
+    task = asyncio.create_task(gw.backend.run_control_poller(0.05))
+    try:
+        assert await asyncio.to_thread(main, ["ml", "off", "--db", _dbpath(conn)]) == 0
+        async with asyncio.timeout(3):
+            async for event in sub:
+                if event.get("type") == "ml_state":
+                    seen.append(event)
+                    break
+    finally:
+        task.cancel()
+        sub.close()
+    assert seen and seen[0]["enabled"] is False
+
+
+def test_rest_ml_toggle_pushes_ml_state(tmp_path):
+    from tests.integration.test_gateway_harness import make_env_sync
+
+    gw, *_ = make_env_sync(tmp_path)
+    with TestClient(gw.api(allowed_origins=["null"])) as c:
+        assert c.post("/ml", json={"enabled": "no"}).status_code == 400
+        assert c.post("/ml", json={"enabled": False}).json() == {"ml": False}
+        assert gw.pipeline.ml_enabled() is False
+    assert any(e["type"] == "ml_state" and e["enabled"] is False for e in gw.bus.snapshot(0))

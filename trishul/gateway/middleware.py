@@ -12,8 +12,8 @@ from trishul.gateway.pipeline import CallRequest, Pipeline, State
 
 
 def _request_meta(context: MiddlewareContext[mt.CallToolRequestParams]) -> dict[str, Any]:
-    """Only a cosmetic ``agent`` label is honoured; the task always comes from the trusted
-    binding channel, never from the client (otherwise an agent could pick its own purpose)."""
+    """The ``agent`` label is cosmetic; ``task_id`` may only select an already-bound task (the
+    purpose/category still come from the trusted binding channel, never from the client)."""
     raw: Any = None
     try:
         fc = context.fastmcp_context
@@ -27,9 +27,16 @@ def _request_meta(context: MiddlewareContext[mt.CallToolRequestParams]) -> dict[
         raw = dump() if callable(dump) else {}
     data = raw if isinstance(raw, dict) else {}
     agent = data.get("agent")
+    out: dict[str, Any] = {}
     if isinstance(agent, str) and re.fullmatch(r"[A-Za-z0-9_.-]{1,40}", agent):
-        return {"agent": agent}
-    return {}
+        out["agent"] = agent
+    task_id = data.get("task_id")  # pins a call to an already-bound task; unknown id => DENY
+    if isinstance(task_id, str) and re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", task_id):
+        out["task_id"] = task_id
+        task_pin = data.get("task_pin")  # secret proving the caller owns a pinnable task
+        if isinstance(task_pin, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", task_pin):
+            out["task_pin"] = task_pin
+    return out
 
 
 class PolicyMiddleware(Middleware):

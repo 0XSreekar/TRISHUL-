@@ -171,7 +171,9 @@ def build_gateway(
         mcp = base
     register_native_tools(mcp)
     mcp.add_middleware(PolicyMiddleware(pipeline, NativeExecutor(pipeline.handles)))
-    return Gateway(mcp, pipeline, Backend(pipeline), bus, metrics, policy)
+    backend = Backend(pipeline)
+    backend.mcp = mcp
+    return Gateway(mcp, pipeline, backend, bus, metrics, policy)
 
 
 def _demo_servers(

@@ -115,6 +115,8 @@ class NonceService:
         self._clock = clock
         self._ttl = ttl_s
         self._live: dict[str, dict[str, Nonce]] = {}
+        # consumed-with-match ids (bounded) -> digest of the call that matched (None until bound)
+        self._matched: dict[tuple[str, str], str | None] = {}
 
     def issue(self, session: str) -> Nonce:
         words = tuple(secrets.choice(WORDS) for _ in range(3))
@@ -136,13 +138,31 @@ class NonceService:
         if nonce is None:
             return "mismatch"
         if self._clock() - nonce.issued_at > self._ttl:
-            del bucket[nonce_id]
+            bucket.pop(nonce_id, None)
             return "expired"
         if transcript is None:
             return "unknown"
-        del bucket[nonce_id]
+        if bucket.pop(nonce_id, None) is None:  # atomic consume: a concurrent attempt won it
+            return "mismatch"
         dist = best_window_distance(list(nonce.words), transcript)
-        return "match" if dist <= LIVENESS_MAX_DISTANCE else "mismatch"
+        if dist <= LIVENESS_MAX_DISTANCE:
+            self._matched[(session, nonce_id)] = None  # bound to a call digest by bind_call
+            while len(self._matched) > 1024:
+                self._matched.pop(next(iter(self._matched)))
+            return "match"
+        return "mismatch"
+
+    def bind_call(self, session: str, nonce_id: str, call_digest: str) -> None:
+        """Record the digest of the call whose attempt matched this nonce (first binding wins)."""
+        key = (session, nonce_id)
+        if key in self._matched and self._matched[key] is None:
+            self._matched[key] = call_digest
+
+    def was_matched(self, session: str, nonce_id: str, call_digest: str) -> bool:
+        """True iff this nonce was already consumed by a matching attempt *for this exact call*
+        (never a fresh pass: only used to resume a call that an operator approved out of band)."""
+        bound = self._matched.get((session, nonce_id))
+        return bound is not None and bound == call_digest
 
 
 # ---------------------------------------------------------------- decision table

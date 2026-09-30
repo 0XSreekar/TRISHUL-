@@ -18,7 +18,7 @@ DEMO_NOW = datetime(2026, 9, 30, 9, 0, 0, tzinfo=UTC)
 DEMO_PRINCIPAL = "user_demo"
 DEMO_ACCOUNT = "acct_demo"
 DEMO_BALANCE_PAISE = 5_000_000  # INR 50,000.00
-FIXTURES_DIR = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
+FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 BUSY_TIMEOUT_MS = 5000
 
 SCHEMA = """
@@ -142,6 +142,24 @@ CREATE TABLE IF NOT EXISTS outbox(
     call_id TEXT,
     ts TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS control(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    ts TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ns_ledger(
+    txn_id TEXT PRIMARY KEY,
+    namespace TEXT NOT NULL,
+    tool TEXT NOT NULL,
+    payee_vpa TEXT,
+    amount_paise INTEGER NOT NULL DEFAULT 0,
+    args TEXT NOT NULL DEFAULT '{}',
+    call_id TEXT,
+    ts TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ns_ledger_by_ns ON ns_ledger(namespace, ts);
 CREATE TABLE IF NOT EXISTS task_bindings(
     task_id TEXT PRIMARY KEY,
     principal TEXT NOT NULL,
@@ -170,6 +188,8 @@ TABLES = (
     "inbox",
     "outbox",
     "task_bindings",
+    "control",
+    "ns_ledger",
 )
 # children before parents so foreign keys never block the wipe
 _WIPE_ORDER = (
@@ -188,6 +208,8 @@ _WIPE_ORDER = (
     "inbox",
     "outbox",
     "task_bindings",
+    "control",
+    "ns_ledger",
     "meta",
 )
 
@@ -331,10 +353,15 @@ def reset(
     ids = IdGen(seed)
     ts = iso(now)
     with transaction(conn):
+        kept = conn.execute("SELECT value FROM meta WHERE key='redteam_killed'").fetchone()
         for table in _WIPE_ORDER:
             conn.execute(f"DELETE FROM {table}")  # noqa: S608 - fixed table names
         conn.execute("INSERT INTO consent_epoch(id, epoch) VALUES (1, 0)")
         conn.execute("INSERT INTO meta(key, value) VALUES ('seed', ?)", (str(seed),))
+        if kept is not None:  # the public-wall kill switch survives a demo reset
+            conn.execute(
+                "INSERT INTO meta(key, value) VALUES ('redteam_killed', ?)", (kept["value"],)
+            )
         conn.execute(
             "INSERT INTO accounts(account_id, principal_id, balance_paise) VALUES (?,?,?)",
             (DEMO_ACCOUNT, DEMO_PRINCIPAL, DEMO_BALANCE_PAISE),

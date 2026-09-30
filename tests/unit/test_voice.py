@@ -37,7 +37,7 @@ from trishul.domains.voicetrust import (
 from trishul.policy.compiler import compile_files
 from trishul.policy.evaluator import evaluate
 
-AUDIO = Path(__file__).resolve().parent.parent / "fixtures" / "audio"
+AUDIO = Path(__file__).resolve().parents[2] / "trishul" / "fixtures" / "audio"
 
 
 class Clock:
@@ -257,14 +257,15 @@ def test_policy_consumes_facts() -> None:
     policy = compile_files([POLICY_DIR / "voicetrust.yaml"])
     args = {"transcript": "pay", "clip_id": "c", "nonce_id": "n"}
     cases = [
-        (("ok", "match", True, None, "low"), Decision.ALLOW),
+        (("ok", "match", True, 0.1, "low"), Decision.ALLOW),
+        (("ok", "match", True, None, "low"), Decision.STEP_UP),  # spoof check did not run
         (("ok", "mismatch", True, None, "low"), Decision.DENY),
         (("ok", "expired", True, None, "low"), Decision.DENY),
         (("low", "match", True, None, "low"), Decision.STEP_UP),
         (("ok", "match", False, None, "low"), Decision.STEP_UP),
         (("ok", "match", True, 0.3, "low"), Decision.STEP_UP),
         (("ok", "match", True, 0.7, "low"), Decision.DENY),
-        (("ok", "match", True, None, "high"), Decision.STEP_UP),
+        (("ok", "match", True, 0.1, "high"), Decision.STEP_UP),
         (("ok", "unknown", False, None, "low"), Decision.STEP_UP),
     ]
     for inputs, expected in cases:
@@ -272,5 +273,7 @@ def test_policy_consumes_facts() -> None:
         ctx = make_ctx(facts=facts)
         verdict = evaluate(policy, make_call("voice_command", args), ctx)
         assert verdict.decision == expected, inputs
-        assert verdict.decision == voice_decision(*inputs)[0]  # type: ignore[arg-type]
-        assert {r.rule_id for r in verdict.reasons} == set(voice_decision(*inputs)[1])
+        if inputs[3] is not None:  # no score: the YAML fails closed (SPOOF.NOT_RUN), the table
+            # does not
+            assert verdict.decision == voice_decision(*inputs)[0]  # type: ignore[arg-type]
+            assert {r.rule_id for r in verdict.reasons} == set(voice_decision(*inputs)[1])

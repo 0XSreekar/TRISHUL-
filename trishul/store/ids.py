@@ -12,6 +12,11 @@ class IdGen:
         self._n = start
         self._lock = threading.Lock()
 
+    def restart(self, start: int = 0) -> None:
+        """Rewind the counter in place (``demo reset``: same seed => same ids again)."""
+        with self._lock:
+            self._n = start
+
     @property
     def counter(self) -> int:
         return self._n

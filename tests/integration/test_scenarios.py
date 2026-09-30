@@ -17,10 +17,10 @@ from tests.integration.test_gateway_harness import (
     parse_error,
 )
 from trishul.audit.verify import verify
-from trishul.domains.voice_adapters import DeterministicSpoofAdapter, ScriptedASR, SpoofResult
+from trishul.domains.voice_adapters import ScriptedASR, SpoofResult
 from trishul.domains.voicetrust import NonceService, VoiceTrust
 
-AUDIO = Path(__file__).resolve().parents[1] / "fixtures" / "audio"
+AUDIO = Path(__file__).resolve().parents[2] / "trishul" / "fixtures" / "audio"
 ACME = "acme@okaxis"
 
 
@@ -202,14 +202,16 @@ def clip(name: str) -> str:
     return base64.b64encode((AUDIO / name).read_bytes()).decode()
 
 
-async def voice_env(tmp_path: Path, spoof: Any = None) -> tuple[Env, PhraseASR, Client[Any]]:
+async def voice_env(
+    tmp_path: Path, spoof: Any = None, category: str = "READ"
+) -> tuple[Env, PhraseASR, Client[Any]]:
     asr = PhraseASR()
-    vt = VoiceTrust(NonceService(), asr, spoof or DeterministicSpoofAdapter())
+    vt = VoiceTrust(NonceService(), asr, spoof or FixedSpoof(0.05))
     gw, conn, ids, keys, clock, events = make_env_sync(tmp_path, voice=vt)
     client: Client[Any] = Client(gw.mcp)
     await client.__aenter__()
     env = Env(gw, client, conn, ids, keys, clock, events)
-    env.gw.bind_task(purpose="order_support", category="VOICE", text="voice request")
+    env.gw.bind_task(purpose="order_support", category=category, text="voice request")
     return env, asr, client
 
 
@@ -239,12 +241,11 @@ async def test_8_low_quality_or_uncertain_voice_never_allowed(tmp_path: Path) ->
         assert (
             noisy["decision"] == "STEP_UP" and "VOICETRUST.QUALITY.INSUFFICIENT" in noisy["rules"]
         )
-        assert noisy["approval_id"] is None  # voice can never self-approve
+        assert noisy["approval_id"]  # an out-of-band approval is raised; voice cannot grant it
         args = voice_args(env, asr)
         asr.say(None, ran=False)  # ASR unavailable: liveness unknown
         unsure = await env.denied("voice_command", args)
         assert unsure["decision"] == "STEP_UP" and "VOICETRUST.ASR.NOT_RUN" in unsure["rules"]
-        assert env.conn.execute("SELECT COUNT(*) FROM approvals").fetchone()[0] == 0
         # a voice-derived value can never reach a payment sink
         env.gw.bind_task(purpose="payment_processing", category="PAYMENT", text="pay")
     finally:
@@ -256,9 +257,9 @@ async def test_8b_suspicious_spoof_score_is_step_up(tmp_path: Path) -> None:
     try:
         body = await env.denied("voice_command", voice_args(env, asr))
         assert body["decision"] == "STEP_UP" and "VOICETRUST.SPOOF.SUSPECT" in body["rules"]
-        env.gw.pipeline.set_ml(False)  # ML off: spoof signal ignored, liveness still enforced
-        ok = await env.call("voice_command", voice_args(env, asr))
-        assert ok["summary"]["liveness"] == "match"
+        env.gw.pipeline.set_ml(False)  # ML off: no spoof score => fail closed to STEP_UP
+        off = await env.denied("voice_command", voice_args(env, asr))
+        assert off["decision"] == "STEP_UP" and "VOICETRUST.SPOOF.NOT_RUN" in off["rules"]
         env.gw.pipeline.set_ml(True)
         assert any(e.get("type") == "ml_state" and e["ml"] is True for e in env.events)
     finally:
@@ -403,5 +404,24 @@ async def test_voice_command_holds_lock_except_during_assess(tmp_path: Path) -> 
         await env.call("voice_command", voice_args(env, asr))
         assert seen == {"during_assess": False, "at_finish": True}
         assert not lock.locked()
+    finally:
+        await client.__aexit__(None, None, None)
+
+
+async def test_voice_payment_always_needs_out_of_band_approval(tmp_path: Path) -> None:
+    env, asr, client = await voice_env(tmp_path, spoof=FixedSpoof(0.01), category="PAYMENT")
+    try:
+        args = voice_args(env, asr)  # perfect clip, nonce matches, spoof score ~0
+        body = await env.denied("voice_command", args)
+        assert body["decision"] == "STEP_UP" and "VOICETRUST.SINK.HIGH_RISK" in body["rules"]
+        assert body["approval_id"]
+        env.gw.backend.resolve_approval(body["approval_id"], "approve", "console")
+        again = await env.call("voice_command", args)  # same clip + nonce, now approved
+        assert "handle" in again
+        replay = await env.denied("voice_command", args)  # token is single use
+        assert replay["decision"] in ("STEP_UP", "DENY")
+        # a different clip (other sha256) under the same nonce is not covered by the approval
+        other = dict(args, clip_b64=clip("tone_noisy_3s.wav"))
+        assert (await env.denied("voice_command", other))["decision"] != "ALLOW"
     finally:
         await client.__aexit__(None, None, None)

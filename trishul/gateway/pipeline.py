@@ -18,6 +18,8 @@ Invariants (property-tested in ``tests/property/test_failclosed.py``):
 import asyncio
 import base64
 import binascii
+import hashlib
+import hmac
 import inspect
 import json
 import logging
@@ -26,7 +28,7 @@ import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
@@ -67,17 +69,20 @@ from trishul.gateway.taint import (
     model_untrusted,
     system_label,
 )
+from trishul.observability.redaction import redact_args
 from trishul.policy.ast import CompiledPolicy
 from trishul.policy.evaluator import EvalContext, evaluate
 from trishul.provenance.lattice import join_all
 from trishul.servers.upi import preview_pay_upi
-from trishul.store.db import iso
+from trishul.store.db import DEMO_BALANCE_PAISE, iso, transaction
 from trishul.store.ids import IdGen
 from trishul.telemetry import EventBus, stage_span
 
 log = logging.getLogger("trishul.gateway")
 
 NAMESPACES = ("upi", "crm", "mail", "files")
+DEMO_OFF = "demo_off"  # isolated ledger namespace used while TRISHUL is switched OFF
+MODE_OFF_DISABLED = ("taint", "policy", "mandate", "approval", "ml")
 NATIVE_TOOLS = frozenset({"extract_field", "voice_command"})
 # native tool argument that carries a handle the *tool itself* dereferences (quarantined reader)
 HANDLE_PASSTHROUGH = frozenset({("extract_field", "handle")})
@@ -116,6 +121,9 @@ FAILSAFE_DECISION: dict[str, Decision] = {
 DEFAULT_STAGE_TIMEOUT_S = 2.0
 VOICE_GUARD_TIMEOUT_S = 60.0
 INJECTION_STEP_UP = 0.5
+# OFF mode executes only these reads on the real servers; everything else is simulated
+OFF_REAL_READS = frozenset({"read_document", "list_payees", "get_balance"})
+_VOICE_HIGH_SINK = frozenset({ToolCategory.PAYMENT, ToolCategory.VOICE})
 MAX_ARG_BYTES = 1_000_000
 
 type Executor = Callable[[dict[str, Any]], Awaitable[ToolResult]]
@@ -250,6 +258,7 @@ class Pipeline:
         self.handles = SessionHandles(self.registry)
         self.cache = DecisionCache(conn)
         self._tasks: dict[str, Task] = {}
+        self.pinnable: dict[str, str] = {}  # pinnable task id -> secret pin (red-team harness)
         self.approval_calls: dict[str, str] = {}  # approval_id -> call event id (UI id)
 
     # ------------------------------------------------------------------ tasks / ML state
@@ -318,7 +327,57 @@ class Pipeline:
                 "session": self.session,
             }
         )
-        self.bus.publish({"type": "ml_state", "ml": enabled})
+        self.bus.publish({"type": "ml_state", "ml": enabled, "enabled": enabled})
+
+    # ------------------------------------------------------------------ ON / OFF demo mode
+
+    def mode(self) -> str:
+        """``"on"`` (default) or ``"off"``. Anything unreadable is ON: fail closed."""
+        try:
+            row = self.conn.execute("SELECT value FROM meta WHERE key='mode'").fetchone()
+        except Exception:
+            return "on"
+        return "off" if row is not None and row["value"] == "off" else "on"
+
+    def mode_info(self) -> dict[str, Any]:
+        off = self.mode() == "off"
+        return {
+            "mode": "off" if off else "on",
+            "namespace": DEMO_OFF if off else "protected",
+            "disabled": list(MODE_OFF_DISABLED) if off else [],
+        }
+
+    def set_mode(self, mode: str) -> dict[str, Any]:
+        if mode not in ("on", "off"):
+            raise ValueError("mode must be on or off")
+        self.conn.execute(
+            "INSERT OR REPLACE INTO meta(key, value) VALUES ('mode', ?)",
+            (mode,),
+        )
+        self.audit.append(
+            {
+                "domain": "core",
+                "type": "mode",
+                "mode": mode,
+                "namespace": DEMO_OFF if mode == "off" else "protected",
+                "ts": iso(self.clock()),
+                "session": self.session,
+            }
+        )
+        info = self.mode_info()
+        self.bus.publish({"type": "mode", **info})
+        return info
+
+    def reset_runtime(self, ids_start: int = 0) -> None:
+        """Forget in-memory state after ``demo reset`` (tasks, handles, taint, caches). The
+        registry/handle store are re-initialised in place: the native executor holds them."""
+        self._tasks.clear()
+        self.pinnable.clear()
+        self.approval_calls.clear()
+        self.registry.__init__()  # type: ignore[misc]
+        self.handles.__init__(self.registry)  # type: ignore[misc]
+        self.cache = DecisionCache(self.conn)
+        self.ids.restart(ids_start)
 
     # ------------------------------------------------------------------ stage runner
 
@@ -386,6 +445,8 @@ class Pipeline:
         )
         st.agent = st.agent or AGENT_OF_DOMAIN[st.domain]
         try:
+            if self.mode() == "off":
+                return await self._run_off(st, execute)
             await self.run_stage(st, "ingress", self._ingress)
             await self.run_stage(st, "handles", self._handles)
             await self.run_stage(st, "provenance", self._provenance)
@@ -405,7 +466,147 @@ class Pipeline:
                 (str(self.ids.counter),),
             )
 
+    # ------------------------------------------------------------------ OFF demo mode
+
+    def _off_effect(self, st: State, args: dict[str, Any]) -> dict[str, Any]:
+        """Side effect of an unguarded call: recorded in the ``demo_off`` ledger namespace only,
+        never in the protected ledger, accounts, payees or outbox."""
+        payee: str | None = None
+        amount = 0
+        if st.tool == "pay_upi":
+            vpa, amt = args.get("payee_vpa"), args.get("amount_paise")
+            if not isinstance(vpa, str) or not vpa.strip():
+                raise ToolError("payee_vpa must be a non-empty string")
+            if not isinstance(amt, int) or isinstance(amt, bool) or amt <= 0:
+                raise ToolError("amount must be a positive integer number of paise")
+            payee, amount = vpa, amt
+        txn = self.ids.new("txn")
+        with transaction(self.conn):
+            spent = int(
+                self.conn.execute(
+                    "SELECT COALESCE(SUM(amount_paise), 0) FROM ns_ledger WHERE namespace=?",
+                    (DEMO_OFF,),
+                ).fetchone()[0]
+            )
+            if amount and spent + amount > DEMO_BALANCE_PAISE:
+                raise ToolError("insufficient funds")
+            self.conn.execute(
+                "INSERT INTO ns_ledger(txn_id, namespace, tool, payee_vpa, amount_paise, args,"
+                " call_id, ts) VALUES (?,?,?,?,?,?,?,?)",
+                (
+                    txn,
+                    DEMO_OFF,
+                    st.tool,
+                    payee,
+                    amount,
+                    json.dumps(sorted(args), sort_keys=True),
+                    st.call_id,
+                    iso(st.now),
+                ),
+            )
+        out: dict[str, Any] = {"txn_id": txn, "namespace": DEMO_OFF, "simulated": amount == 0}
+        if amount:
+            out["balance_after"] = DEMO_BALANCE_PAISE - spent - amount
+        return out
+
+    async def _run_off(self, st: State, execute: Executor) -> ToolResult:
+        args = dict(st.req.arguments)
+        failure: ToolError | None = None
+        result: ToolResult | None = None
+        effect: dict[str, Any] | None = None
+        try:
+            if st.server in ("unknown", "gateway"):
+                raise ToolError("tool unavailable in OFF demo mode")
+            spec = self.policy.tools.get(st.tool)
+            if spec is None or spec.category != ToolCategory.READ or st.tool not in OFF_REAL_READS:
+                effect = self._off_effect(st, args)
+                result = self._wrap(effect)
+            else:  # reads cannot change the protected namespace; the agent sees raw content
+                result = await execute(args)
+        except ToolError as exc:
+            failure = exc
+        except Exception as exc:
+            log.warning("OFF-mode call failed: %s", type(exc).__name__)
+            failure = ToolError("tool execution failed")
+        digest = hashlib.sha256(json.dumps(args, sort_keys=True, default=str).encode()).hexdigest()
+        base = {
+            "domain": "core",
+            "mode": "off",
+            "namespace": DEMO_OFF,
+            "decision": "UNGUARDED",
+            "event_id": st.call_id,
+            "call_id": st.call_id,
+            "tool": st.tool,
+            "server": st.server,
+            "args_digest": digest,
+            "session": self.session,
+            "ts": iso(st.now),
+        }
+        audit_hash: str | None = None
+        tree: dict[str, Any] | None = None
+        try:
+            rec = self.audit.append({**base, "type": "decision", "rule_ids": []})
+            audit_hash, tree = rec.leaf_hash, {"size": rec.tree_size, "root": rec.root}
+            done = self.audit.append(
+                {
+                    **base,
+                    "type": "execution",
+                    "status": "error" if failure else "ok",
+                    "effect": effect,
+                }
+            )
+            tree = {"size": done.tree_size, "root": done.root}
+        except Exception:
+            log.exception("OFF-mode audit append failed")
+            raise ToolError("audit unavailable; call refused") from None
+        try:
+            shown = json.loads(json.dumps(redact_args(args, {}), default=lambda o: o.model_dump()))
+        except Exception:
+            shown = {}
+        self.bus.publish(
+            {
+                "type": "call",
+                "id": st.call_id,
+                "ts": iso(st.now),
+                "session": self.session,
+                "agent": st.agent,
+                "feature": st.domain,
+                "tool": st.tool,
+                "args": shown,
+                "labels": {},
+                "mode": "off",
+                "namespace": DEMO_OFF,
+                "decision": "UNGUARDED",
+                "rules": [],
+                "reason": "TRISHUL is OFF: executed unguarded in the isolated demo_off namespace",
+                "scores": {},
+                "latency_ms": round((time.perf_counter() - st.t0) * 1000, 3),
+                "stage_ms": {},
+                "lineage": {"nodes": [], "edges": []},
+                "audit_hash": audit_hash,
+                "tree_head": tree,
+                "approval": None,
+                "mandate": None,
+                "redaction": {"fields": [], "count": 0},
+                "effect": effect,
+                "liveness": None,
+                "ml": "off",
+                **({"error": "ToolError"} if failure else {}),
+            }
+        )
+        if failure is not None:
+            raise failure
+        assert result is not None  # noqa: S101
+        return result
+
     # ------------------------------------------------------------------ stages 1-3
+
+    def _pin_ok(self, task_id: object, pin: object) -> bool:
+        """A pinned task id is honoured only with its secret pin (constant-time compare)."""
+        if not isinstance(task_id, str) or not isinstance(pin, str):
+            return False
+        expected = self.pinnable.get(task_id)
+        return expected is not None and hmac.compare_digest(pin.encode(), expected.encode())
 
     async def _ingress(self, st: State) -> None:
         raw = st.req.arguments
@@ -415,8 +616,13 @@ class Pipeline:
             )
             st.halted = True
             return
-        # the active task is whatever the trusted channel bound last; a client cannot pick one
-        task = self.resolve_task(None)
+        # the active task is whatever the trusted channel bound last, unless a call pins a
+        # harness-bound (pinnable) task id in meta; any other pinned id fails closed
+        pinned = st.req.meta.get("task_id")
+        if pinned is not None and not self._pin_ok(pinned, st.req.meta.get("task_pin")):
+            task = None
+        else:
+            task = self.resolve_task(pinned)
         if task is None:
             st.reasons.append(
                 reason("CORE.TASK.UNBOUND", Stage.INTERNAL, Decision.DENY, "No bound task")
@@ -575,12 +781,13 @@ class Pipeline:
             st.facts = dict(self.cache.facts(call, task.purpose, st.now))
         elif st.tool == "voice_command":
             await self._voice_guard(st, call)
-        if st.tool != "voice_command":
-            # a valid, exact-call approval token (single use); voice can never carry one
-            check = self.approvals.check(call, st.now)
-            st.token = check.token
-            st.facts["approval_valid"] = check.valid
-            st.facts["approval_binding_mismatch"] = check.binding_mismatch
+        # a valid, exact-call approval token (single use); for voice it is bound to the
+        # clip sha256 + nonce id via the call digest
+        assert st.call is not None  # noqa: S101 - _voice_guard rebuilds it with clip/transcript
+        check = self.approvals.check(st.call, st.now)
+        st.token = check.token
+        st.facts["approval_valid"] = check.valid
+        st.facts["approval_binding_mismatch"] = check.binding_mismatch
 
     async def _voice_guard(self, st: State, call: ToolCall) -> None:
         clip_id = call.args.get("clip_id")
@@ -589,20 +796,41 @@ class Pipeline:
             wav = base64.b64decode(st.voice_b64 or "", validate=True)
         except (binascii.Error, ValueError):
             wav = b""
+        # voice-initiated payments always need nonce + out-of-band approval, whatever the score
+        sink: Literal["low", "high"] = (
+            "high" if st.task is not None and st.task.category in _VOICE_HIGH_SINK else "low"
+        )
+        # the approval binds to this exact clip: its digest is part of the call args
+        st.args["clip_sha256"] = hashlib.sha256(wav).hexdigest()
         # every stage holds the gateway lock except the (possibly slow) ASR/anti-spoof thread,
         # which touches no shared gateway state
         self._lock.release()
         try:
-            assessment = await asyncio.to_thread(
-                self.voice.assess,
-                self.session,
-                clip_id if isinstance(clip_id, str) else "unknown",
-                wav,
-                nonce_id if isinstance(nonce_id, str) else "",
-                "low",
+            # only the worker thread is time-limited here; the stage timeout above still bounds
+            # the whole guard, but the lock below is always reacquired before leaving
+            assessment = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self.voice.assess,
+                    self.session,
+                    clip_id if isinstance(clip_id, str) else "unknown",
+                    wav,
+                    nonce_id if isinstance(nonce_id, str) else "",
+                    sink,
+                ),
+                timeout=VOICE_GUARD_TIMEOUT_S,
             )
         finally:
-            await self._lock.acquire()
+            # a cancel landing while we wait for the lock must not leave the rest of the call
+            # running unlocked (and the caller's `async with` releasing a lock it doesn't hold)
+            cancelled: asyncio.CancelledError | None = None
+            while True:
+                try:
+                    await self._lock.acquire()
+                    break
+                except asyncio.CancelledError as exc:
+                    cancelled = exc
+            if cancelled is not None:
+                raise cancelled
         st.voice = assessment
         score = assessment.spoof.score if assessment.spoof.ran else None
         st.facts = dict(
@@ -611,7 +839,7 @@ class Pipeline:
                 assessment.liveness,
                 assessment.asr.ran,
                 score if self.ml_enabled() else None,
-                "low",
+                sink,
             )
         )
         transcript = assessment.transcript
@@ -626,6 +854,19 @@ class Pipeline:
         st.leaf_labels["/transcript"] = label
         st.call = self._build_call(st)
         st.lineage = self._lineage(st, st.call)
+        # the nonce is consumed by the attempt that raised the approval; resuming is only allowed
+        # when an operator approved this exact clip sha256 + nonce + transcript
+        nid = nonce_id if isinstance(nonce_id, str) else ""
+        digest = st.call.call_digest()
+        if assessment.liveness == "match":
+            self.voice.nonces.bind_call(self.session, nid, digest)
+        if (
+            assessment.liveness == "mismatch"
+            and self.voice.nonces.was_matched(self.session, nid, digest)
+            and self.approvals.check(st.call, st.now).valid
+        ):
+            st.facts["voice_liveness_match"] = True
+            st.facts["voice_liveness_mismatch"] = False
 
     # ------------------------------------------------------------------ stage 4: policy
 
@@ -776,13 +1017,15 @@ class Pipeline:
 
     def _decide(self, st: State, verdict: Verdict) -> Verdict:
         if verdict.decision == Decision.STEP_UP and st.call is not None:
-            if st.tool == "voice_command":
-                # a voice channel can never approve anything: no approval is even created
-                st.approval = None
-            else:
-                aid = self._pending_approval(st.call)
-                self.approval_calls[aid] = st.call_id
-                st.approval = {"id": aid, "state": "pending"}
+            if st.tool == "voice_command" and not (st.voice and st.voice.liveness == "match"):
+                # a failsafe STEP_UP (e.g. guards crashed after the rebuild) must not mint an
+                # approval for a replayed/unverified clip: only a fresh liveness match may
+                return verdict
+            # voice never approves itself: the approval is a console/CLI action bound to the
+            # exact call digest (clip sha256 + nonce id + transcript)
+            aid = self._pending_approval(st.call)
+            self.approval_calls[aid] = st.call_id
+            st.approval = {"id": aid, "state": "pending"}
         elif verdict.decision == Decision.ALLOW and st.token is not None:
             if not self.approvals.consume(st.token.token_id):
                 st.reasons.append(

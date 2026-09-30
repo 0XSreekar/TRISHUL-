@@ -84,9 +84,9 @@ def make_env_sync(
     events: list[dict[str, Any]] = []
     original = gw.bus.publish
 
-    def spy(event: dict[str, Any]) -> int:
+    def spy(event: dict[str, Any], **kw: Any) -> int:
         events.append(event)
-        return original(event)
+        return original(event, **kw)
 
     gw.bus.publish = spy  # type: ignore[method-assign]
     return gw, conn, ids, keys, clock, events

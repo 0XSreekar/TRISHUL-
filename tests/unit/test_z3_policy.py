@@ -19,7 +19,7 @@ from trishul.policy.evaluator import EvalContext, _build_env, eval_predicate, ev
 from trishul.verify import prove_all, translate
 from trishul.verify.z3_policy import path_var_name
 
-UNSAFE_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "unsafe_policy"
+UNSAFE_DIR = Path(__file__).resolve().parents[2] / "trishul" / "fixtures" / "unsafe_policy"
 
 
 def test_real_policies_proofs(policy: ast.CompiledPolicy) -> None:

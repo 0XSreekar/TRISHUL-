@@ -7,6 +7,7 @@ tools:
       transcript: {type: string, required: true}
       clip_id: {type: string, required: true}
       nonce_id: {type: string, required: true}
+      clip_sha256: {type: string}
 rules:
   - id: VOICETRUST.LIVENESS.MISMATCH
     stage: LABEL
@@ -45,6 +46,7 @@ rules:
             fact: voice_liveness_mismatch
         - not:
             fact: voice_liveness_expired
+        - not: {fact: approval_valid}
   - id: VOICETRUST.QUALITY.INSUFFICIENT
     stage: LABEL
     then: STEP_UP
@@ -54,6 +56,7 @@ rules:
         - tool: voice_command
         - not:
             fact: voice_quality_ok
+        - not: {fact: approval_valid}
   - id: VOICETRUST.ASR.NOT_RUN
     stage: LABEL
     then: STEP_UP
@@ -63,6 +66,7 @@ rules:
         - tool: voice_command
         - not:
             fact: voice_asr_ran
+        - not: {fact: approval_valid}
   - id: VOICETRUST.SPOOF.SUSPECT
     stage: ML
     then: STEP_UP
@@ -71,6 +75,7 @@ rules:
       all:
         - tool: voice_command
         - fact: voice_spoof_suspect
+        - not: {fact: approval_valid}
   - id: VOICETRUST.SINK.HIGH_RISK
     stage: LABEL
     then: STEP_UP
@@ -79,3 +84,14 @@ rules:
       all:
         - tool: voice_command
         - fact: voice_sink_high
+        - not: {fact: approval_valid}
+  - id: VOICETRUST.SPOOF.NOT_RUN
+    stage: ML
+    then: STEP_UP
+    explain: "Anti-spoof check did not run; out-of-band approval required"
+    when:
+      all:
+        - tool: voice_command
+        - not:
+            fact: voice_spoof_ran
+        - not: {fact: approval_valid}

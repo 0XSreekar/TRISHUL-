@@ -15,6 +15,7 @@ Invariant -> test map (property tests live in ``tests/property``):
 * I7 audit byte flip gives exact ``bad_index``      -> ``tests/property/test_audit_mutation.py``
 """
 
+import time
 from typing import Any
 
 import z3  # type: ignore[import-untyped]
@@ -141,8 +142,17 @@ def prove_all(policy: ast.CompiledPolicy, timeout_ms: int = 10000) -> dict[str, 
             negation = build(policy, m)
             if negation is None:
                 continue
+            started = time.perf_counter()
             result, cex = _check(m, negation, timeout_ms)
-            rows.append({"id": inv_id, "tool": tool, "result": result, "counterexample": cex})
+            rows.append(
+                {
+                    "id": inv_id,
+                    "tool": tool,
+                    "result": result,
+                    "solve_ms": round((time.perf_counter() - started) * 1000, 3),
+                    "counterexample": cex,
+                }
+            )
     results = {r["result"] for r in rows}
     overall = "UNSAT" if results <= {"UNSAT"} else ("SAT" if "SAT" in results else "UNKNOWN")
     return {"result": overall, "solver": "z3", "property": PROPERTY, "per_invariant": rows}

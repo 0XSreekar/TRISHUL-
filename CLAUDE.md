@@ -59,6 +59,10 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-09-30 | Phase 1 gate re-verification (clean clone) | ✅ Complete | All checks green from fresh clone; fixed replay forwarding synthetic audit_verify (fake TAMPERED) and latency marked measured in replay |
 | 2026-09-30 | Phase 2 security kernel (gateway, PayShield, PurposeLock, VoiceTrust, Merkle audit, Z3) | ✅ Complete | 415 tests passed, 22 invariants UNSAT, all CSRF/approval/audit fixes verified end-to-end |
 | 2026-09-30 | VoiceTrust on real models (mlx-whisper Metal, DF_Arena 1B/500M, faster-whisper fallback) | ✅ Complete | Pinned revisions, TTS samples (en/en-IN/hi/te), bench/voice.json measured, voice_models tests; see docs/phase-2-report.md |
+| 2026-10-01 | Phase 3 backend (ON/OFF demo ns, audit proofs API, /prove unsafe fixture, Red-Team Wall, FinBot 6 moments, CLI) | ✅ Complete | AT-11..15,17 pass; operator Bearer token on all mutating routes |
+| 2026-10-01 | Phase 3 benchmarks (`trishul bench` -> bench/results.json) | ✅ Complete | India 49 attacks/34 benign ASR 0.0 on vs 0.9167 off; AgentDojo banking subset (qwen3:8b local) ASR 0.1667 -> 0.0, clean utility 0.5 -> 0.4375 |
+| 2026-10-01 | Phase 3 console + landing wired to real WS/REST, vendored React/Babel | ✅ Complete | Headless-Chrome checked feed + bench panel; not every drawer clicked |
+| 2026-10-01 | Opus gates: 13 backend fixes + task-pin/voice-nonce fixes; Docker, runbook, README, threat model, phase-3-report | ✅ Complete | 479 passed/5 skipped, 22 invariants UNSAT, docker compose smoke OK, pip-audit clean |
 
 ---
 
@@ -168,5 +172,5 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
 
 ---
 
-**Last Updated**: 2026-09-30 (Phase 1 foundation)
+**Last Updated**: 2026-10-01 (Phase 3 showcase complete)
 **Update Frequency**: After every task (MANDATORY)

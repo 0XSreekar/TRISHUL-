@@ -8,21 +8,28 @@ used from one thread.
 
 import asyncio
 import concurrent.futures
-import importlib
 import json
+import os
 import re
+import secrets
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Literal, TypeVar
+
+from fastmcp import Client
 
 from trishul.approvals import ApprovalError
 from trishul.audit.verify import verify
 from trishul.contracts.calls import ToolCategory
 from trishul.domains.dpdp import dpdp_report
 from trishul.domains.purposelock import ConsentRecord, ConsentRegistry
+from trishul.finbot import FinBot
+from trishul.finbot.moments import run_moment
 from trishul.gateway.pipeline import Pipeline
+from trishul.gateway.showcase import ShowcaseMixin
 from trishul.gateway.taint import Task
 from trishul.observability.redaction import redact_args
+from trishul.redteam.service import RedTeam
 from trishul.store.db import DEMO_PRINCIPAL, iso, parse_iso
 
 T = TypeVar("T")
@@ -30,11 +37,50 @@ _ID = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 MAX_TEXT = 4000
 
 
-class Backend:
+class Backend(ShowcaseMixin):
     def __init__(self, pipeline: Pipeline) -> None:
         self.p = pipeline
         self.loop: asyncio.AbstractEventLoop | None = None
+        self.mcp: Any = None  # the gateway's FastMCP (set by build_gateway)
         self.registry = ConsentRegistry(pipeline.conn, pipeline.clock)
+        self.redteam = RedTeam(pipeline, self._attack)
+        self.control_baseline()
+
+    # --- scripted agent plumbing --------------------------------------------------------
+    def finbot_client(self) -> Client[Any]:
+        """In-memory MCP transport; ``TRISHUL_FINBOT_URL`` targets the real gateway URL."""
+        url = os.environ.get("TRISHUL_FINBOT_URL")
+        if self.mcp is None and not url:
+            raise RuntimeError("gateway MCP not attached")
+        return Client(url or self.mcp)
+
+    async def _attack(self, text: str, doc_id: str, moderated: bool) -> dict[str, Any]:
+        async with self.finbot_client() as client:
+            return await FinBot(client, self, self.p.bus, agent="redteam").attack(
+                text, doc_id, moderated
+            )
+
+    async def demo_moment(self, n: int, step: int | None = None) -> dict[str, Any]:
+        if isinstance(n, bool) or not 1 <= n <= 6:
+            raise ValueError("moment must be 1..6")
+        async with self.finbot_client() as client:
+            bot = FinBot(client, self, self.p.bus, agent="finbot")
+            out: dict[str, Any] = await run_moment(self, bot, n, step)
+            return out
+
+    async def redteam_submit(self, text: object, client_ip: str) -> dict[str, Any]:
+        res: dict[str, Any] = await self.redteam.submit(text, client_ip)
+        return res
+
+    async def redteam_fallback(self, count: int | None = None) -> list[dict[str, Any]]:
+        done: list[dict[str, Any]] = await self.redteam.fallback(count)
+        return done
+
+    def redteam_stats(self) -> dict[str, Any]:
+        return self._run(self.redteam.stats)
+
+    def redteam_kill(self, on: bool) -> dict[str, Any]:
+        return self._run(lambda: self.redteam.set_killed(on))
 
     # --- thread marshalling -------------------------------------------------------------
     def _run(self, fn: Callable[[], T]) -> T:
@@ -106,7 +152,7 @@ class Backend:
             return ident
         for aid, call_id in self.p.approval_calls.items():
             if call_id == ident:
-                return aid
+                return str(aid)
         raise KeyError(ident)
 
     def _approval_dict(self, row: Any) -> dict[str, Any]:
@@ -220,6 +266,10 @@ class Backend:
                     params=params,
                 )
             )
+            pin: str | None = None
+            if payload.get("pinnable") is True:  # harness tasks: a call may pin this id in meta
+                pin = secrets.token_urlsafe(16)  # bearer secret: returned once, never logged
+                self.p.pinnable[task.task_id] = pin
             self.p.audit.append(
                 {
                     "domain": "core",
@@ -231,14 +281,21 @@ class Backend:
                     "ts": iso(self.p.clock()),
                 }
             )
-            return {
+            out = {
                 "task_id": task.task_id,
                 "principal": task.principal,
                 "purpose": task.purpose,
                 "category": task.category.value,
             }
+            if pin is not None:
+                out["task_pin"] = pin
+            return out
 
         return self._run(go)
+
+    def unpin_task(self, task_id: str) -> None:
+        """Drop a harness task's pin once its run is over (pins are single-run secrets)."""
+        self.p.pinnable.pop(task_id, None)
 
     def issue_voice_nonce(self, session: str) -> dict[str, Any]:
         nonce = self.p.voice.nonces.issue(session)
@@ -257,6 +314,10 @@ class Backend:
                 "size": result.size,
                 "bad_index": result.bad_index,
                 "invalid_sths": list(result.invalid_sths),
+                "tree_head": {
+                    "size": self.p.audit.size(),
+                    "root": self.p.audit.root().hex(),
+                },
             }
             self.p.bus.publish(
                 {
@@ -269,18 +330,6 @@ class Backend:
             return out
 
         return self._run(go)
-
-    def prove(self) -> dict[str, Any]:
-        """Z3 proofs arrive with ``trishul.verify`` (T6); until then report UNAVAILABLE."""
-        try:
-            mod = importlib.import_module("trishul.verify")
-        except ImportError:
-            return {"result": "UNAVAILABLE", "solver": "z3", "per_invariant": []}
-        fn = getattr(mod, "prove_all", None)
-        if not callable(fn):
-            return {"result": "UNAVAILABLE", "solver": "z3", "per_invariant": []}
-        out = fn(self.p.policy)
-        return dict(out) if isinstance(out, dict) else {"result": "UNAVAILABLE"}
 
     def dpdp(self) -> dict[str, Any]:
         return self._run(lambda: dpdp_report(self.p.conn, self.p.keys))

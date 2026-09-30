@@ -90,6 +90,9 @@ def build_parser() -> argparse.ArgumentParser:
     start = top.add_parser("start", help="run the gateway (MCP + REST/WS)")
     _db_arg(start)
     start.add_argument("--seed", type=int, default=None, help="reset the demo state with this seed")
+    start.add_argument(
+        "--host", default="127.0.0.1", help="bind address for the API and MCP servers"
+    )
     start.add_argument("--port", type=int, default=DEFAULT_PORT, help="REST/WS API port")
     start.add_argument("--mcp-port", type=int, default=DEFAULT_MCP_PORT, help="MCP HTTP port")
     start.add_argument(
@@ -111,6 +114,14 @@ def build_parser() -> argparse.ArgumentParser:
     reset = demo.add_parser("reset", help="wipe and reseed deterministic demo state")
     _db_arg(reset)
     reset.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    tamper = demo.add_parser("tamper", help="mutate one stored audit payload (demo tampering)")
+    _db_arg(tamper)
+    tamper.add_argument("--idx", type=int, required=True, help="audit leaf index to tamper with")
+    rt = top.add_parser("redteam", help="red-team wall controls").add_subparsers(
+        dest="cmd", required=True
+    )
+    for name, help_text in (("kill", "stop accepting submissions"), ("resume", "accept again")):
+        _db_arg(rt.add_parser(name, help=help_text))
     for name in ("approve", "reject"):
         ap = top.add_parser(name, help=f"{name} a pending step-up approval")
         _db_arg(ap)
@@ -125,6 +136,9 @@ def build_parser() -> argparse.ArgumentParser:
     bind.add_argument("--params", default="{}", help="JSON object of trusted task parameters")
     bind.add_argument("--principal", default=None)
     bind.add_argument("--task-id", default=None)
+    from trishul.bench.cli import register as _register_bench
+
+    _register_bench(top)
     return parser
 
 
@@ -187,15 +201,53 @@ def _report_dpdp(db: Path) -> int:
 
 def _ml(db: Path, state: str) -> int:
     gw = _gateway(db)
-    gw.backend.set_ml(state == "on")
+    gw.backend.set_ml_cli(state == "on")  # applies + audits, then a control row for the gateway
     _print({"ml": state})
+    return 0
+
+
+def _redteam(db: Path, on: bool) -> int:
+    gw = _gateway(db)
+    stats = gw.backend.redteam_kill_cli(on)
+    _print({"redteam_killed": on, **stats})
+    return 0
+
+
+def _demo_tamper(db: Path, idx: int) -> int:
+    """``UPDATE audit_leaves SET payload=? WHERE idx=?`` with one JSON field mutated (the stored
+    leaf hash is left alone, so ``trishul verify`` reports exactly ``bad_index == idx``)."""
+    conn, _ = _open(db)
+    row = conn.execute("SELECT payload FROM audit_leaves WHERE idx=?", (idx,)).fetchone()
+    if row is None:
+        print(f"no audit leaf at index {idx}", file=sys.stderr)
+        return 1
+    try:
+        event = json.loads(bytes(row["payload"]))
+        if not isinstance(event, dict):
+            raise ValueError
+    except ValueError:
+        print(f"audit leaf {idx} is not a JSON object", file=sys.stderr)
+        return 1
+    field = "decision" if "decision" in event else "type" if "type" in event else None
+    if field is None:
+        event["tampered"] = True
+        field = "tampered"
+    elif event[field] == "ALLOW":
+        event[field] = "DENY"
+    elif field == "decision":
+        event[field] = "ALLOW"
+    else:
+        event[field] = str(event[field]) + "-tampered"
+    payload = json.dumps(event, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    conn.execute("UPDATE audit_leaves SET payload=? WHERE idx=?", (payload.encode(), idx))
+    _print({"tampered": idx, "field": field})
     return 0
 
 
 def _demo_reset(db: Path, seed: int) -> int:
     from trishul.crypto.keys import KeyRing
     from trishul.gateway.app import seed_demo_mandate
-    from trishul.store.db import DEMO_NOW, connect, reset
+    from trishul.store.db import DEMO_NOW, connect, iso, reset
     from trishul.store.ids import IdGen
 
     conn = connect(db)
@@ -203,6 +255,10 @@ def _demo_reset(db: Path, seed: int) -> int:
     mandate = seed_demo_mandate(conn, KeyRing.from_seed(seed), now=DEMO_NOW)
     conn.execute(
         "INSERT OR REPLACE INTO meta(key, value) VALUES ('id_counter', ?)", (str(ids.counter),)
+    )
+    conn.execute(
+        "INSERT INTO control(key, value, origin, ts) VALUES ('reset', ?, 'cli', ?)",
+        (str(seed), iso(DEMO_NOW)),
     )
     preview = IdGen(seed, start=ids.counter).new("call")
     _print(
@@ -255,6 +311,21 @@ def _task_bind(args: argparse.Namespace) -> int:
     return 0
 
 
+def _ensure_operator_token(db: Path) -> Path:
+    """Operator token: TRISHUL_OPERATOR_TOKEN if set, else a fresh random one. Always written to
+    ``<db_dir>/operator.token`` (mode 0600); the token itself is never printed."""
+    import secrets
+
+    tok = os.environ.get("TRISHUL_OPERATOR_TOKEN") or secrets.token_urlsafe(32)
+    os.environ["TRISHUL_OPERATOR_TOKEN"] = tok
+    path = db.resolve().parent / "operator.token"
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        fh.write(tok + "\n")
+    os.chmod(path, 0o600)
+    return path
+
+
 def _start(args: argparse.Namespace) -> int:
     import uvicorn
 
@@ -275,6 +346,7 @@ def _start(args: argparse.Namespace) -> int:
         from trishul.store.ids import IdGen
 
         ids = IdGen(seed, start=int(counter["value"]) if counter else 0)
+    token_path = _ensure_operator_token(db)
     if args.in_process:
         gw = build_gateway(conn, ids, seed=seed)
     else:
@@ -284,19 +356,22 @@ def _start(args: argparse.Namespace) -> int:
         gw.backend.loop = asyncio.get_running_loop()
         server = uvicorn.Server(
             uvicorn.Config(
-                gw.api(port=args.port), host="127.0.0.1", port=args.port, log_level="warning"
+                gw.api(port=args.port), host=args.host, port=args.port, log_level="warning"
             )
         )
         mode = "in-process" if args.in_process else "stdio subprocesses"
+        print(f"operator token file: {token_path} (send as 'Authorization: Bearer <token>')")
+        print("readiness:", json.dumps(gw.backend.readyz(), sort_keys=True), flush=True)
         print(
             f"TRISHUL gateway: MCP http://127.0.0.1:{args.mcp_port}/mcp  API :{args.port}"
             f"  servers={mode}  seed={seed}",
             flush=True,
         )
         await asyncio.gather(
+            gw.backend.run_control_poller(),
             server.serve(),
             gw.mcp.run_http_async(
-                transport="http", host="127.0.0.1", port=args.mcp_port, show_banner=False
+                transport="http", host=args.host, port=args.mcp_port, show_banner=False
             ),
         )
 
@@ -327,13 +402,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         case "ml":
             return _ml(args.db, args.state)
         case "demo":
+            if args.cmd == "tamper":
+                return _demo_tamper(args.db, args.idx)
             return _demo_reset(args.db, args.seed)
+        case "redteam":
+            return _redteam(args.db, args.cmd == "kill")
         case "approve":
             return _resolve(args.db, args.approval_id, "approve", args.approver)
         case "reject":
             return _resolve(args.db, args.approval_id, "reject", args.approver)
         case "task":
             return _task_bind(args)
+        case "bench":
+            from trishul.bench.cli import run as _run_bench
+
+            return _run_bench(args)
     return 2  # pragma: no cover - argparse enforces the choices
 
 

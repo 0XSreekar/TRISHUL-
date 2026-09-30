@@ -26,6 +26,7 @@ dev = [
     "types-PyYAML",
 ]
 mcp = ["fastmcp>=2.9"]
+bench = ["agentdojo==0.1.35"]
 voice = [
     "mlx-whisper>=0.4",
 ]
@@ -63,6 +64,10 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 strict = true
 python_version = "3.12"
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["agentdojo", "agentdojo.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

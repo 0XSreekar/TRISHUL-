@@ -58,3 +58,22 @@ def make_ctx(**kw: object) -> EvalContext:
 
 
 __all__ = ["NOW", "TRUSTED", "UNTRUSTED", "Tag", "make_call", "make_ctx"]
+
+
+OP_TOKEN = "test-operator-token"
+
+
+@pytest.fixture(autouse=True)
+def _operator_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Operator routes always need a bearer token: set one and send it by default from every
+    TestClient (auth tests override the header explicitly)."""
+    from starlette.testclient import TestClient
+
+    monkeypatch.setenv("TRISHUL_OPERATOR_TOKEN", OP_TOKEN)
+    orig = TestClient.__init__
+
+    def init(self, *a, **kw):  # type: ignore[no-untyped-def]
+        hdrs = {"authorization": f"Bearer {OP_TOKEN}", **(kw.pop("headers", None) or {})}
+        orig(self, *a, headers=hdrs, **kw)
+
+    monkeypatch.setattr(TestClient, "__init__", init)

@@ -1146,6 +1146,17 @@
   var REACT_DOM_SRI = "sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1";
   var BABEL_URL = "https://unpkg.com/@babel/standalone@7.29.0/babel.min.js";
   var BABEL_SRI = "sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y";
+  // Offline-first: prefer the copy vendored next to this file (vendor/), fall back to unpkg (+SRI).
+  var VENDOR_BASE = ((document.currentScript && document.currentScript.src) || "").replace(/[^/]*$/, "") + "vendor/";
+  function vendorLocal(url) {
+    return VENDOR_BASE + url.split("/").pop();
+  }
+  function loadVendored(url, sri) {
+    const res = window.__resources;
+    const v = res ? res[url] : void 0;
+    if (typeof v === "string" && v) return loadScript(v);
+    return loadScript(vendorLocal(url)).catch(() => loadScript(url, sri));
+  }
   function cdnScriptFor(url, sri) {
     const res = window.__resources;
     const v = res ? res[url] : void 0;
@@ -1176,18 +1187,7 @@
     function ensureBabel() {
       if (window.Babel) return Promise.resolve();
       if (babelLoading) return babelLoading;
-      const babel = cdnScriptFor(BABEL_URL, BABEL_SRI);
-      babelLoading = new Promise((res, rej) => {
-        const s = document.createElement("script");
-        s.src = babel.src;
-        if (babel.integrity) {
-          s.integrity = babel.integrity;
-          s.crossOrigin = "anonymous";
-        }
-        s.onload = () => res();
-        s.onerror = rej;
-        document.head.appendChild(s);
-      });
+      babelLoading = loadVendored(BABEL_URL, BABEL_SRI);
       return babelLoading;
     }
     const pending = /* @__PURE__ */ new Map();
@@ -1838,11 +1838,9 @@
   function loadReactUmd() {
     const w = window;
     if (w.React && w.ReactDOM) return Promise.resolve();
-    const react = cdnScriptFor(REACT_URL, REACT_SRI);
-    const reactDom = cdnScriptFor(REACT_DOM_URL, REACT_DOM_SRI);
     return Promise.all([
-      loadScript(react.src, react.integrity),
-      loadScript(reactDom.src, reactDom.integrity)
+      loadVendored(REACT_URL, REACT_SRI),
+      loadVendored(REACT_DOM_URL, REACT_DOM_SRI)
     ]).then(() => void 0);
   }
   function init() {

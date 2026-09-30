@@ -28,7 +28,7 @@ button{font-family:inherit}
     <div style="position:absolute;inset:0;transform-origin:50% 58%;transform:{{ plane }};transition:transform 4.6s cubic-bezier(.45,0,.2,1)">
       <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(202,217,226,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(202,217,226,.035) 1px,transparent 1px);background-size:40px 40px"></div>
 
-      <div style="position:absolute;left:32px;right:32px;top:18px;height:56px;box-sizing:border-box;display:flex;align-items:center;gap:26px;padding:0 18px;border:1px solid rgba(202,217,226,.1);border-radius:12px;background:linear-gradient(180deg,rgba(33,57,71,.5),rgba(33,57,71,.18));box-shadow:inset 0 1px 0 rgba(255,255,255,.06)">
+      <div style="position:absolute;left:32px;right:32px;top:18px;height:56px;box-sizing:border-box;display:flex;align-items:center;gap:18px;padding:0 18px;border:1px solid rgba(202,217,226,.1);border-radius:12px;background:linear-gradient(180deg,rgba(33,57,71,.5),rgba(33,57,71,.18));box-shadow:inset 0 1px 0 rgba(255,255,255,.06)">
         <a href="Trishul-Landing.dc.html" style="display:flex;align-items:center;gap:12px">
           <span style="display:flex;flex-direction:column;align-items:center;gap:2px">
             <span style="display:flex;align-items:flex-end;gap:3px"><span style="width:2px;height:8px;background:#CAD9E2"></span><span style="width:2px;height:13px;background:#CAD9E2"></span><span style="width:2px;height:8px;background:#CAD9E2"></span></span>
@@ -40,30 +40,43 @@ button{font-family:inherit}
           </span>
         </a>
         <span style="width:1px;height:28px;background:rgba(202,217,226,.12)"></span>
-        <div style="display:flex;gap:26px">
+        <div style="display:flex;gap:20px">
           <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">CALLS TODAY</span><span style="font-size:18px;font-weight:300;font-variant-numeric:tabular-nums">{{ calls }}</span></div>
           <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">BLOCKED</span><span style="font-size:18px;font-weight:300;color:#E5533D;font-variant-numeric:tabular-nums">{{ blocked }}</span></div>
           <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">ATTACKS STOPPED</span><span style="font-size:18px;font-weight:300;color:#E5533D;font-variant-numeric:tabular-nums">{{ attacks }}</span></div>
           <div data-trishul="latency" data-state="{{ latState }}" style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">P99 LATENCY</span><span style="font-size:18px;font-weight:300;font-variant-numeric:tabular-nums">{{ p99 }}<span style="font-size:11px;color:#8B98A1">{{ p99u }}</span></span></div>
         </div>
         <span style="flex:1"></span>
-        <div data-trishul="audit-root" data-state="{{ auditState }}" style="display:flex;align-items:center;gap:10px;animation:{{ auditAnim }}">
+        <div data-trishul="audit-root" data-state="{{ auditState }}" onClick="{{ openAudit }}" style="display:flex;align-items:center;gap:10px;cursor:pointer;animation:{{ auditAnim }}">
           <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">AUDIT CHAIN</span>
           <span style="font-size:12px;letter-spacing:.14em;color:{{ auditColor }}">{{ auditText }}</span>
           <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ rootColor }}">{{ root }}</span>
         </div>
         <span style="width:1px;height:28px;background:rgba(202,217,226,.12)"></span>
-        <div data-trishul="domain-status" data-state="unavailable" style="display:flex;gap:6px">
-          <button data-trishul="approval-state" onClick="{{ openApprovals }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(232,163,61,.45);background:rgba(232,163,61,.08);color:#E8A33D;font-size:10.5px;letter-spacing:.14em;cursor:pointer">APPROVALS · {{ pending }}</button>
-          <button onClick="{{ openVoice }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">VOICETRUST</button>
-          <button onClick="{{ openPurpose }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">PURPOSELOCK</button>
-          <button onClick="{{ openProof }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">PROOF</button>
-          <button onClick="{{ openRed }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">RED-TEAM</button>
+        <div data-trishul="domain-status" data-state="{{ domState }}" style="display:flex;gap:6px">
+          <button data-trishul="approval-state" onClick="{{ openApprovals }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(232,163,61,.45);background:rgba(232,163,61,.08);color:#E8A33D;font-size:10.5px;letter-spacing:.14em;white-space:nowrap;cursor:pointer">APPROVALS · {{ pending }}</button>
+          <button onClick="{{ openPay }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;white-space:nowrap;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">PAYSHIELD</button>
+          <button onClick="{{ openVoice }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;white-space:nowrap;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">VOICETRUST</button>
+          <button onClick="{{ openPurpose }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;white-space:nowrap;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">PURPOSELOCK</button>
+          <button onClick="{{ openProof }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;white-space:nowrap;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">PROOF</button>
+          <button onClick="{{ openRed }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;white-space:nowrap;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">RED-TEAM</button>
+          <button onClick="{{ openDemo }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;white-space:nowrap;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">DEMO</button>
         </div>
-        <div style="display:flex;padding:3px;border-radius:9px;border:1px solid rgba(202,217,226,.12);background:rgba(6,9,12,.5)">
-          <button onClick="{{ goReplay }}" style="height:24px;padding:0 10px;border-radius:6px;border:0;background:{{ replayBg }};color:#CAD9E2;font-size:10px;letter-spacing:.16em;cursor:pointer">REPLAY</button>
-          <button onClick="{{ goLive }}" style="height:24px;padding:0 10px;border-radius:6px;border:0;background:{{ liveBg }};color:#CAD9E2;font-size:10px;letter-spacing:.16em;cursor:pointer">LIVE</button>
-        </div>
+        <sc-if value="{{ isReplay }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;padding:3px;border-radius:9px;border:1px solid rgba(202,217,226,.12);background:rgba(6,9,12,.5)">
+            <button onClick="{{ goReplay }}" style="height:24px;padding:0 10px;border-radius:6px;border:0;background:{{ replayBg }};color:#CAD9E2;font-size:10px;letter-spacing:.16em;cursor:pointer">REPLAY</button>
+            <button onClick="{{ goLive }}" style="height:24px;padding:0 10px;border-radius:6px;border:0;background:{{ liveBg }};color:#CAD9E2;font-size:10px;letter-spacing:.16em;cursor:pointer">LIVE</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
+          <div data-trishul="mode-toggle" data-state="{{ modeState }}" style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">TRISHUL</span>
+            <div style="display:flex;padding:3px;border-radius:9px;border:1px solid rgba(202,217,226,.12);background:rgba(6,9,12,.5)">
+              <button onClick="{{ setOn }}" style="height:24px;padding:0 10px;border-radius:6px;border:0;background:{{ onBg }};color:#CAD9E2;font-size:10px;letter-spacing:.16em;cursor:pointer">ON</button>
+              <button onClick="{{ setOff }}" style="height:24px;padding:0 10px;border-radius:6px;border:0;background:{{ offBg }};color:{{ offCol }};font-size:10px;letter-spacing:.16em;cursor:pointer">OFF</button>
+            </div>
+          </div>
+        </sc-if>
       </div>
 
       <sc-if value="{{ showStatus }}" hint-placeholder-val="{{ false }}">
@@ -147,6 +160,7 @@ button{font-family:inherit}
           <sc-if value="{{ mlOff }}" hint-placeholder-val="{{ false }}">
             <span style="font-size:10px;letter-spacing:.18em;padding:4px 9px;border-radius:6px;border:1px dashed rgba(202,217,226,.45);color:#CAD9E2">RULES ONLY · ML OFF</span>
           </sc-if>
+          <button onClick="{{ openBench }}" style="height:24px;padding:0 10px;border-radius:6px;border:1px solid rgba(202,217,226,.14);background:rgba(6,9,12,.4);color:#CAD9E2;font-size:10px;letter-spacing:.16em;cursor:pointer">BENCH</button>
           <button onClick="{{ cycleFilter }}" style="height:24px;padding:0 10px;border-radius:6px;border:1px solid rgba(202,217,226,.14);background:rgba(6,9,12,.4);color:#CAD9E2;font-size:10px;letter-spacing:.16em;cursor:pointer">FILTER · {{ filterLabel }}</button>
         </div>
         <div style="position:absolute;left:48px;right:24px;top:28px;height:220px;background:repeating-linear-gradient(180deg,rgba(202,217,226,.06) 0 1px,transparent 1px 55px)"></div>
@@ -270,12 +284,29 @@ button{font-family:inherit}
                   <span style="width:36px;text-align:right;font-family:'JetBrains Mono',monospace">{{ sc.val }}</span>
                 </div>
               </sc-for>
-              <sc-if value="{{ d.noScores }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8B98A1">Classifier off. Rules decided alone.</span></sc-if>
+              <sc-if value="{{ d.noScores }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8B98A1">{{ d.noScoresText }}</span></sc-if>
             </div>
             <sc-if value="{{ d.hasEffect }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:6px">
                 <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">EFFECT PREVIEW</span>
                 <span style="font-size:15px">{{ d.effect }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ d.hasLineage }}" hint-placeholder-val="{{ false }}">
+              <div data-trishul="lineage-detail" style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">LINEAGE · SOURCE → DERIVE → SINK</span>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                  <sc-for list="{{ d.lineage }}" as="ln" hint-placeholder-count="3">
+                    <span style="display:flex;align-items:center;gap:6px;opacity:{{ ln.op }};transition:opacity .6s"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid {{ ln.col }};color:{{ ln.col }};word-break:break-all">{{ ln.text }}</span><span style="color:#8B98A1;font-size:11px">{{ ln.arrow }}</span></span>
+                  </sc-for>
+                </div>
+                <sc-for list="{{ d.edges }}" as="eg" hint-placeholder-count="2"><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8B98A1;word-break:break-all">{{ eg.text }}</span></sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ d.hasExtra }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">MODE · APPROVAL · MANDATE</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;word-break:break-all">{{ d.extra }}</span>
               </div>
             </sc-if>
             <div style="display:flex;flex-direction:column;gap:6px">
@@ -290,12 +321,17 @@ button{font-family:inherit}
         </sc-if>
 
         <sc-if value="{{ isApprovals }}" hint-placeholder-val="{{ false }}">
-          <div data-trishul="approval-state" style="display:flex;flex-direction:column;gap:12px">
+          <div data-trishul="approval-state" data-state="{{ apState }}" style="display:flex;flex-direction:column;gap:12px">
+            <sc-if value="{{ apOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ apState }}" style="font-size:12.5px;line-height:1.5;color:{{ apCol }}">{{ apMsg }}</span></sc-if>
             <sc-for list="{{ approvals }}" as="ap" hint-placeholder-count="1">
               <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:12px;border:1px solid {{ ap.border }};background:rgba(33,57,71,.35)">
                 <div style="display:flex;justify-content:space-between;font-size:11px"><span style="font-family:'JetBrains Mono',monospace">{{ ap.tool }} · {{ ap.agent }}</span><span style="font-family:'JetBrains Mono',monospace;color:#4FD1C5">{{ ap.time }}</span></div>
                 <span style="font-size:17px">{{ ap.effect }}</span>
                 <span style="font-size:12px;color:#8B98A1">{{ ap.reason }}</span>
+                <div data-trishul="approval-binding" data-state="{{ ap.bindState }}" style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">BINDING</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#4FD1C5;word-break:break-all">{{ ap.binding }}</span>
+                </div>
                 <sc-if value="{{ ap.open }}" hint-placeholder-val="{{ true }}">
                   <div style="display:flex;gap:8px">
                     <button onClick="{{ ap.approve }}" style="height:32px;padding:0 16px;border-radius:8px;border:1px solid #45829B;background:rgba(69,130,155,.25);color:#CAD9E2;font-size:11px;letter-spacing:.16em;cursor:pointer">APPROVE</button>
@@ -305,32 +341,40 @@ button{font-family:inherit}
                 <sc-if value="{{ ap.done }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;letter-spacing:.16em;color:{{ ap.col }}">{{ ap.status }}</span></sc-if>
               </div>
             </sc-for>
-            <sc-if value="{{ noApprovals }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#8B98A1">No STEP_UP decisions yet.</span></sc-if>
+            <sc-if value="{{ hasMismatch }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">BINDING CHECKS · DENIED AT GATE</span></sc-if>
+            <sc-for list="{{ mismatches }}" as="mm" hint-placeholder-count="0">
+              <div onClick="{{ mm.open }}" style="display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:10px;border:1px solid rgba(229,83,61,.5);background:rgba(229,83,61,.08);cursor:pointer"><span style="font-family:'JetBrains Mono',monospace;font-size:12px">{{ mm.summary }}</span><span style="font-size:11px;letter-spacing:.12em;color:#E5533D">{{ mm.rule }}</span><span style="font-size:12px;color:#8B98A1">{{ mm.reason }}</span></div>
+            </sc-for>
           </div>
         </sc-if>
 
         <sc-if value="{{ isVoice }}" hint-placeholder-val="{{ false }}">
-          <sc-if value="{{ v.has }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;flex-direction:column;gap:20px">
-              <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">LATEST VOICE COMMAND · {{ v.time }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:14px">“{{ v.transcript }}”</span></div>
-              <div style="display:flex;flex-direction:column;gap:10px">
-                <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">SPOOF SCORE</span><span style="font-size:34px;font-weight:200;color:{{ v.col }}">{{ v.spoof }}</span></div>
-                <div style="position:relative;height:8px;border-radius:4px;background:linear-gradient(90deg,rgba(69,130,155,.5),rgba(232,163,61,.5) 50%,rgba(229,83,61,.6))">
-                  <span style="position:absolute;top:-4px;left:{{ v.pct }}%;width:2px;height:16px;margin-left:-1px;background:#FFFFFF;box-shadow:0 0 8px #FFFFFF"></span>
+          <div data-trishul="voice-state" data-state="{{ v.state }}" style="display:flex;flex-direction:column;gap:20px">
+            <sc-if value="{{ v.has }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:20px">
+                <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">LATEST VOICE COMMAND · {{ v.time }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:14px;word-break:break-all">{{ v.transcript }}</span></div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">SPOOF SCORE</span><span style="font-size:34px;font-weight:200;color:{{ v.col }}">{{ v.spoof }}</span></div>
+                  <div style="position:relative;height:8px;border-radius:4px;background:linear-gradient(90deg,rgba(69,130,155,.5),rgba(232,163,61,.5) 50%,rgba(229,83,61,.6))">
+                    <span style="position:absolute;top:-4px;left:{{ v.pct }}%;width:2px;height:16px;margin-left:-1px;background:#FFFFFF;box-shadow:0 0 8px #FFFFFF"></span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:#8B98A1"><span>0</span><span>0.5</span><span>1</span></div>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:#8B98A1"><span>0</span><span>0.5</span><span>1</span></div>
+                <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">LIVENESS</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px">{{ v.liveness }}</span></div>
+                <div style="display:flex;align-items:center;gap:12px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">FINAL DECISION</span><span style="padding:4px 10px;border-radius:6px;border:1px solid {{ v.col }};color:{{ v.col }};font-size:11px;letter-spacing:.16em">{{ v.decision }}</span></div>
+                <span style="font-size:13px;line-height:1.55;color:#8B98A1">{{ v.reason }}</span>
               </div>
-              <sc-if value="{{ v.hasPhrase }}" hint-placeholder-val="{{ false }}">
-                <div style="display:flex;align-items:center;gap:18px;padding:14px;border-radius:12px;background:rgba(33,57,71,.35)">
-                  <svg width="56" height="56" viewBox="0 0 56 56"><circle cx="28" cy="28" r="22" fill="none" stroke="rgba(202,217,226,.12)" stroke-width="3"></circle><circle cx="28" cy="28" r="22" fill="none" stroke="#E8A33D" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="{{ v.ring }}" transform="rotate(-90 28 28)" stroke-linecap="round"></circle><text x="28" y="32" text-anchor="middle" fill="#CAD9E2" font-size="12" font-family="JetBrains Mono">{{ v.secs }}</text></svg>
-                  <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">LIVENESS PHRASE</span><span style="font-size:18px">{{ v.phrase }}</span></div>
-                </div>
-              </sc-if>
-              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">FINAL DECISION</span><span style="padding:4px 10px;border-radius:6px;border:1px solid {{ v.col }};color:{{ v.col }};font-size:11px;letter-spacing:.16em">{{ v.decision }}</span></div>
-              <span style="font-size:13px;line-height:1.55;color:#8B98A1">{{ v.reason }}</span>
-            </div>
-          </sc-if>
-          <sc-if value="{{ v.none }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#8B98A1">No voice commands in the stream yet.</span></sc-if>
+            </sc-if>
+            <sc-if value="{{ v.none }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#8B98A1">{{ v.noneText }}</span></sc-if>
+            <sc-if value="{{ v.hasPhrase }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:18px;padding:14px;border-radius:12px;background:rgba(33,57,71,.35)">
+                <svg width="56" height="56" viewBox="0 0 56 56"><circle cx="28" cy="28" r="22" fill="none" stroke="rgba(202,217,226,.12)" stroke-width="3"></circle><circle cx="28" cy="28" r="22" fill="none" stroke="#E8A33D" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="{{ v.ring }}" transform="rotate(-90 28 28)" stroke-linecap="round"></circle><text x="28" y="32" text-anchor="middle" fill="#CAD9E2" font-size="12" font-family="JetBrains Mono">{{ v.secs }}</text></svg>
+                <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">LIVENESS PHRASE</span><span style="font-size:18px">{{ v.phrase }}</span></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ v.canNonce }}" hint-placeholder-val="{{ false }}"><button onClick="{{ issueNonce }}" style="align-self:flex-start;height:32px;padding:0 16px;border-radius:8px;border:1px solid #45829B;background:rgba(69,130,155,.25);color:#CAD9E2;font-size:11px;letter-spacing:.16em;cursor:pointer">ISSUE NONCE</button></sc-if>
+            <sc-if value="{{ nonceOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ nonceState }}" style="font-size:12.5px;line-height:1.5;color:{{ nonceCol }}">{{ nonceMsg }}</span></sc-if>
+          </div>
         </sc-if>
 
         <sc-if value="{{ isPurpose }}" hint-placeholder-val="{{ false }}">
@@ -344,7 +388,8 @@ button{font-family:inherit}
                 <sc-if value="{{ c.active }}" hint-placeholder-val="{{ false }}"><button onClick="{{ c.withdraw }}" style="height:26px;border-radius:6px;border:1px solid rgba(229,83,61,.6);background:transparent;color:#E5533D;font-size:10px;letter-spacing:.1em;cursor:pointer">WITHDRAW</button></sc-if>
               </div>
             </sc-for>
-            <sc-if value="{{ noConsent }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#8B98A1">No consent records loaded.</span></sc-if>
+            <sc-if value="{{ consentOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ consentState }}" style="font-size:12.5px;line-height:1.5;color:{{ consentCol }}">{{ consentMsg }}</span></sc-if>
+            <sc-if value="{{ reportOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ reportState }}" style="font-size:12.5px;line-height:1.5;color:{{ reportCol }}">{{ reportMsg }}</span></sc-if>
             <button onClick="{{ downloadReport }}" style="align-self:flex-start;height:34px;padding:0 16px;border-radius:8px;border:1px solid rgba(202,217,226,.25);background:rgba(33,57,71,.4);color:#CAD9E2;font-size:11px;letter-spacing:.16em;cursor:pointer">DOWNLOAD DPDP REPORT</button>
           </div>
         </sc-if>
@@ -352,38 +397,135 @@ button{font-family:inherit}
         <sc-if value="{{ isProof }}" hint-placeholder-val="{{ false }}">
           <div data-trishul="proof-status" data-state="{{ proofState }}" style="display:flex;flex-direction:column;gap:18px">
             <p style="margin:0;font-size:13px;line-height:1.55;color:#8B98A1">Asks Z3 whether any path lets an untrusted value reach a money, email or export sink.</p>
-            <button onClick="{{ prove }}" style="align-self:flex-start;height:40px;padding:0 26px;border-radius:9px;border:1px solid #45829B;background:rgba(69,130,155,.25);color:#CAD9E2;font-size:12px;letter-spacing:.24em;cursor:pointer">{{ proveLabel }}</button>
-            <sc-if value="{{ proofOk }}" hint-placeholder-val="{{ false }}">
-              <div style="display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:12px;border:1px solid rgba(69,130,155,.6);background:rgba(69,130,155,.12)">
-                <span style="font-size:30px;font-weight:200;color:#45829B;letter-spacing:.08em">UNSAT ✓</span>
-                <span style="font-size:12.5px;line-height:1.5">{{ proofProp }}</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onClick="{{ proveLive }}" style="height:40px;padding:0 22px;border-radius:9px;border:1px solid #45829B;background:rgba(69,130,155,.25);color:#CAD9E2;font-size:12px;letter-spacing:.24em;cursor:pointer">{{ proveLiveLabel }}</button>
+              <button onClick="{{ proveUnsafe }}" style="height:40px;padding:0 22px;border-radius:9px;border:1px solid rgba(229,83,61,.7);background:transparent;color:#E5533D;font-size:12px;letter-spacing:.24em;cursor:pointer">{{ proveUnsafeLabel }}</button>
+            </div>
+            <span style="font-size:12.5px;line-height:1.5;color:#8B98A1">{{ proofNeverSwapped }}</span>
+            <sc-for list="{{ proofBlocks }}" as="pb" hint-placeholder-count="1">
+              <div data-trishul="proof-result" data-state="{{ pb.state }}" style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:12px;border:1px solid {{ pb.border }};background:{{ pb.bg }}">
+                <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">{{ pb.title }}</span>
+                <span style="font-size:26px;font-weight:200;color:{{ pb.col }};letter-spacing:.08em">{{ pb.head }}</span>
+                <span style="font-size:12.5px;line-height:1.5">{{ pb.prop }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8B98A1;word-break:break-all">{{ pb.digest }}</span>
+                <sc-for list="{{ pb.rows }}" as="pr" hint-placeholder-count="2">
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:11.5px"><span style="width:28px;color:#8B98A1">{{ pr.id }}</span><span style="flex:1;min-width:0;word-break:break-all">{{ pr.tool }}</span><span style="color:{{ pr.col }}">{{ pr.result }}</span><span style="width:76px;text-align:right;color:#8B98A1">{{ pr.ms }}</span></div>
+                    <sc-if value="{{ pr.hasCex }}" hint-placeholder-val="{{ false }}"><pre style="margin:0;padding:8px 10px;border-radius:8px;background:rgba(6,9,12,.5);font-family:'JetBrains Mono',monospace;font-size:10.5px;white-space:pre-wrap;word-break:break-all;max-height:160px;overflow:auto;color:#E5533D">{{ pr.cex }}</pre></sc-if>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ pb.hasReplay }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:8px;background:rgba(6,9,12,.5)">
+                    <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">SANDBOXED REPLAY · ONE INJECTED PAYMENT</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;word-break:break-all">{{ pb.replayCall }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#E5533D">{{ pb.replayUnsafe }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#45829B">{{ pb.replayLive }}</span>
+                  </div>
+                </sc-if>
               </div>
-            </sc-if>
-            <sc-if value="{{ proofBad }}" hint-placeholder-val="{{ false }}">
-              <div style="display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:12px;border:1px solid rgba(229,83,61,.6);background:rgba(229,83,61,.1)">
-                <span style="font-size:24px;font-weight:200;color:#E5533D">COUNTEREXAMPLE</span>
-                <pre style="margin:0;font-family:'JetBrains Mono',monospace;font-size:11px;white-space:pre-wrap">{{ proofCex }}</pre>
-              </div>
-            </sc-if>
-            <sc-if value="{{ proofNoteOn }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;line-height:1.5;color:#8B98A1">{{ proofNote }}</span></sc-if>
-            <sc-if value="{{ proofErrOn }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:#E5533D">{{ proofErr }}</span></sc-if>
+            </sc-for>
+            <sc-if value="{{ proofOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ proofState }}" style="font-size:12.5px;line-height:1.5;color:{{ proofCol }}">{{ proofMsg }}</span></sc-if>
           </div>
         </sc-if>
 
         <sc-if value="{{ isRed }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex;flex-direction:column;gap:16px">
+          <div data-trishul="redteam-wall" data-state="{{ rtState }}" style="display:flex;flex-direction:column;gap:16px">
             <div style="display:flex;gap:28px;align-items:baseline">
               <div style="display:flex;flex-direction:column"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">ATTEMPTED</span><span style="font-size:44px;font-weight:200">{{ rtAtt }}</span></div>
               <span style="font-size:30px;font-weight:200;color:#53555A">/</span>
               <div style="display:flex;flex-direction:column"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">SUCCEEDED</span><span style="font-size:44px;font-weight:200;color:{{ rtCol }}">{{ rtSucc }}</span></div>
             </div>
+            <sc-if value="{{ rtKilled }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;letter-spacing:.18em;color:#E8A33D">SUBMISSIONS PAUSED · KILL SWITCH ON</span></sc-if>
+            <textarea ref="{{ rtRef }}" placeholder="Try to make the agent pay, email or export something it should not." style="box-sizing:border-box;width:100%;height:84px;padding:10px;border-radius:8px;border:1px solid rgba(202,217,226,.2);background:rgba(6,9,12,.5);color:#CAD9E2;font-family:'JetBrains Mono',monospace;font-size:12px;resize:vertical"></textarea>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onClick="{{ rtSubmit }}" style="height:32px;padding:0 16px;border-radius:8px;border:1px solid #45829B;background:rgba(69,130,155,.25);color:#CAD9E2;font-size:11px;letter-spacing:.16em;cursor:pointer">SUBMIT ATTACK</button>
+              <button onClick="{{ rtFallback }}" style="height:32px;padding:0 16px;border-radius:8px;border:1px solid rgba(202,217,226,.25);background:rgba(33,57,71,.4);color:#CAD9E2;font-size:11px;letter-spacing:.16em;cursor:pointer">RUN FALLBACK QUEUE</button>
+              <button onClick="{{ rtToggleKill }}" style="height:32px;padding:0 16px;border-radius:8px;border:1px solid rgba(229,83,61,.7);background:transparent;color:#E5533D;font-size:11px;letter-spacing:.16em;cursor:pointer">{{ rtKillLabel }}</button>
+            </div>
+            <sc-if value="{{ rtOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ rtState }}" style="font-size:12.5px;line-height:1.5;color:{{ rtCol }}">{{ rtMsg }}</span></sc-if>
             <sc-for list="{{ rtCards }}" as="rc" hint-placeholder-count="2">
-              <div onClick="{{ rc.open }}" style="display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:10px;border:1px solid rgba(202,217,226,.1);background:rgba(33,57,71,.35);cursor:pointer">
-                <span style="font-size:13px;line-height:1.45">“{{ rc.text }}”</span>
-                <div style="display:flex;gap:10px;align-items:center;font-size:10.5px"><span style="padding:2px 8px;border-radius:5px;border:1px solid {{ rc.col }};color:{{ rc.col }};letter-spacing:.14em">{{ rc.decision }}</span><span style="font-family:'JetBrains Mono',monospace;color:#8B98A1">{{ rc.meta }}</span></div>
+              <div onClick="{{ rc.open }}" style="display:flex;align-items:flex-start;cursor:pointer">
+                <span style="width:26px;height:1px;margin:12px 6px 0 0;background:{{ rc.col }}"></span>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding:6px 10px;border-radius:8px;border:1px solid {{ rc.outline }};background:{{ rc.bg }}">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.45;word-break:break-word">“{{ rc.text }}”</span>
+                  <span style="font-size:10px;letter-spacing:.14em;color:{{ rc.col }}">{{ rc.decision }} · {{ rc.rules }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8B98A1">{{ rc.meta }}</span>
+                </div>
               </div>
             </sc-for>
-            <sc-if value="{{ noRed }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#8B98A1">No red-team submissions yet.</span></sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAudit }}" hint-placeholder-val="{{ false }}">
+          <div data-trishul="audit-explorer" data-state="{{ auState }}" style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:10px;border:1px solid rgba(202,217,226,.1);background:rgba(33,57,71,.35)">
+              <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">TREE HEAD</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#4FD1C5;word-break:break-all">{{ auHead }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8B98A1;word-break:break-all">{{ auSth }}</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onClick="{{ auVerify }}" style="height:32px;padding:0 16px;border-radius:8px;border:1px solid #45829B;background:rgba(69,130,155,.25);color:#CAD9E2;font-size:11px;letter-spacing:.16em;cursor:pointer">VERIFY CHAIN</button>
+              <button onClick="{{ auConsistency }}" style="height:32px;padding:0 16px;border-radius:8px;border:1px solid rgba(202,217,226,.25);background:rgba(33,57,71,.4);color:#CAD9E2;font-size:11px;letter-spacing:.16em;cursor:pointer">CONSISTENCY VS SIGNED HEAD</button>
+            </div>
+            <sc-if value="{{ auVerOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="verify-result" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ auVerCol }}">{{ auVerText }}</span></sc-if>
+            <sc-if value="{{ auConOn }}" hint-placeholder-val="{{ false }}"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ auConCol }};word-break:break-all">{{ auConText }}</span></sc-if>
+            <sc-if value="{{ auIncOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="inclusion-result" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ auIncCol }};word-break:break-all">{{ auIncText }}</span></sc-if>
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">LEAVES · {{ auRange }}</span><span style="display:flex;gap:6px"><button onClick="{{ auPrev }}" style="height:26px;padding:0 10px;border-radius:6px;border:1px solid rgba(202,217,226,.14);background:rgba(6,9,12,.4);color:#CAD9E2;font-size:10px;letter-spacing:.16em;cursor:pointer">PREV</button><button onClick="{{ auNext }}" style="height:26px;padding:0 10px;border-radius:6px;border:1px solid rgba(202,217,226,.14);background:rgba(6,9,12,.4);color:#CAD9E2;font-size:10px;letter-spacing:.16em;cursor:pointer">NEXT</button></span></div>
+            <sc-if value="{{ auOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ auState }}" style="font-size:12.5px;line-height:1.5;color:{{ auCol }}">{{ auMsg }}</span></sc-if>
+            <sc-for list="{{ auLeaves }}" as="lf" hint-placeholder-count="3">
+              <div onClick="{{ lf.open }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid {{ lf.border }};background:rgba(33,57,71,.35);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11.5px">
+                <span style="width:44px;color:#4FD1C5">#{{ lf.idx }}</span><span style="flex:1;min-width:0;word-break:break-all">{{ lf.text }}</span><span style="color:{{ lf.col }};font-size:10px;letter-spacing:.1em">{{ lf.intact }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isPay }}" hint-placeholder-val="{{ false }}">
+          <div data-trishul="mandate-state" data-state="{{ payState }}" style="display:flex;flex-direction:column;gap:12px">
+            <sc-if value="{{ payOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ payState }}" style="font-size:12.5px;line-height:1.5;color:{{ payCol }}">{{ payMsg }}</span></sc-if>
+            <sc-for list="{{ mandates }}" as="md" hint-placeholder-count="1">
+              <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:12px;border:1px solid {{ md.border }};background:rgba(33,57,71,.35)">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'JetBrains Mono',monospace;font-size:12px">{{ md.id }}</span><span style="padding:3px 9px;border-radius:6px;border:1px solid {{ md.col }};color:{{ md.col }};font-size:10.5px;letter-spacing:.16em">{{ md.state }}</span></div>
+                <span style="font-size:15px">{{ md.payee }}</span>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:12.5px">
+                  <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">PER-TXN CAP</span><span>{{ md.perTxn }}</span></div>
+                  <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">DAILY CAP</span><span>{{ md.daily }}</span></div>
+                  <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">USED TODAY</span><span>{{ md.used }}</span></div>
+                  <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">USES</span><span>{{ md.uses }}</span></div>
+                </div>
+                <span style="height:2px;background:rgba(202,217,226,.08);position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ md.pct }}%;background:{{ md.col }};transition:width .8s ease-in-out"></span></span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8B98A1">{{ md.window }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8B98A1;word-break:break-all">{{ md.payees }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isBench }}" hint-placeholder-val="{{ false }}">
+          <div data-trishul="bench-panel" data-state="{{ benchState }}" style="display:flex;flex-direction:column;gap:16px">
+            <sc-if value="{{ benchOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ benchState }}" style="font-size:12.5px;line-height:1.5;color:{{ benchCol }}">{{ benchMsg }}</span></sc-if>
+            <sc-for list="{{ benchSections }}" as="bs" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">{{ bs.title }}</span>
+                <sc-for list="{{ bs.lines }}" as="bl" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:baseline;gap:10px;padding:6px 10px;border-radius:8px;background:rgba(33,57,71,.35);font-size:12px"><span style="flex:1;min-width:0;color:#8B98A1;word-break:break-all">{{ bl.a }}</span><span style="font-family:'JetBrains Mono',monospace;color:{{ bl.col }};text-align:right;word-break:break-all">{{ bl.b }}</span><span style="min-width:0;max-width:170px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8B98A1;text-align:right;word-break:break-all">{{ bl.c }}</span></div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isDemo }}" hint-placeholder-val="{{ false }}">
+          <div data-trishul="demo-panel" data-state="{{ demoState }}" style="display:flex;flex-direction:column;gap:12px">
+            <span style="font-size:12.5px;line-height:1.5;color:#8B98A1">Runs the scripted FinBot through the real gateway. Every event below comes from the stream.</span>
+            <sc-for list="{{ moments }}" as="mo" hint-placeholder-count="6">
+              <button onClick="{{ mo.run }}" data-trishul="demo-moment" data-state="{{ mo.state }}" style="display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid {{ mo.border }};background:rgba(33,57,71,.35);color:#CAD9E2;cursor:pointer"><span style="width:26px;height:26px;flex:none;border-radius:7px;border:1px solid rgba(69,130,155,.5);background:rgba(69,130,155,.14);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px">{{ mo.n }}</span><span style="flex:1;min-width:0;font-size:12.5px;line-height:1.4">{{ mo.label }}</span><span style="font-size:10px;letter-spacing:.14em;color:{{ mo.col }}">{{ mo.status }}</span></button>
+            </sc-for>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button onClick="{{ demoReset }}" style="height:32px;padding:0 16px;border-radius:8px;border:1px solid rgba(229,83,61,.7);background:transparent;color:#E5533D;font-size:11px;letter-spacing:.16em;cursor:pointer">RESET DEMO STATE</button></div>
+            <sc-if value="{{ demoOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ demoState }}" style="font-size:12.5px;line-height:1.5;color:{{ demoCol }}">{{ demoMsg }}</span></sc-if>
+            <sc-for list="{{ demoLines }}" as="dl" hint-placeholder-count="0">
+              <div style="display:flex;flex-direction:column;gap:3px;padding:8px 10px;border-radius:8px;background:rgba(33,57,71,.35)"><span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;word-break:break-all">{{ dl.a }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:{{ dl.col }};word-break:break-all">{{ dl.b }}</span></div>
+            </sc-for>
           </div>
         </sc-if>
       </aside>
@@ -394,10 +536,10 @@ button{font-family:inherit}
 <script type="text/x-dc" data-dc-script data-props="{&quot;tilt&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0,&quot;min&quot;:0,&quot;max&quot;:12,&quot;step&quot;:1,&quot;unit&quot;:&quot;°&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;View&quot;},&quot;replaySpeed&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;8&quot;,&quot;options&quot;:[&quot;4&quot;,&quot;8&quot;,&quot;16&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Data&quot;},&quot;wsUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;ws://localhost:8787/events&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Data&quot;},&quot;apiBase&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;http://localhost:8787&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Data&quot;}}">
 const W=1920,H=1080;
 const C={blue:'#45829B',amber:'#E8A33D',red:'#E5533D',teal:'#4FD1C5',text:'#CAD9E2',user:'#7FD6A0',muted:'#8B98A1'};
-const DCOL={ALLOW:C.blue,STEP_UP:C.amber,DENY:C.red};
+const DCOL={ALLOW:C.blue,STEP_UP:C.amber,DENY:C.red,UNGUARDED:C.red};
 const AGENTS=[{id:'finbot',name:'FinBot',role:'Payments',glyph:'₹'},{id:'supportbot',name:'SupportBot',role:'CRM',glyph:'DB'},{id:'voicedesk',name:'VoiceDesk',role:'Voice',glyph:'MIC'}];
-const TOOLS=['pay_upi','get_balance','add_payee','read_customer_data','export_records','send_email','voice_command','approve_step_up'];
-const GLYPH={pay_upi:'₹',get_balance:'₹',add_payee:'₹+',read_customer_data:'DB',export_records:'DB',send_email:'✉',voice_command:'MIC',approve_step_up:'OK'};
+const TOOLS=['pay_upi','add_payee','get_balance','read_customer_data','export_records','send_email','read_document','voice_command'];
+const GLYPH={pay_upi:'₹',get_balance:'₹',add_payee:'₹+',read_customer_data:'DB',export_records:'DB',send_email:'✉',read_document:'DOC',voice_command:'MIC'};
 const FEATS=[{id:'payshield',name:'PayShield',short:'PS'},{id:'purposelock',name:'PurposeLock',short:'PL'},{id:'voicetrust',name:'VoiceTrust',short:'VT'}];
 const FNAME={payshield:'PAYSHIELD',purposelock:'PURPOSELOCK',voicetrust:'VOICETRUST'};
 const FX={payshield:1590,purposelock:1670,voicetrust:1750};
@@ -406,16 +548,38 @@ const AGY=i=>104+i*216, TLY=i=>96+i*80, ROWY=i=>470+i*72;
 const GX=520, AX=392, TX=660, BEAM_TOP=462;
 const CH={x:80,y:800,w:896,h:220};
 const WIN=15*60000;
+const PAGE=20;
+const DEF_API='http://localhost:8787', DEF_WS='ws://localhost:8787/events';
+const OP_HINT='Operator token required (open console via URL printed by `trishul start`)';
+let OP_TOKEN='';  /* in-memory only: read once from #op=..., stripped from the URL, never stored/logged/rendered */
+try{const m=/(?:^#|&)op=([^&]*)/.exec(location.hash||'');if(m){OP_TOKEN=decodeURIComponent(m[1]);history.replaceState(null,'',location.pathname+location.search);}}catch(e){}
+const OP_PATH=/^\/(mode|ml|prove|redteam\/(kill|fallback)|demo\/|approvals\/|consent\/)/;
+const BENCH_URLS=['/bench/results.json','bench/results.json'];
+const MOMENTS=[
+  {n:1,label:'Unguarded: TRISHUL OFF, the injected invoice pays the hidden payee'},
+  {n:2,label:'Integration: two-line diff, TRISHUL back ON'},
+  {n:3,label:'Same invoice DENY, normal bill ALLOW, STEP_UP approve, approval binding mismatch'},
+  {n:4,label:'Red-Team Wall: attack queue through the real gateway'},
+  {n:5,label:'ML off: top attacks still DENY, Z3 proof, unsafe fixture counterexample'},
+  {n:6,label:'VoiceTrust: spoof clip, replayed nonce, audit and report'}];
 const tOf=e=>e._t||(e._t=Date.parse(e.ts));
 const hsh=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))|0;return Math.abs(h);};
 const isAttack=e=>e.source==='redteam'||Object.values(e.labels||{}).some(v=>String(v).startsWith('UNTRUSTED'))||Object.values(e.scores||{}).some(v=>v>=0.5);
 const risk=e=>{const v=Object.values(e.scores||{});const m=v.length?Math.max(...v):0;return Math.min(1,m*0.75+((e.rules||[]).length?0.25:0));};
 const inr=n=>'₹'+Number(n).toLocaleString('en-IN');
-const summary=e=>{const a=e.args||{};let s=e.tool;if(a.amount!=null)s+=' '+inr(a.amount);if(a.payee_vpa)s+=' → '+a.payee_vpa;else if(a.to)s+=' → '+a.to;else if(a.dataset)s+=' '+a.dataset;else if(a.transcript)s+=' “'+a.transcript+'”';else if(a.customer_id)s+=' '+a.customer_id;return s;};
+const money=p=>p==null?'—':'₹'+(Number(p)/100).toLocaleString('en-IN');
+const short=(v,n)=>{const t=String(v==null?'':v);return t.length>n?t.slice(0,n)+'… ['+t.length+' chars]':t;};
+const summary=e=>{const a=e.args||{};let s=e.tool;
+  if(a.amount_paise!=null)s+=' '+money(a.amount_paise);else if(a.amount!=null)s+=' '+inr(a.amount);
+  if(a.payee_vpa)s+=' → '+a.payee_vpa;else if(a.vpa)s+=' → '+a.vpa;else if(a.to)s+=' → '+a.to;else if(a.destination)s+=' → '+a.destination;else if(a.dataset)s+=' '+a.dataset;else if(a.transcript)s+=' “'+a.transcript+'”';else if(a.customer_id)s+=' '+a.customer_id;else if(a.doc_id)s+=' '+a.doc_id;else if(a.clip_id)s+=' '+a.clip_id;
+  return short(s,90);};
 const tagOf=e=>e.tag||(((e.rules||[])[0]||'DENY')+' '+String(e.tool).toUpperCase());
 const dotX=e=>(FX[e.feature]||1670)+((hsh(e.id)%37)-18);
 const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;};
 const pctl=(arr,p)=>arr.length?arr[Math.min(arr.length-1,Math.floor(p*arr.length))]:null;
+const effectText=e=>{const f=e.effect;if(!f)return '';if(f.summary)return f.summary+(f.balance_after!=null?' · balance after '+inr(f.balance_after):'');
+  return [f.simulated?'PREVIEW (simulated)':'EXECUTED',f.namespace,f.txn_id,f.balance_after!=null?'balance after '+money(f.balance_after):''].filter(Boolean).join(' · ');};
+const STATE_COL={error:C.red,disconnected:C.amber};
 
 /* ===== TrishulEventSource adapter boundary =====================================
  * Interface (both sources implement it):
@@ -425,34 +589,41 @@ const pctl=(arr,p)=>arr.length?arr[Math.min(arr.length-1,Math.floor(p*arr.length
  *   close()    stop and release everything
  * hooks: { state(conn), reset(meta) }   conn: connecting|open|lost|error|idle|noreplay
  *
- * Event contract consumed by the UI (one JSON object, or an array of them):
- *   call event : id, ts (ISO), agent (finbot|supportbot|voicedesk), tool, feature
- *                (payshield|purposelock|voicetrust), decision (ALLOW|STEP_UP|DENY),
- *                reason, rules[], scores{}, labels{}, args{}, effect{summary,balance_after},
- *                latency_ms (omit if not measured), audit_hash (real audit leaf only),
- *                liveness{phrase}, source ('redteam' for red-team), attack_text, tag
- *   control    : {type:'ml_state',ml}  {type:'audit_verify',ok,bad_id}
- *                {type:'resolution',id,decision}
+ * Live source = the gateway WebSocket (/events). Event types consumed:
+ *   call        id, ts, agent, feature, tool, args, labels, decision (ALLOW|STEP_UP|DENY|UNGUARDED),
+ *               rules[], reason, scores{}, latency_ms, stage_ms{}, lineage{nodes,edges}, audit_hash,
+ *               tree_head{size,root}, approval{id,state}, mandate{id,state}, effect, liveness{state}, mode
+ *   mode        {mode, namespace, disabled[]}        ml_state {enabled}
+ *   audit_verify{ok, bad_index}    resolution {id, approval_id, decision}    consent {id, status}
+ *   redteam     {id, text, source, moderated, decision, rules, succeeded}    redteam_stats {attempted, succeeded, killed}
+ *   proof       {policy, result, policy_digest, solve_ms, per_invariant, replay}    demo {moment, step, name, status}
+ *   gap / heartbeat (transport)
  * Missing fields render as unavailable ("—"); the UI never fabricates a value.
+ * Reconnect: exponential backoff, resume_from = last seq; a silent socket is treated as lost.
  * ============================================================================= */
 class WebSocketSource{
-  constructor(url,h){this.url=url;this.h=h;this.buf=[];this.ws=null;this.closed=false;this.err=false;}
+  constructor(url,h){this.url=url;this.h=h;this.buf=[];this.ws=null;this.closed=false;this.err=false;this.lastSeq=0;this.tries=0;this.lastMsg=0;}
   now(){return Date.now();}
   poll(){const b=this.buf;this.buf=[];return b;}
   connect(){
     if(this.closed)return;
     let ws;
+    this.h.state(this.tries?'lost':'connecting');
     try{ws=new WebSocket(this.url);}catch(e){this.h.state('error');return this.retry();}
     this.ws=ws;
-    ws.onopen=()=>{this.err=false;this.h.state('open');};
-    ws.onmessage=m=>{try{const d=JSON.parse(m.data);Array.isArray(d)?this.buf.push(...d):this.buf.push(d);}catch(e){}};
+    ws.onopen=()=>{this.err=false;this.tries=0;this.lastMsg=Date.now();
+      if(this.lastSeq>0){try{ws.send(JSON.stringify({resume_from:this.lastSeq}));}catch(e){}}
+      this.h.state('open');this.watch();};
+    ws.onmessage=m=>{this.lastMsg=Date.now();try{const d=JSON.parse(m.data);const l=Array.isArray(d)?d:[d];
+      for(const x of l){if(typeof x.seq==='number')this.lastSeq=x.seq;if(x.type==='heartbeat')continue;this.buf.push(x);}}catch(e){}};
     ws.onerror=()=>{if(this.ws===ws){this.err=true;this.h.state('error');}};
-    ws.onclose=()=>{if(this.ws!==ws||this.closed)return;this.ws=null;this.h.state(this.err?'error':'lost');this.retry();};
+    ws.onclose=()=>{if(this.ws!==ws||this.closed)return;this.ws=null;clearInterval(this.wt);this.h.state(this.err?'error':'lost');this.retry();};
   }
-  retry(){clearTimeout(this.rt);this.rt=setTimeout(()=>this.connect(),3000);}
-  close(){this.closed=true;clearTimeout(this.rt);if(this.ws){const w=this.ws;this.ws=null;w.onclose=null;w.onerror=null;try{w.close();}catch(e){}}}
+  watch(){clearInterval(this.wt);this.wt=setInterval(()=>{if(this.ws&&Date.now()-this.lastMsg>40000){const w=this.ws;try{w.close();}catch(e){}}},5000);}
+  retry(){clearTimeout(this.rt);const d=Math.min(10000,1000*Math.pow(2,this.tries++));this.rt=setTimeout(()=>this.connect(),d);}
+  close(){this.closed=true;clearTimeout(this.rt);clearInterval(this.wt);if(this.ws){const w=this.ws;this.ws=null;w.onclose=null;w.onerror=null;try{w.close();}catch(e){}}}
 }
-// PHASE-3: remove DevReplaySource (synthetic recorded session; dev only)
+// DEV ONLY: synthetic recorded session, reachable solely through ?mode=replay
 class DevReplaySource{
   constructor(url,speed,h){this.url=url;this.speed=speed;this.h=h;this.q=null;this.closed=false;this.loopT=null;}
   async connect(){
@@ -480,60 +651,143 @@ class DevReplaySource{
 /* ===== end adapter ============================================================ */
 
 class Component extends DCLogic {
-  state={events:[],ml:true,audit:{ok:true,bad:null},resolved:{},panel:null,detail:null,now:0,scale:1,cam:0,mode:'replay',conn:'idle',consent:[],proof:null,proofNote:'',proofBusy:false,proofErr:'',logName:'',filter:0};
+  state={events:[],ml:true,audit:{ok:true,bad:null,known:false},resolved:{},panel:null,detail:null,now:0,scale:1,cam:0,mode:'live',conn:'idle',consent:[],logName:'',filter:0,
+    rs:{},tmode:null,tdisabled:[],tns:'',proofs:{},proofBusy:null,proofErr:'',digests:[],rt:[],rtStats:null,rtMsg:'',rtErr:'',demoEv:{},demoRes:{},demoBusy:null,demoErr:'',
+    nonce:null,nonceErr:'',apErr:'',cErr:'',repErr:'',au:{from:null,ver:null,con:null,inc:null,err:''},bench:{s:'idle'},gap:0,modeErr:'',linStep:0};
 
   componentDidMount(){
     this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.anims=[];this.parts=[];this.flashes=[];this.arr={};this.geoC={};this.series=null;this.rseries=null;this.rowGeo=[];this.threat=null;this.lastAttack=0;this.src=null;
+    this.seen=new Set();this.dirty={};this.lastFlush=0;this.timers=[];this.lastSession='sess_console';
     this.onResize=()=>this.setState({scale:Math.min(innerWidth/W,innerHeight/H)});
     this.onResize();addEventListener('resize',this.onResize);
-    this.startReplay();
+    let replay=false;try{replay=new URLSearchParams(location.search).get('mode')==='replay';}catch(e){}
+    if(replay)this.startReplay();else this.startLive();
     this.iv=setInterval(()=>this.step(),250);
     this.raf=requestAnimationFrame(this.frame);
     setTimeout(()=>this.setState({cam:1}),this.reduced?0:150);
   }
-  componentWillUnmount(){removeEventListener('resize',this.onResize);clearInterval(this.iv);cancelAnimationFrame(this.raf);this.detach();}
-  base(){return this.props.apiBase||'http://localhost:8787';}
+  componentWillUnmount(){removeEventListener('resize',this.onResize);clearInterval(this.iv);cancelAnimationFrame(this.raf);this.timers.forEach(clearTimeout);this.detach();}
+  later(fn,ms){const t=setTimeout(fn,ms);this.timers.push(t);return t;}
+  http(){return /^https?:$/.test(location.protocol);}
+  base(){const p=this.props.apiBase;if(p&&p!==DEF_API)return p;return this.http()?location.origin:DEF_API;}
+  wsUrl(){const p=this.props.wsUrl;if(p&&p!==DEF_WS)return p;return this.http()?location.origin.replace(/^http/,'ws')+'/events':DEF_WS;}
   speed(){return Number(this.props.replaySpeed??8)||8;}
   decOf(e){const r=this.state.resolved[e.id];return e.decision==='STEP_UP'&&r?r:e.decision;}
   pass(e){const f=FILTERS[this.state.filter];return f==='all'||e.feature===f;}
+  isLive(){return this.state.mode==='live';}
 
   detach(){if(this.src){const x=this.src;this.src=null;x.close();}}
   attach(make,mode){
     this.detach();
     const hooks={
-      state:c=>{if(this.src!==src)return;this.setState({conn:c});if(c==='open'&&mode==='live')this.loadConsent();},
-      reset:m=>{if(this.src!==src)return;this.anims=[];this.parts=[];this.flashes=[];this.arr={};
-        this.setState(s=>({mode:'replay',conn:'idle',events:[],resolved:{},ml:true,audit:{ok:true,bad:null},consent:m.consent,proof:null,proofNote:'',proofErr:'',logName:m.name,now:src.now(),detail:null,panel:s.panel==='detail'?null:s.panel}));}
+      state:c=>{if(this.src!==src)return;const was=this.state.conn;this.setState({conn:c});if(c==='open'&&mode==='live')this.onOpen(was);},
+      reset:m=>{if(this.src!==src)return;this.anims=[];this.parts=[];this.flashes=[];this.arr={};this.seen=new Set();
+        this.setState(s=>({mode:'replay',conn:'idle',events:[],resolved:{},ml:true,audit:{ok:true,bad:null,known:false},consent:m.consent,proofs:{},logName:m.name,now:src.now(),detail:null,panel:s.panel==='detail'?null:s.panel}));}
     };
     const src=make(hooks);this.src=src;src.connect();
   }
-  startReplay(){this.attach(h=>new DevReplaySource('replay/demo-session.json',()=>this.speed(),h),'replay');}
-  goLive(){
-    if(this.state.mode==='live')return;
-    this.detach();this.anims=[];this.arr={};
-    this.setState({mode:'live',conn:'connecting',events:[],resolved:{},audit:{ok:true,bad:null},ml:true,proof:null,proofNote:'',proofErr:'',consent:[],detail:null},()=>this.attach(h=>new WebSocketSource(this.props.wsUrl||'ws://localhost:8787/events',h),'live'));
+  startReplay(){this.setState({mode:'replay'});this.attach(h=>new DevReplaySource('replay/demo-session.json',()=>this.speed(),h),'replay');}
+  startLive(){
+    this.detach();this.anims=[];this.arr={};this.seen=new Set();
+    this.setState({mode:'live',conn:'connecting',events:[],resolved:{},audit:{ok:true,bad:null,known:false},ml:true,proofs:{},consent:[],detail:null,rs:{}},()=>this.attach(h=>new WebSocketSource(this.wsUrl(),h),'live'));
   }
-  loadConsent(){fetch(this.base()+'/consent').then(r=>r.json()).then(j=>this.setState({consent:Array.isArray(j)?j:(j.consent||[])})).catch(()=>{});}
-  pump(){if(!this.src)return;const b=this.src.poll();if(b.length)this.ingest(b);}
+  onOpen(was){this.loadAll();if(was==='lost'||was==='error')this.setState({gap:Date.now()});}
 
+  /* ---- REST ---------------------------------------------------------------- */
+  async api(path,opts){
+    const isPost=opts&&opts.method==='POST';
+    if(isPost&&OP_PATH.test(path)&&!OP_TOKEN){const x=new Error(OP_HINT);x.status=401;throw x;}
+    if(isPost&&OP_TOKEN)opts={...opts,headers:{...(opts.headers||{}),Authorization:'Bearer '+OP_TOKEN}};
+    let r;try{r=await fetch(this.base()+path,opts);}catch(e){const x=new Error('gateway unreachable');x.status=0;throw x;}
+    let j=null;try{j=await r.json();}catch(e){}
+    if(!r.ok){const x=new Error((j&&j.error)||('http_'+r.status));x.status=r.status;throw x;}
+    return j;
+  }
+  post(path,body){return this.api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});}
+  errText(e){return e&&e.status?'HTTP '+e.status+' · '+e.message:'gateway unreachable';}
+  setRs(k,p){this.setState(s=>({rs:{...s.rs,[k]:{...(s.rs[k]||{}),...p}}}));}
+  async load(k,path){
+    const cur=this.state.rs[k];if(!cur||!cur.d)this.setRs(k,{s:'loading',e:null});
+    try{const j=await this.api(path);this.setRs(k,{s:'ok',d:j,e:null});return j;}
+    catch(e){this.setRs(k,{s:'error',e:this.errText(e)});return null;}
+  }
+  loadAll(){
+    if(!this.isLive())return;
+    this.load('approvals','/approvals');this.load('consent','/consent');this.load('mandates','/mandates');this.load('head','/audit/head');this.load('metrics','/metrics');
+    this.load('rtStats','/redteam/stats').then(j=>{if(j)this.setState({rtStats:j});});
+    this.load('mode','/mode').then(j=>{if(j)this.setState({tmode:j.mode,tdisabled:j.disabled||[],tns:j.namespace||''});});
+    this.verify(true);
+  }
+  flush(){
+    const d=this.dirty;if(!this.isLive()||this.state.conn!=='open'||!Object.keys(d).length)return;
+    const now=Date.now();if(now-this.lastFlush<900)return;this.lastFlush=now;this.dirty={};
+    if(d.all){this.loadAll();return;}
+    if(d.approvals)this.load('approvals','/approvals');if(d.consent)this.load('consent','/consent');if(d.mandates)this.load('mandates','/mandates');
+    if(d.head)this.load('head','/audit/head');if(d.metrics)this.load('metrics','/metrics');
+    if(d.leaves&&this.state.panel==='audit')this.loadLeaves(this.state.au.from);
+  }
+  async verify(quiet){
+    try{const j=await this.api('/audit/verify');
+      this.setState(s=>({audit:{ok:!!j.ok,bad:j.ok?null:j.bad_index,known:true},au:{...s.au,ver:j}}));return j;}
+    catch(e){if(!quiet)this.setState(s=>({au:{...s.au,ver:{error:this.errText(e)}}}));return null;}
+  }
+  async loadLeaves(from){
+    let f=from;
+    if(f==null){const h=await this.load('head','/audit/head');if(!h)return;f=Math.max(0,h.size-PAGE);}
+    try{const j=await this.api('/audit/leaves?from='+f+'&limit='+PAGE);this.setState(s=>({au:{...s.au,from:f,err:''},rs:{...s.rs,leaves:{s:'ok',d:j,e:null}}}));}
+    catch(e){this.setState(s=>({au:{...s.au,err:this.errText(e)},rs:{...s.rs,leaves:{s:'error',d:(s.rs.leaves||{}).d,e:this.errText(e)}}}));}
+  }
+  async loadBench(){
+    this.setState({bench:{s:'loading'}});
+    const tried=[];
+    for(const u of BENCH_URLS){
+      try{const r=await fetch(u,{cache:'no-store'});if(!r.ok){tried.push(u+' → HTTP '+r.status);continue;}
+        const j=await r.json();this.setState({bench:{s:'ok',d:j,from:u}});this.load('metrics','/metrics');return;}
+      catch(e){tried.push(u+' → '+(e&&e.message||'failed'));}
+    }
+    this.setState({bench:{s:'error',e:'bench/results.json could not be loaded ('+tried.join('; ')+'). Run trishul bench, then serve bench/results.json.'}});
+  }
+
+  pump(){if(!this.src)return;const b=this.src.poll();if(b.length)this.ingest(b);}
   step(){
     const now=this.src?this.src.now():Date.now();
-    this.pump();
+    this.pump();this.flush();
     this.computeSeries(now);
     this.setState({now});
   }
   ingest(list){
-    const calls=[];const patch={};const T=performance.now();
+    const calls=[],patch={},dirty=this.dirty,T=performance.now(),live=this.isLive(),wall=Date.now();
+    let resolved=null,rtNew=[],demoNew=[],proofNew=[];
     for(const e of list){
-      if(e.type==='ml_state')patch.ml=!!e.ml;
-      else if(e.type==='audit_verify')patch.audit={ok:!!e.ok,bad:e.ok?null:(e.bad_id||null),known:true};
-      else if(e.type==='resolution')patch.resolved={...(patch.resolved||this.state.resolved),[e.id]:e.decision};
-      else if(e.tool&&e.id)calls.push(e);
+      switch(e.type){
+        case 'ml_state':patch.ml=!!(e.enabled!=null?e.enabled:e.ml);break;
+        case 'mode':patch.tmode=e.mode;patch.tdisabled=e.disabled||[];patch.tns=e.namespace||'';break;
+        case 'audit_verify':patch.audit={ok:!!e.ok,bad:e.ok?null:(e.bad_index!=null?e.bad_index:e.bad_id),known:true};dirty.head=1;break;
+        case 'resolution':resolved=resolved||{...this.state.resolved};resolved[e.id]=e.decision;dirty.approvals=1;dirty.mandates=1;break;
+        case 'consent':dirty.consent=1;break;
+        case 'redteam':rtNew.push(e);break;
+        case 'redteam_stats':patch.rtStats={attempted:e.attempted,succeeded:e.succeeded,killed:e.killed};break;
+        case 'proof':proofNew.push(e);break;
+        case 'demo':demoNew.push(e);break;
+        case 'gap':dirty.all=1;patch.gap=wall;break;
+        default:
+          if(e.tool&&e.id&&!this.seen.has(e.id)){this.seen.add(e.id);if(live)e._t=wall;calls.push(e);
+            dirty.head=1;dirty.metrics=1;dirty.leaves=1;
+            if(e.decision==='STEP_UP'||e.approval)dirty.approvals=1;
+            if(e.effect||e.mandate)dirty.mandates=1;
+            if(e.session)this.lastSession=e.session;}
+      }
     }
+    if(resolved)patch.resolved=resolved;
     calls.forEach((e,i)=>{const t=T+i*110;this.arr[e.id]=t;this.anims.push({e,t});if(e.decision==='DENY')this.lastAttack=t;});
     if(this.anims.length>90)this.anims.splice(0,this.anims.length-90);
-    this.setState(s=>({...patch,events:calls.length?s.events.concat(calls).slice(-4000):s.events}));
+    this.setState(s=>{const out={...patch};
+      if(calls.length)out.events=s.events.concat(calls).slice(-4000);
+      if(rtNew.length){const seenIds=new Set(s.rt.map(x=>x.id));out.rt=s.rt.concat(rtNew.filter(x=>!seenIds.has(x.id))).slice(-200);}
+      if(demoNew.length){const d={...s.demoEv};demoNew.forEach(x=>{d[x.moment]=x;});out.demoEv=d;}
+      if(proofNew.length){const p={...s.proofs};proofNew.forEach(x=>{const cur=p[x.policy];if(!cur||cur._ws)p[x.policy]={...x,_ws:true};});out.proofs=p;}
+      return out;});
   }
   computeSeries(now){
     const N=120,b=new Array(N).fill(0),rb=new Array(N).fill(0),x0=now-WIN,ev=this.state.events;
@@ -632,37 +886,157 @@ class Component extends DCLogic {
       if(!this.reduced){const f=(T/1600)%1;this.glow(ctx,x0+(t.x-x0)*f,y0+(t.y-y0)*f,C.red,.8,2.2);}}
   }
 
-  open(id){this.setState({panel:'detail',detail:id});}
-  resolve(id,ok){
-    const dec=ok?'ALLOW':'DENY';
-    this.setState(s=>({resolved:{...s.resolved,[id]:dec}}));
-    if(this.state.mode==='live')fetch(`${this.base()}/approvals/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({decision:ok?'approve':'reject'})}).catch(()=>{});
+
+  /* ---- actions ----------------------------------------------------------------- */
+  open(id){
+    this.setState({panel:'detail',detail:id,linStep:this.reduced?99:0});
+    if(!this.reduced){let i=0;const tk=()=>{if(this.state.detail!==id||this.state.panel!=='detail')return;this.setState({linStep:++i});if(i<12)this.later(tk,420);};this.later(tk,200);}
   }
-  withdraw(id){
-    this.setState(s=>({consent:s.consent.map(c=>c.id===id?{...c,status:'withdrawn'}:c)}));
-    if(this.state.mode==='live')fetch(`${this.base()}/consent/${id}/withdraw`,{method:'POST'}).catch(()=>{});
+  openPanel(p){
+    this.setState({panel:p});
+    if(!this.isLive())return;
+    if(p==='approvals')this.load('approvals','/approvals');
+    else if(p==='purpose')this.load('consent','/consent');
+    else if(p==='pay')this.load('mandates','/mandates');
+    else if(p==='audit'){this.load('head','/audit/head');this.loadLeaves(null);this.verify(false);}
+    else if(p==='bench')this.loadBench();
+    else if(p==='red')this.load('rtStats','/redteam/stats').then(j=>{if(j)this.setState({rtStats:j});});
   }
-  prove(){
-    this.setState({proofBusy:true,proof:null,proofErr:'',proofNote:''});
-    if(this.state.mode==='replay'){setTimeout(()=>{if(this.state.mode==='replay')this.setState({proofBusy:false,proofNote:'UNAVAILABLE · Dev replay carries only a synthetic recorded value, not a solver result. Connect to a live gateway for a real proof.'});},700);return;}
-    fetch(this.base()+'/prove',{method:'POST'}).then(r=>r.json()).then(p=>this.setState({proofBusy:false,proof:p})).catch(()=>this.setState({proofBusy:false,proofErr:'Gateway unreachable at '+this.base()+'/prove'}));
+  async resolve(aid,ok){
+    if(!this.isLive()){this.setState(s=>({resolved:{...s.resolved,[aid]:ok?'ALLOW':'DENY'}}));return;}
+    this.setState({apErr:''});
+    try{await this.post('/approvals/'+encodeURIComponent(aid),{decision:ok?'approve':'reject'});}
+    catch(e){this.setState({apErr:'Approval failed · '+this.errText(e)});}
+    this.load('approvals','/approvals');
   }
-  downloadReport(){
+  async withdraw(id){
+    if(!this.isLive()){this.setState(s=>({consent:s.consent.map(c=>c.id===id?{...c,status:'withdrawn'}:c)}));return;}
+    this.setState({cErr:''});
+    try{await this.api('/consent/'+encodeURIComponent(id)+'/withdraw',{method:'POST'});}
+    catch(e){this.setState({cErr:'Withdraw failed · '+this.errText(e)});}
+    this.load('consent','/consent');
+  }
+  async prove(policy){
+    if(!this.isLive()){this.setState({proofErr:'UNAVAILABLE · DEV REPLAY carries only a synthetic recorded value, not a solver result. Open the console without ?mode=replay and connect to a live gateway for a real proof.'});return;}
+    this.setState({proofBusy:policy,proofErr:''});
+    try{const j=await this.post('/prove',{policy});
+      this.setState(s=>({proofBusy:null,proofs:{...s.proofs,[policy]:j},digests:s.digests.concat(j.live_policy_digest||[])}));}
+    catch(e){this.setState({proofBusy:null,proofErr:'Proof failed · '+this.errText(e)});}
+  }
+  async setMode(m){
+    if(!this.isLive())return;
+    this.setState({modeErr:''});
+    try{const j=await this.post('/mode',{mode:m});this.setState({tmode:j.mode,tdisabled:j.disabled||[],tns:j.namespace||''});}
+    catch(e){this.setState({modeErr:'MODE CHANGE FAILED · '+this.errText(e)});this.later(()=>this.setState({modeErr:''}),7000);}
+  }
+  async moment(n){
+    if(!this.isLive()||this.state.demoBusy)return;
+    this.setState(s=>({demoBusy:n,demoErr:'',demoRes:{...s.demoRes,[n]:null}}));
+    try{const j=await this.post('/demo/moment/'+n,{});this.setState(s=>({demoBusy:null,demoRes:{...s.demoRes,[n]:j}}));}
+    catch(e){this.setState({demoBusy:null,demoErr:'Moment '+n+' failed · '+this.errText(e)});}
+    this.loadAll();
+  }
+  async demoReset(){
+    if(!this.isLive())return;
+    try{await this.post('/demo/reset',{});this.anims=[];this.arr={};this.seen=new Set();
+      this.setState({events:[],resolved:{},proofs:{},digests:[],rt:[],demoRes:{},demoEv:{},demoErr:'',nonce:null});this.loadAll();}
+    catch(e){this.setState({demoErr:'Reset failed · '+this.errText(e)});}
+  }
+  async issueNonce(){
+    this.setState({nonceErr:''});
+    try{const j=await this.post('/voice/nonce',{session:this.lastSession});this.setState({nonce:{...j,at:Date.now()}});}
+    catch(e){this.setState({nonceErr:'Nonce failed · '+this.errText(e)});}
+  }
+  async rtSubmit(){
+    const text=this.rtEl?this.rtEl.value:'';
+    if(!text.trim()){this.setState({rtErr:'Enter some text first.',rtMsg:''});return;}
+    this.setState({rtErr:'',rtMsg:'Submitting…'});
+    try{const j=await this.post('/redteam/submit',{text});if(this.rtEl)this.rtEl.value='';
+      this.setState({rtMsg:'Evaluated by the real gateway · '+j.decision+(j.moderated?' · text withheld by display filter':''),rtErr:''});}
+    catch(e){this.setState({rtMsg:'',rtErr:'Submission rejected · '+this.errText(e)});}
+  }
+  async rtFallback(){
+    this.setState({rtErr:'',rtMsg:'Running fallback queue…'});
+    try{const j=await this.post('/redteam/fallback',{});this.setState({rtMsg:'Fallback queue ran · '+((j.results||[]).length)+' submissions',rtErr:''});}
+    catch(e){this.setState({rtMsg:'',rtErr:'Fallback failed · '+this.errText(e)});}
+  }
+  async rtKill(){
+    const killed=!!(this.state.rtStats&&this.state.rtStats.killed);
+    try{const j=await this.post('/redteam/kill',{on:!killed});if(j&&j.attempted!=null)this.setState({rtStats:{attempted:j.attempted,succeeded:j.succeeded,killed:j.killed}});this.setState({rtErr:''});}
+    catch(e){this.setState({rtErr:'Kill switch failed · '+this.errText(e)});}
+  }
+  async inclusion(idx){
+    try{const j=await this.api('/audit/proof/inclusion?idx='+idx);this.setState(s=>({au:{...s.au,inc:j}}));}
+    catch(e){this.setState(s=>({au:{...s.au,inc:{error:this.errText(e),index:idx}}}));}
+  }
+  async consistency(){
+    const h=(this.state.rs.head||{}).d;const old=h&&h.sth?h.sth.size:null;
+    if(!old){this.setState(s=>({au:{...s.au,con:{error:'no signed tree head yet'}}}));return;}
+    try{const j=await this.api('/audit/proof/consistency?old='+old);this.setState(s=>({au:{...s.au,con:j}}));}
+    catch(e){this.setState(s=>({au:{...s.au,con:{error:this.errText(e)}}}));}
+  }
+  async downloadReport(){
+    const save=(obj,name)=>{const url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));
+      const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);};
+    if(this.isLive()){this.setState({repErr:''});try{save(await this.api('/report/dpdp'),'trishul-dpdp-report.json');}catch(e){this.setState({repErr:'Report failed · '+this.errText(e)});}return;}
     const evs=this.state.events.filter(e=>e.feature==='purposelock');
-    const rep={generated_at:new Date().toISOString(),source:this.state.mode==='replay'?'DEV REPLAY (synthetic) · '+this.state.logName:'live stream',consent:this.state.consent,
-      decisions:evs.map(e=>({id:e.id,ts:e.ts,tool:e.tool,decision:this.decOf(e),rules:e.rules,reason:e.reason,audit_hash:e.audit_hash}))};
-    const url=URL.createObjectURL(new Blob([JSON.stringify(rep,null,2)],{type:'application/json'}));
-    const a=document.createElement('a');a.href=url;a.download='dpdp-report.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    save({generated_at:new Date().toISOString(),source:'DEV REPLAY (synthetic) · '+this.state.logName,consent:this.state.consent,
+      decisions:evs.map(e=>({id:e.id,ts:e.ts,tool:e.tool,decision:this.decOf(e),rules:e.rules,reason:e.reason}))},'dpdp-report-dev-replay.json');
+  }
+  /* region status: [state,text] for loading / empty / error / disconnected */
+  status(r,n,empty){
+    const live=this.isLive(),conn=this.state.conn;
+    if(!live)return ['unavailable','UNAVAILABLE in DEV REPLAY · this panel needs a live gateway'];
+    if(r&&r.s==='error')return ['error','Could not load · '+r.e];
+    if(conn!=='open'&&!(r&&r.d))return ['disconnected','DISCONNECTED · waiting for the gateway to reconnect'];
+    if(!r||(r.s==='loading'&&!r.d))return ['loading','Loading…'];
+    if(conn!=='open')return ['disconnected','DISCONNECTED · showing last known data'];
+    if(!n)return ['empty',empty];
+    return ['ok',''];
+  }
+
+  benchSections(j,metrics){
+    const pc=v=>v==null?'not measured':(v*100).toFixed(1)+'%';
+    const ms=v=>v==null?'—':Number(v).toFixed(3)+' ms';
+    const L=(a,b,c,col)=>({a,b:b==null?'—':String(b),c:c==null?'':String(c),col:col||C.text});
+    const out=[];const env=j.environment||{},su=j.suites||{},ind=su.india||{},lat=j.latency||{},vo=j.voice||{},ag=su.agentdojo||{};
+    out.push({title:'RUN',lines:[L('generated at',j.generated_at),L('git commit',short(j.git_commit,10),j.git_dirty?'dirty tree':''),L('seed',j.seed),L('dataset',j.dataset_version),L('environment',[env.os,env.cpu,'python '+env.python].filter(Boolean).join(' · '))]});
+    const wc=ind.with_counts||{},wt=ind.with_trishul||{},wo=ind.without||{};
+    out.push({title:'INDIA ATTACK SUITE · '+(j.dataset_version||''),lines:[
+      L('attacks / benign',(ind.attacks!=null?ind.attacks:'—')+' / '+(ind.benign!=null?ind.benign:'—')),
+      L('attack success rate · TRISHUL on',pc(wt.asr),wc.attacks_succeeded!=null?wc.attacks_succeeded+' of '+wc.attacks_measured+' succeeded':'',C.teal),
+      L('attack success rate · TRISHUL off',pc(wo.asr),wo.attacks_measured!=null?wo.attacks_measured+' measured':'',C.red),
+      L('benign utility · on / off',pc(wt.utility)+' / '+pc(wo.utility),wc.benign_completed!=null?wc.benign_completed+' of '+wc.benign_measured+' completed':''),
+      ...(wo.note?[L('note',wo.note)]:[])]});
+    out.push({title:'PER CATEGORY',lines:Object.entries(ind.per_category||{}).map(([k,c])=>{const a=c.with_trishul||{},b=c.without||{};
+      return L(k+' ('+c.kind+', n '+c.n+')',pc(a.rate)+' on',b.rate==null?'off: not run':pc(b.rate)+' off',c.kind==='attack'&&a.count>0?C.amber:C.text);})});
+    const lt=(k)=>{const t=(lat[k]||{}).total||{};return ms(t.p50)+' / '+ms(t.p99);};
+    out.push({title:'DECISION LATENCY · p50 / p99',lines:[L('ML on · total',lt('ml_on')),L('ML off · total',lt('ml_off')),L('samples',lat.samples,lat.repeats!=null?lat.repeats+' repeats':''),...(lat.note?[L('note',lat.note)]:[]),
+      ...Object.entries(lat.ml_on||{}).filter(([k])=>k!=='total').map(([k,t])=>L('stage · '+k,ms(t.p50)+' / '+ms(t.p99)))]});
+    out.push({title:'AGENTDOJO',lines:ag.status==='ok'
+      ?[L('status','ok'),L('model',ag.model),L('suites run',(ag.suites_run||[]).join(', ')),L('with TRISHUL',pc((ag.with_trishul||{}).asr)+' asr · '+pc((ag.with_trishul||{}).utility)+' utility'),L('without',pc((ag.without||{}).asr)+' asr · '+pc((ag.without||{}).utility)+' utility'),L('subset',ag.subset_note)]
+      :[L('status','not run',null,C.amber),L('reason',ag.reason),...(ag.subset_note?[L('subset when run',ag.subset_note)]:[])]});
+    out.push({title:'VOICE · '+(vo.source||''),lines:[L('status',vo.status,vo.detector||'',vo.status==='measured'?C.teal:C.amber),L('eer',vo.eer==null?'not measured':pc(vo.eer)),L('accuracy',vo.accuracy==null?'not measured':pc(vo.accuracy)),
+      ...(vo.spoof_recall!=null?[L('spoof recall',pc(vo.spoof_recall),(vo.spoof_clips!=null?vo.spoof_clips+' spoof clips':''))]:[]),...(vo.bonafide_clips!=null?[L('bonafide clips',vo.bonafide_clips)]:[]),L('note',vo.note)]});
+    out.push({title:'ABLATION',lines:(j.ablation||[]).map(a=>L(a.config,pc(a.asr)+' asr',pc(a.utility)+' utility'))});
+    out.push({title:'FAILURES · '+((j.failures||[]).length),lines:(j.failures||[]).map(f=>L(f.id+' · '+f.kind,f.detail,f.mode,C.amber))});
+    const st=metrics&&metrics.stages;
+    if(st)out.push({title:'LIVE STAGE LATENCY · GET /metrics',lines:Object.entries(st).map(([k,t])=>L(k,ms(t.p50_ms)+' / '+ms(t.p99_ms),t.n!=null?t.n+' samples':''))});
+    return out;
   }
 
   renderVals(){
-    const s=this.state,ev=s.events,now=s.now||Date.now();
+    const s=this.state,ev=s.events,now=s.now||Date.now(),live=s.mode==='live';
     const dec=e=>this.decOf(e);
-    let den=0,att=0,pend=0;const lat=[];
-    for(const e of ev){const d=dec(e);if(d==='DENY'){den++;if(isAttack(e))att++;}if(e.decision==='STEP_UP'&&!s.resolved[e.id])pend++;if(e.latency_ms!=null)lat.push(e.latency_ms);}
+    const R=k=>s.rs[k]||null;
+    const evById={};ev.forEach(e=>{evById[e.id]=e;});
+    let den=0,att=0,pendEv=0;const lat=[];
+    for(const e of ev){const d=dec(e);if(d==='DENY'){den++;if(isAttack(e))att++;}if(e.decision==='STEP_UP'&&!s.resolved[e.id])pendEv++;if(e.latency_ms!=null)lat.push(e.latency_ms);}
     lat.sort((a,b)=>a-b);
     const p99=pctl(lat,.99),p95=pctl(lat,.95);
     const lastCall=ev[ev.length-1];
+    const M=(k,state,text)=>({[k+'On']:!!text,[k+'State']:state,[k+'Col']:STATE_COL[state]||C.muted,[k+'Msg']:text||''});
+    const fmt=n=>n==null?'—':n.toFixed(1);
 
     const agents=AGENTS.map((a,i)=>{
       const es=ev.filter(e=>e.agent===a.id);
@@ -701,7 +1075,7 @@ class Component extends DCLogic {
 
     const x0=now-WIN;let lastX=-1e9;const tags=[];
     ev.forEach(e=>{const t=tOf(e);if(t<x0||t>now||dec(e)!=='DENY'||!this.pass(e))return;const x=CH.x+(t-x0)/WIN*CH.w;if(x-lastX<96)return;lastX=x;
-      tags.push({left:Math.round(Math.min(x-6,CH.x+CH.w-120)),top:Math.round(Math.max(792,CH.y+CH.h-risk(e)*CH.h*.92-34)),label:tagOf(e)});});
+      tags.push({left:Math.round(Math.min(x-6,CH.x+CH.w-120)),top:Math.round(Math.max(816,CH.y+CH.h-risk(e)*CH.h*.92-34)),label:tagOf(e)});});
 
     const bins=new Array(15).fill(0);
     ev.forEach(e=>{if(dec(e)!=='DENY')return;const k=Math.floor((now-tOf(e))/60000);if(k>=0&&k<15)bins[14-k]++;});
@@ -710,84 +1084,190 @@ class Component extends DCLogic {
     let apmPath='';pts.forEach((p,i)=>{if(!i)apmPath=`M${p.x},${p.y}`;else{const q=pts[i-1],mx=(q.x+p.x)/2;apmPath+=` C${mx},${q.y} ${mx},${p.y} ${p.x},${p.y}`;}});
     const apmDots=[];pts.forEach((p,i)=>{for(let j=0;j<Math.min(p.v,6);j++){const h=hsh(i*13+j);apmDots.push({x:(p.x+((h%15)-7)).toFixed(1),y:(p.y+(((h>>4)%11)-5)).toFixed(1),r:j?1.3:2.2,o:j?.55:.95});}});
 
-    const badIdx=s.audit.bad?ev.findIndex(e=>e.id===s.audit.bad):-1;
-    const src=badIdx>=0?ev.slice(Math.max(0,badIdx-3),badIdx+5).reverse():ev.slice(-8).reverse();
+    const src=ev.slice(-8).reverse();
     this.rowGeo=[];
     const rows=src.map((e,i)=>{
-      const d=dec(e),col=DCOL[d]||C.blue,top=ROWY(i),x=dotX(e),y=top+22,bad=e.id===s.audit.bad;
-      this.rowGeo.push({id:e.id,x,y,col,bad});
+      const d=dec(e),col=DCOL[d]||C.blue,top=ROWY(i),x=dotX(e),y=top+22;
+      this.rowGeo.push({id:e.id,x,y,col,bad:false});
       const iso=e.ts||'';
       return {top,hm:iso.slice(11,16),summary:summary(e),caps:(e.reason||'').replace(/\.$/,'').toUpperCase()+((e.rules||[]).length?' · '+e.rules.join(', '):''),
-        capsCol:d==='ALLOW'?C.muted:col,date:iso.slice(2,10)+'T ',time:iso.slice(11,19),col,feat:FNAME[e.feature]||'',fy:top+16,
-        dx:x-12,dy:y-12,outline:bad?C.red:'transparent',bg:bad?'rgba(229,83,61,.1)':'transparent',decision:d,open:()=>this.open(e.id)};
+        capsCol:d==='ALLOW'?C.muted:col,date:iso.slice(2,10)+'T ',time:iso.slice(11,19),col,feat:FNAME[e.feature]||(e.feature||'').toUpperCase(),fy:top+16,
+        dx:x-12,dy:y-12,outline:'transparent',bg:'transparent',decision:d,open:()=>this.open(e.id)};
     });
     let latestDeny=null;for(let i=ev.length-1;i>=0;i--){if(dec(ev[i])==='DENY'){latestDeny=ev[i];break;}}
     const tg=latestDeny&&this.rowGeo.find(r=>r.id===latestDeny.id);this.threat=tg?{x:tg.x,y:tg.y}:null;
 
     let active=0;ev.forEach(e=>{if(dec(e)==='DENY'&&isAttack(e)&&now-tOf(e)<300000)active++;});
 
-    const live=s.mode==='live';
+    /* ---- top strip: connection / OFF banner / gap / dev replay ---- */
     let statusText='',statusBg='',statusBorder='',statusColor='',statusAnim='none';
-    if(live&&s.conn!=='open'){const lost=s.conn==='lost',bad=s.conn==='error';statusText=bad?'CONNECTION ERROR · RETRYING · '+(this.props.wsUrl||'ws://localhost:8787/events'):lost?'STREAM LOST · RECONNECTING':'CONNECTING · '+(this.props.wsUrl||'ws://localhost:8787/events');statusBg='rgba(229,83,61,.14)';statusBorder='rgba(229,83,61,.5)';statusColor=C.red;statusAnim=lost||bad?'blink 1.4s ease-in-out infinite':'none';}
-    else if(!live){if(s.conn==='noreplay'){statusText='REPLAY LOG NOT FOUND · replay/demo-session.json';statusBg='rgba(33,57,71,.35)';statusBorder='rgba(202,217,226,.1)';statusColor=C.muted;}else{statusText=`DEV REPLAY · SYNTHETIC DATA · ${s.logName} · ${this.speed()}×`;statusBg='rgba(232,163,61,.14)';statusBorder='rgba(232,163,61,.5)';statusColor=C.amber;}}
+    const off=live&&s.tmode==='off';
+    if(live&&s.conn!=='open'){const lost=s.conn==='lost',bad=s.conn==='error';statusText=bad?'CONNECTION ERROR · RETRYING · '+this.wsUrl():lost?'STREAM LOST · RECONNECTING':'CONNECTING · '+this.wsUrl();statusBg='rgba(229,83,61,.14)';statusBorder='rgba(229,83,61,.5)';statusColor=C.red;statusAnim=lost||bad?'blink 1.4s ease-in-out infinite':'none';}
+    else if(live&&s.modeErr){statusText=s.modeErr;statusBg='rgba(229,83,61,.14)';statusBorder='rgba(229,83,61,.5)';statusColor=C.red;}
+    else if(off){statusText='TRISHUL IS OFF · UNGUARDED DEMO · DISABLED: '+((s.tdisabled||[]).join(' · ').toUpperCase()||'EVERYTHING')+' · CALLS EXECUTE IN THE ISOLATED '+(s.tns||'demo_off')+' NAMESPACE, NEVER THE PROTECTED LEDGER';statusBg='rgba(229,83,61,.3)';statusBorder='rgba(229,83,61,.85)';statusColor='#FFFFFF';statusAnim='blink 1.4s ease-in-out infinite';}
+    else if(live&&!OP_TOKEN){statusText=OP_HINT;statusBg='rgba(232,163,61,.14)';statusBorder='rgba(232,163,61,.5)';statusColor=C.amber;}
+    else if(live&&s.gap&&Date.now()-s.gap<9000){statusText='STREAM GAP · RESYNCED FROM THE GATEWAY';statusBg='rgba(232,163,61,.14)';statusBorder='rgba(232,163,61,.5)';statusColor=C.amber;}
+    else if(!live){if(s.conn==='noreplay'){statusText='REPLAY LOG NOT FOUND · replay/demo-session.json';statusBg='rgba(33,57,71,.35)';statusBorder='rgba(202,217,226,.1)';statusColor=C.muted;}else{statusText='DEV REPLAY — synthetic data · '+s.logName+' · '+this.speed()+'×';statusBg='rgba(232,163,61,.14)';statusBorder='rgba(232,163,61,.5)';statusColor=C.amber;}}
 
     const P=s.panel;
-    const de=P==='detail'?ev.find(e=>e.id===s.detail):null;
+    const de=P==='detail'?evById[s.detail]:null;
     let d={};
     if(de){const dd=dec(de);const sc=Object.entries(de.scores||{});
-      d={decision:dd,col:DCOL[dd],tool:de.tool,agent:de.agent,feature:FNAME[de.feature]||de.feature,ts:de.ts,latency:de.latency_ms!=null?de.latency_ms+' ms':'—',
-        args:Object.entries(de.args||{}).map(([k,v])=>{const l=(de.labels||{})[k];const un=l&&String(l).startsWith('UNTRUSTED');return{key:k,value:typeof v==='object'?JSON.stringify(v):(k==='amount'?inr(v):String(v)),label:l?String(l).replace('UNTRUSTED_EXTERNAL:','UNTRUSTED · '):'USER',lc:un?C.red:l?C.muted:C.user};}),
+      const nodes=((de.lineage||{}).nodes||[]).slice().sort((a,b)=>({source:0,derivation:1,sink:2}[a.kind]??1)-({source:0,derivation:1,sink:2}[b.kind]??1));
+      const refOf={};nodes.forEach(n=>{refOf[n.id]=n.ref||n.id;});
+      const lvCol=l=>String(l).startsWith('UNTRUSTED')?C.red:l==='TRUSTED_USER'?C.user:C.blue;
+      const extra=[de.mode?'mode '+de.mode:'',de.namespace?'namespace '+de.namespace:'',de.approval?'approval '+de.approval.id+' ('+de.approval.state+')':'',de.mandate?'mandate '+de.mandate.id+' ('+de.mandate.state+')':''].filter(Boolean).join(' · ');
+      d={decision:dd,col:DCOL[dd]||C.blue,tool:de.tool,agent:de.agent,feature:FNAME[de.feature]||de.feature,ts:de.ts,latency:de.latency_ms!=null?de.latency_ms+' ms':'—',
+        args:Object.entries(de.args||{}).map(([k,v])=>{const l=(de.labels||{})[k];const un=l&&String(l).startsWith('UNTRUSTED');return{key:k,value:k==='amount_paise'?money(v):k==='amount'?inr(v):short(typeof v==='object'?JSON.stringify(v):String(v),120),label:l?String(l).replace('UNTRUSTED_EXTERNAL:','UNTRUSTED · '):'USER',lc:un?C.red:l?C.muted:C.user};}),
         rules:(de.rules||[]).map(id=>({id})),noRules:!(de.rules||[]).length,
         scores:sc.map(([k,v])=>({key:k,val:Number(v).toFixed(2),pct:Math.round(v*100),col:v>=.5?C.red:C.blue})),noScores:!sc.length,
-        hasEffect:!!de.effect,effect:de.effect?de.effect.summary+(de.effect.balance_after!=null?' · balance after '+inr(de.effect.balance_after):''):'',
+        noScoresText:de.mode==='off'?'TRISHUL is OFF: nothing was scored.':de.ml==='off'?'Classifier off. Rules decided alone.':'No ML scores reported for this call.',
+        hasEffect:!!de.effect,effect:effectText(de),
+        hasLineage:nodes.length>0,lineage:nodes.map((n,i)=>({text:n.kind+' · '+short(n.ref||n.id,44)+' · '+((n.label||{}).level||'?'),col:lvCol((n.label||{}).level),op:i<s.linStep?1:.12,arrow:i<nodes.length-1?'→':''})),
+        edges:(((de.lineage||{}).edges)||[]).map(e=>({text:e.op+': '+short(refOf[e.src]||e.src,40)+' → '+short(refOf[e.dst]||e.dst,40)})),
+        hasExtra:!!extra,extra,
         reason:de.reason||'',hash:de.audit_hash||(live?'—':'— (replay)')};}
 
-    const approvals=ev.filter(e=>e.decision==='STEP_UP').slice().reverse().map(e=>{const r=s.resolved[e.id];
-      return{tool:e.tool,agent:e.agent,time:(e.ts||'').slice(11,19),effect:e.effect?e.effect.summary+(e.effect.balance_after!=null?' · balance after '+inr(e.effect.balance_after):''):summary(e),reason:e.reason,
-        open:!r,done:!!r,status:r==='ALLOW'?'APPROVED · BEAM RELEASED':'REJECTED · DENIED AT GATE',col:r==='ALLOW'?C.blue:C.red,border:r?'rgba(202,217,226,.1)':'rgba(232,163,61,.5)',
-        approve:()=>this.resolve(e.id,true),reject:()=>this.resolve(e.id,false)};});
+    /* ---- approvals ---- */
+    let approvals=[],apSt;
+    if(live){
+      const r=R('approvals');const list=(r&&r.d&&r.d.approvals)||[];
+      approvals=list.map(a=>{const e=evById[a.id];const pend=a.status==='pending',ok=a.status==='approved';
+        return{tool:a.tool,agent:e?e.agent:a.task_id,time:(a.created_ts||'').slice(11,19),effect:e?summary(e):summary({tool:a.tool,args:a.args}),reason:e?e.reason:'',
+          binding:'call digest '+short(a.call_digest,24)+' · task '+a.task_id+(a.approver?' · decided by '+a.approver:'')+(ok?(a.consumed?' · token consumed':' · token not yet used'):''),
+          bindState:ok?(a.consumed?'consumed':'approved'):a.status,open:pend,done:!pend,
+          status:ok?'APPROVED · '+(a.consumed?'TOKEN CONSUMED':'TOKEN UNUSED'):a.status==='rejected'?'REJECTED · DENIED AT GATE':String(a.status).toUpperCase(),col:ok?C.blue:C.red,border:pend?'rgba(232,163,61,.5)':'rgba(202,217,226,.1)',
+          approve:()=>this.resolve(a.approval_id,true),reject:()=>this.resolve(a.approval_id,false)};});
+      apSt=this.status(r,approvals.length,'No STEP_UP approvals yet.');
+    }else{
+      approvals=ev.filter(e=>e.decision==='STEP_UP').slice().reverse().map(e=>{const r=s.resolved[e.id];
+        return{tool:e.tool,agent:e.agent,time:(e.ts||'').slice(11,19),effect:effectText(e)||summary(e),reason:e.reason,binding:'— (dev replay)',bindState:'synthetic',
+          open:!r,done:!!r,status:r==='ALLOW'?'APPROVED · BEAM RELEASED':'REJECTED · DENIED AT GATE',col:r==='ALLOW'?C.blue:C.red,border:r?'rgba(202,217,226,.1)':'rgba(232,163,61,.5)',
+          approve:()=>this.resolve(e.id,true),reject:()=>this.resolve(e.id,false)};});
+      apSt=approvals.length?['ok','']:['empty','No STEP_UP decisions yet.'];
+    }
+    const mismatches=ev.filter(e=>(e.rules||[]).some(r=>/BINDING/.test(r))).slice().reverse().map(e=>({summary:summary(e),rule:(e.rules||[]).filter(r=>/BINDING/.test(r)).join(', '),reason:e.reason||'',open:()=>this.open(e.id)}));
+    const pend=live&&R('approvals')&&R('approvals').d?((R('approvals').d.approvals)||[]).filter(a=>a.status==='pending').length:pendEv;
 
-    let vv=null;for(let i=ev.length-1;i>=0;i--){if(ev[i].feature==='voicetrust'&&ev[i].scores&&ev[i].scores.spoof!=null){vv=ev[i];break;}}
-    const v=vv?(()=>{const dd=dec(vv),sp=vv.scores.spoof,rem=Math.max(0,10-(now-tOf(vv))/1000);
-      return{has:true,none:false,time:(vv.ts||'').slice(11,19),transcript:(vv.args||{}).transcript||'',spoof:sp.toFixed(2),pct:Math.round(sp*100),col:DCOL[dd],decision:dd,reason:vv.reason||'',
-        hasPhrase:!!(vv.liveness&&vv.liveness.phrase),phrase:vv.liveness?vv.liveness.phrase:'',secs:Math.ceil(rem)+'s',ring:(138.2*(1-rem/10)).toFixed(1)};})():{has:false,none:true};
+    /* ---- voice ---- */
+    let vv=null;for(let i=ev.length-1;i>=0;i--){if(ev[i].feature==='voicetrust'){vv=ev[i];break;}}
+    const nn=s.nonce;const nrem=nn?Math.max(0,nn.ttl_s-(Date.now()-nn.at)/1000):0;
+    const replayPhrase=!live&&vv&&vv.liveness&&vv.liveness.phrase;
+    const v=(()=>{const base={has:!!vv,none:!vv,noneText:live?(s.conn==='open'?'No voice commands in the stream yet.':'DISCONNECTED · waiting for the gateway'):'No voice commands in the replay yet.',
+        state:vv?'ok':live?(s.conn==='open'?'empty':'disconnected'):'empty',hasPhrase:!!nn&&live||!!replayPhrase,phrase:live?(nn?nn.phrase:''):(replayPhrase?vv.liveness.phrase:''),
+        secs:live&&nn?Math.ceil(nrem)+'s':'—',ring:live&&nn?(138.2*(1-nrem/nn.ttl_s)).toFixed(1):'0',canNonce:live};
+      if(!vv)return {...base,time:'',transcript:'',spoof:'—',pct:0,col:C.muted,decision:'',reason:'',liveness:'—'};
+      const dd=dec(vv),sp=vv.scores&&vv.scores.spoof!=null?vv.scores.spoof:null,a=vv.args||{};
+      return {...base,time:(vv.ts||'').slice(11,19),transcript:a.transcript?'“'+short(a.transcript,200)+'”':'transcript not included in this event · clip '+short(a.clip_id,40),
+        spoof:sp==null?'—':sp.toFixed(2),pct:sp==null?0:Math.round(sp*100),col:DCOL[dd]||C.blue,decision:dd,reason:vv.reason||'',liveness:vv.liveness?(vv.liveness.state||JSON.stringify(vv.liveness)):'—'};})();
 
-    const consent=s.consent.map(c=>({principal:c.principal,purpose:c.purpose,status:String(c.status||'').toUpperCase(),active:c.status==='active',col:c.status==='active'?C.blue:C.muted,withdraw:()=>this.withdraw(c.id)}));
-    const rt=ev.filter(e=>e.source==='redteam');
-    const rtSucc=rt.filter(e=>dec(e)==='ALLOW').length;
-    const pf=s.proof;const pr=pf&&String(pf.result||'').toUpperCase();
+    /* ---- consent ---- */
+    let consent=[],cSt;
+    if(live){const r=R('consent');const list=(r&&r.d&&r.d.consent)||[];
+      consent=list.map(c=>({principal:c.principal,purpose:(c.purposes||[]).join(', '),status:String(c.status||'').toUpperCase(),active:c.status==='active',col:c.status==='active'?C.blue:C.muted,withdraw:()=>this.withdraw(c.id)}));
+      cSt=this.status(r,consent.length,'No consent records.');
+    }else{consent=s.consent.map(c=>({principal:c.principal,purpose:c.purpose,status:String(c.status||'').toUpperCase(),active:c.status==='active',col:c.status==='active'?C.blue:C.muted,withdraw:()=>this.withdraw(c.id)}));
+      cSt=consent.length?['ok','']:['empty','No consent records in the replay.'];}
 
-    const titles={detail:'CALL DETAIL',approvals:'APPROVALS',voice:'VOICETRUST',purpose:'PURPOSELOCK · CONSENT',proof:'PROOF · Z3',red:'RED-TEAM WALL'};
+    /* ---- proof ---- */
+    const pbOf=(key,p)=>{const unsat=String(p.result).toUpperCase()==='UNSAT';const col=unsat?C.blue:C.red;
+      const rep=p.replay;
+      return{title:key==='live'?'LIVE POLICY':'UNSAFE FIXTURE · compiled separately, live policy untouched',state:unsat?'unsat':'counterexample',head:unsat?'UNSAT ✓':'SAT · COUNTEREXAMPLE',col,
+        border:unsat?'rgba(69,130,155,.6)':'rgba(229,83,61,.6)',bg:unsat?'rgba(69,130,155,.12)':'rgba(229,83,61,.1)',prop:p.property||'',
+        digest:'policy digest '+short(p.policy_digest,20)+' · solver '+(p.solver||'z3')+(p.solve_ms!=null?' · '+Number(p.solve_ms).toFixed(1)+' ms total':'')+(p._ws?' · from stream (counterexample detail via POST /prove)':''),
+        rows:(p.per_invariant||[]).map(r=>({id:r.id,tool:r.tool||'',result:r.result,col:String(r.result).toUpperCase()==='UNSAT'?C.blue:C.red,ms:r.solve_ms!=null?Number(r.solve_ms).toFixed(1)+' ms':'—',hasCex:!!r.counterexample,cex:r.counterexample?JSON.stringify(r.counterexample,null,1):''})),
+        hasReplay:!!rep,replayCall:rep?short(JSON.stringify(rep.call),260):'',replayUnsafe:rep?'decision under unsafe fixture: '+rep.decision_under_unsafe:'',replayLive:rep?'decision under live policy: '+rep.decision_under_live:''};};
+    const proofBlocks=['live','unsafe_fixture'].filter(k=>s.proofs[k]).map(k=>pbOf(k,s.proofs[k]));
+    const dg=s.digests,stable=dg.length>0&&dg.every(x=>x===dg[0]);
+    const pfSt=s.proofErr?['error',s.proofErr]:(!live?['unavailable','UNAVAILABLE in DEV REPLAY · a proof needs the live gateway']:s.proofBusy?['loading','Z3 is solving…']:!proofBlocks.length?['empty','No proof run yet. Press PROVE LIVE POLICY.']:['ok','']);
+    const anyCex=proofBlocks.some(b=>b.state==='counterexample');
+
+    /* ---- red team ---- */
+    const rst=s.rtStats||(R('rtStats')&&R('rtStats').d)||null;
+    const rtEvents=live?s.rt.slice().reverse().slice(0,20).map(e=>{const dd=e.decision;return{text:e.text,decision:dd,col:DCOL[dd]||C.muted,outline:e.succeeded?C.red:'transparent',bg:e.succeeded?'rgba(229,83,61,.1)':'transparent',rules:(e.rules||[]).join(', ')||'no rule hit',
+        meta:[e.source,e.namespace,e.moderated?'display-filtered':'',e.succeeded?'SUCCEEDED':'blocked'].filter(Boolean).join(' · '),open:()=>{if(e.ref&&evById[e.ref])this.open(e.ref);}};})
+      :ev.filter(e=>e.source==='redteam').slice().reverse().slice(0,20).map(e=>({text:e.attack_text||summary(e),decision:dec(e),col:DCOL[dec(e)],outline:'transparent',bg:'transparent',rules:(e.rules||[]).join(', ')||'no rule hit',meta:e.tool+' · synthetic',open:()=>this.open(e.id)}));
+    const rtSt=s.rtErr?['error',s.rtErr]:s.rtMsg?['ok',s.rtMsg]:!live?['unavailable','UNAVAILABLE in DEV REPLAY · submissions are disabled']:s.conn!=='open'?['disconnected','DISCONNECTED · waiting for the gateway']:(R('rtStats')&&R('rtStats').s==='error')?['error','Could not load · '+R('rtStats').e]:!rtEvents.length?['empty','No red-team submissions yet.']:['ok',''];
+
+    /* ---- audit explorer ---- */
+    const head=(R('head')&&R('head').d)||null;const lv=R('leaves');const lvd=lv&&lv.d;
+    const tail=lastCall&&lastCall.tree_head;
+    const leaves=(lvd&&lvd.leaves||[]).map(l=>{const e=l.event||{};return{idx:l.idx,text:[e.type||'unparseable',e.tool||e.domain,e.decision||e.status].filter(Boolean).join(' · '),intact:l.intact?'INTACT':'HASH MISMATCH',col:l.intact?C.blue:C.red,border:l.intact?'rgba(202,217,226,.08)':'rgba(229,83,61,.7)',open:()=>this.inclusion(l.idx)};});
+    const auSt=!live?['unavailable','UNAVAILABLE in DEV REPLAY · the audit log needs the live gateway']:s.au.err?['error','Could not load leaves · '+s.au.err]:this.status(lv,leaves.length,'The audit log is empty.');
+    const ver=s.au.ver,con=s.au.con,inc=s.au.inc;
+    const yes=b=>b?'✓':'✗';
+
+    /* ---- mandates ---- */
+    const mr=R('mandates');const mlist=(mr&&mr.d&&mr.d.mandates)||[];
+    const mandates=mlist.map(m=>{const okc=m.state==='valid';const pct=m.daily_cap?Math.min(100,Math.round(m.used_today/m.daily_cap*100)):0;
+      return{id:m.id,state:String(m.state).toUpperCase(),col:okc?C.blue:C.red,border:okc?'rgba(202,217,226,.1)':'rgba(229,83,61,.5)',payee:m.payee||'—',perTxn:money(m.per_txn_cap),daily:money(m.daily_cap),used:money(m.used_today),uses:m.uses==null?'—':String(m.uses)+(m.max_uses!=null?' of '+m.max_uses:' · no use limit'),pct,
+        window:'valid '+String(m.nbf||'').slice(0,10)+' → '+String(m.exp||'').slice(0,10),payees:(m.payees||[]).map(p=>p.vpa+' (cap '+money(p.cap)+')').join(' · ')};});
+    const paySt=this.status(mr,mandates.length,'No mandates issued.');
+
+    /* ---- bench ---- */
+    const bn=s.bench;
+    const benchSections=bn.s==='ok'?this.benchSections(bn.d,R('metrics')&&R('metrics').d):[];
+    const benchSt=bn.s==='error'?['error',bn.e]:bn.s==='loading'?['loading','Loading bench/results.json…']:bn.s==='idle'?['loading','Loading…']:['ok',''];
+
+    /* ---- demo ---- */
+    const moments=MOMENTS.map(m=>{const de2=s.demoEv[m.n],busy=s.demoBusy===m.n;const stt=busy?'running':de2?de2.status:'idle';
+      return{n:m.n,label:m.label,state:stt,status:busy?'RUNNING…':de2?String(de2.status).toUpperCase():'',col:stt==='error'?C.red:stt==='done'?C.blue:C.amber,border:busy?'rgba(232,163,61,.5)':'rgba(202,217,226,.1)',run:()=>this.moment(m.n)};});
+    const demoLines=[];
+    Object.keys(s.demoRes).sort().forEach(n=>{const r=s.demoRes[n];if(!r)return;
+      demoLines.push({a:'MOMENT '+n,b:(r.steps||[]).length+' steps',col:C.muted});
+      (r.steps||[]).forEach(st=>{
+        demoLines.push({a:'#'+st.step+' '+st.name+' · '+st.status,col:st.status==='ok'?C.blue:C.red,
+          b:Object.entries(st).filter(([k,x])=>!['step','name','status','diff'].includes(k)&&x!=null).map(([k,x])=>k+' '+(k==='amount_paise'?money(x):short(typeof x==='object'?JSON.stringify(x):String(x),140))).join(' · ')});
+        if(st.diff){demoLines.push({a:'− '+st.diff.remove,b:'',col:C.red});demoLines.push({a:'+ '+st.diff.add,b:'',col:C.blue});}});});
+    const demoSt=s.demoErr?['error',s.demoErr]:!live?['unavailable','UNAVAILABLE in DEV REPLAY · demo moments need the live gateway']:s.conn!=='open'?['disconnected','DISCONNECTED · waiting for the gateway']:s.demoBusy?['loading','Running moment '+s.demoBusy+'…']:['ok',''];
+
+    const titles={detail:'CALL DETAIL',approvals:'APPROVALS',voice:'VOICETRUST',purpose:'PURPOSELOCK · CONSENT',proof:'PROOF · Z3',red:'RED-TEAM WALL',audit:'AUDIT EXPLORER',pay:'PAYSHIELD · MANDATES',bench:'BENCHMARKS',demo:'DEMO MOMENTS'};
     const tilt=Number(this.props.tilt??0);
     const plane=s.cam?(tilt?`rotateX(${tilt}deg) scale(.965)`:'none'):`scale(1.18) translate(8%,4%)`;
-    const fmt=n=>n==null?'—':String(n);
+    const cSm=(st,extra)=>extra?['error',(st[1]?st[1]+' ':'')+extra]:st;
+    const auRoot=head&&head.root?head.root:(tail&&tail.root)||null;
+    const killed=!!(rst&&rst.killed);
 
     return {
       scale:s.scale,plane,cvRef:el=>{this.cv=el;},
       calls:ev.length.toLocaleString('en-IN'),blocked:den,attacks:att,p99:fmt(p99),p99u:p99==null?'':' ms',latState:p99==null?'unavailable':live?'measured':'synthetic',connState:live?(s.conn==='open'?'live':s.conn):(s.conn==='noreplay'?'error':'replay-dev'),
-      auditText:!s.audit.ok?'TAMPERED ✗':live?(s.audit.known?'VERIFIED ✓':'UNAVAILABLE'):'SYNTHETIC',auditColor:!s.audit.ok?C.red:live&&s.audit.known?C.blue:C.muted,rootColor:s.audit.ok?(live?C.teal:C.muted):C.red,auditState:live?(s.audit.known?(s.audit.ok?'verified':'tampered'):'unavailable'):'synthetic',
+      auditText:!s.audit.ok?'TAMPERED ✗'+(s.audit.bad!=null?' #'+s.audit.bad:''):live?(s.audit.known?'VERIFIED ✓':'UNAVAILABLE'):'SYNTHETIC',auditColor:!s.audit.ok?C.red:live&&s.audit.known?C.blue:C.muted,rootColor:s.audit.ok?(live?C.teal:C.muted):C.red,auditState:live?(s.audit.known?(s.audit.ok?'verified':'tampered'):'unavailable'):'synthetic',
       auditAnim:s.audit.ok?'none':'flick 1.1s steps(2,end) infinite',
-      root:lastCall&&lastCall.audit_hash?lastCall.audit_hash.slice(0,12)+'…':(live?'—':'— (replay)'),
-      pending:pend,
-      replayBg:live?'transparent':'rgba(69,130,155,.35)',liveBg:live?'rgba(69,130,155,.35)':'transparent',
-      goReplay:()=>{if(this.state.mode!=='replay'||this.state.conn==='noreplay'||!this.src)this.startReplay();},goLive:()=>this.goLive(),
+      root:live?(auRoot?auRoot.slice(0,12)+'…':'—'):'— (replay)',
+      pending:pend,domState:live&&s.conn==='open'?'live':'unavailable',
+      isReplay:!live,isLive:live,replayBg:'rgba(69,130,155,.35)',liveBg:'transparent',
+      goReplay:()=>{if(this.state.conn==='noreplay'||!this.src)this.startReplay();},goLive:()=>{try{location.href=location.pathname;}catch(e){}},
+      modeState:s.tmode||'unknown',onBg:s.tmode==='on'?'rgba(69,130,155,.35)':'transparent',offBg:s.tmode==='off'?'rgba(229,83,61,.55)':'transparent',offCol:s.tmode==='off'?'#FFFFFF':C.red,
+      setOn:()=>this.setMode('on'),setOff:()=>this.setMode('off'),
       showStatus:!!statusText,statusText,statusBg,statusBorder,statusColor,statusAnim,
       agents,tools,paths,tags,
       mlOff:!s.ml,filterLabel:FILTERS[s.filter].toUpperCase(),cycleFilter:()=>this.setState(x=>({filter:(x.filter+1)%FILTERS.length}),()=>this.computeSeries(this.state.now||Date.now())),
       apmPath,apmDots,apmMax:String(ymax),apmMid:String(Math.round(ymax/2)),
-      blockRate:ev.length?(den/ev.length*100).toFixed(1):'0.0',blockRateT:ev.length?(den/ev.length*100).toFixed(1)+'%':'—',p95:p95==null?'—':p95+' ms',p95w:p95==null?0:Math.min(100,p95),active,
+      blockRate:ev.length?(den/ev.length*100).toFixed(1):'0',blockRateT:ev.length?(den/ev.length*100).toFixed(1)+'%':'—',p95:p95==null?'—':p95.toFixed(1)+' ms',p95w:p95==null||!p99?0:Math.min(100,p95/p99*100),active,
       openLatestDeny:()=>{if(latestDeny)this.open(latestDeny.id);},
-      rows,noRows:!rows.length,emptyText:s.conn==='noreplay'?'NO EVENTS · REPLAY LOG MISSING':live?'WAITING FOR GATEWAY EVENTS':'REPLAY STARTING',
+      rows,noRows:!rows.length,emptyText:s.conn==='noreplay'?'NO EVENTS · REPLAY LOG MISSING':live?(s.conn==='open'?'CONNECTED · WAITING FOR GATEWAY EVENTS':'DISCONNECTED · WAITING FOR THE GATEWAY'):'REPLAY STARTING',
       drawerOpen:!!P&&(P!=='detail'||!!de),panelTitle:titles[P]||'',closePanel:()=>this.setState({panel:null}),
       isDetail:P==='detail'&&!!de,d,
-      isApprovals:P==='approvals',approvals,noApprovals:!approvals.length,
-      isVoice:P==='voice',v,
-      isPurpose:P==='purpose',consent,noConsent:!consent.length,downloadReport:()=>this.downloadReport(),
-      isProof:P==='proof',prove:()=>this.prove(),proveLabel:s.proofBusy?'PROVING…':'PROVE',
-      proofOk:pr==='UNSAT',proofBad:!!pf&&pr!=='UNSAT',proofProp:pf?(pf.property||''):'',proofCex:pf?JSON.stringify(pf.counterexample||pf,null,2):'',proofErrOn:!!s.proofErr,proofErr:s.proofErr,proofNoteOn:!!s.proofNote,proofNote:s.proofNote,proofState:s.proofBusy?'busy':s.proofNote?'unavailable':s.proofErr?'error':pf?(pr==='UNSAT'?'unsat':'counterexample'):'idle',
-      isRed:P==='red',rtAtt:rt.length,rtSucc,rtCol:rtSucc?C.red:C.blue,noRed:!rt.length,
-      rtCards:rt.slice().reverse().slice(0,20).map(e=>({text:e.attack_text||summary(e),decision:dec(e),col:DCOL[dec(e)],meta:e.tool+' · '+(e.rules||[]).join(', '),open:()=>this.open(e.id)})),
-      openApprovals:()=>this.setState({panel:'approvals'}),openVoice:()=>this.setState({panel:'voice'}),openPurpose:()=>this.setState({panel:'purpose'}),openProof:()=>this.setState({panel:'proof'}),openRed:()=>this.setState({panel:'red'})
+      isApprovals:P==='approvals',approvals,...M('ap',cSm(apSt,s.apErr)[0],cSm(apSt,s.apErr)[1]),hasMismatch:mismatches.length>0,mismatches,
+      isVoice:P==='voice',v,issueNonce:()=>this.issueNonce(),...M('nonce',s.nonceErr?'error':'ok',s.nonceErr),
+      isPurpose:P==='purpose',consent,...M('consent',cSt[0]==='ok'&&s.cErr?'error':cSt[0],[cSt[1],s.cErr].filter(Boolean).join(' ')),...M('report',s.repErr?'error':'ok',s.repErr),downloadReport:()=>this.downloadReport(),
+      isProof:P==='proof',proveLive:()=>this.prove('live'),proveUnsafe:()=>this.prove('unsafe_fixture'),proveLiveLabel:s.proofBusy==='live'?'PROVING…':'PROVE LIVE POLICY',proveUnsafeLabel:s.proofBusy==='unsafe_fixture'?'PROVING…':'PROVE UNSAFE FIXTURE',
+      proofBlocks,proofNeverSwapped:'The live policy is never swapped. The unsafe fixture is compiled as a separate object for the proof and one sandboxed replay.'+(stable?' Live policy digest '+short(dg[0],16)+' is unchanged after '+(dg.length>1?'every':'the')+' proof.':''),
+      ...M('proof',pfSt[0],pfSt[1]),proofState:s.proofBusy?'busy':pfSt[0]==='error'||pfSt[0]==='unavailable'?pfSt[0]:!proofBlocks.length?'idle':anyCex?'counterexample':'unsat',
+      isRed:P==='red',rtAtt:rst&&rst.attempted!=null?String(rst.attempted):(live?'—':String(rtEvents.length)),rtSucc:rst&&rst.succeeded!=null?String(rst.succeeded):(live?'—':String(ev.filter(e=>e.source==='redteam'&&dec(e)==='ALLOW').length)),
+      rtCol:rst&&rst.succeeded>0?C.red:C.blue,rtKilled:killed,rtKillLabel:killed?'RESUME SUBMISSIONS':'KILL SWITCH',rtRef:el=>{this.rtEl=el;},rtSubmit:()=>this.rtSubmit(),rtFallback:()=>this.rtFallback(),rtToggleKill:()=>this.rtKill(),
+      ...M('rt',rtSt[0],rtSt[1]),rtCards:rtEvents,
+      openApprovals:()=>this.openPanel('approvals'),openVoice:()=>this.openPanel('voice'),openPurpose:()=>this.openPanel('purpose'),openProof:()=>this.openPanel('proof'),openRed:()=>this.openPanel('red'),openAudit:()=>this.openPanel('audit'),openPay:()=>this.openPanel('pay'),openBench:()=>this.openPanel('bench'),openDemo:()=>this.openPanel('demo'),
+      isAudit:P==='audit',auHead:head?'size '+head.size+' · root '+head.root:(tail?'size '+tail.size+' · root '+tail.root+' (from latest call)':'—'),auSth:head&&head.sth?'signed tree head · size '+head.sth.size+' · '+head.sth.ts+' · key '+head.sth.key_id+' · sig '+short(head.sth.sig,20):'no signed tree head yet',
+      auVerify:()=>this.verify(false),auConsistency:()=>this.consistency(),
+      auVerOn:!!ver,auVerText:ver?(ver.error?'Verify failed · '+ver.error:ver.ok?'CHAIN INTACT · '+ver.size+' leaves verified'+(ver.invalid_sths&&ver.invalid_sths.length?' · invalid signed heads '+ver.invalid_sths.join(','):''):'TAMPERED · first bad leaf index '+ver.bad_index):'',auVerCol:ver&&ver.ok&&!(ver.error)?C.blue:C.red,
+      auConOn:!!con,auConText:con?(con.error?'Consistency failed · '+con.error:'consistency '+con.first+' → '+con.second+' · server verified '+yes(con.verified)+' · '+(con.path||[]).length+' proof nodes'):'',auConCol:con&&con.verified?C.blue:C.red,
+      auIncOn:!!inc,auIncText:inc?(inc.error?'Inclusion failed for #'+inc.index+' · '+inc.error:'inclusion #'+inc.index+' in tree of '+inc.tree_size+' · server verified '+yes(inc.verified)+' · payload intact '+yes(inc.payload_intact)+' · '+(inc.path||[]).length+' proof nodes'+(inc.sth?' · covered by signed head of size '+inc.sth.size:'')):'',auIncCol:inc&&inc.verified&&inc.payload_intact?C.blue:C.red,
+      auRange:lvd?('#'+lvd.from+' – #'+(lvd.from+(lvd.leaves||[]).length-1)+' of '+lvd.size):'—',auLeaves:leaves,
+      auPrev:()=>this.loadLeaves(Math.max(0,(s.au.from||0)-PAGE)),auNext:()=>{if(lvd&&(s.au.from||0)+PAGE<lvd.size)this.loadLeaves((s.au.from||0)+PAGE);},...M('au',auSt[0],auSt[1]),
+      isPay:P==='pay',mandates,...M('pay',paySt[0],paySt[1]),
+      isBench:P==='bench',benchSections,...M('bench',benchSt[0],benchSt[1]),
+      isDemo:P==='demo',moments,demoLines,demoReset:()=>this.demoReset(),...M('demo',demoSt[0],demoSt[1])
     };
   }
 }

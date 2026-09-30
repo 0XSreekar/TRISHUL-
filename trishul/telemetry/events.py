@@ -26,6 +26,12 @@ def _escape(text: str) -> str:
     return "".join(_ESCAPES.get(c, c) for c in text)
 
 
+def _raw_text(text: str) -> str:
+    """Untrusted display text kept verbatim (the UI renders it as a text node, never as HTML):
+    control characters and secret patterns are removed but ``<``/``&`` are NOT entity-escaped."""
+    return scrub_text(_CTRL.sub("", text))
+
+
 def _sanitize(value: object, depth: int = 0) -> object:
     if depth > _MAX_DEPTH:
         return REDACTED
@@ -114,10 +120,25 @@ class EventBus:
         self._subs: list[Subscription] = []
         self._closed = False
 
-    def publish(self, event: dict[str, object]) -> int:
+    @property
+    def seq(self) -> int:
+        return self._seq
+
+    def snapshot(self, after: int = 0) -> list[dict[str, object]]:
+        """Copy of the replay ring, restricted to events with ``seq > after``."""
+        with self._lock:
+            return [e for e in self._ring if isinstance(e["seq"], int) and e["seq"] > after]
+
+    def publish(self, event: dict[str, object], *, raw_keys: tuple[str, ...] = ()) -> int:
+        """Sanitise and broadcast. ``raw_keys`` names top-level string fields that hold untrusted
+        display text and must reach the client unescaped (rendered as text nodes only)."""
         clean = _sanitize(event)
         if not isinstance(clean, dict):
             raise TypeError("event must be a dict")
+        for key in raw_keys:
+            value = event.get(key)
+            if isinstance(value, str):
+                clean[key] = _raw_text(value)
         with self._lock:
             cid = clean.get("id")
             is_call = clean.get("type") == "call" and isinstance(cid, str)
