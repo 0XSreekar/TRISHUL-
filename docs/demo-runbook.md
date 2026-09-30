@@ -67,7 +67,7 @@ the amount: DENY approval-binding mismatch.
 Say: "The deny is not a model opinion, it is a rule over provenance. Approvals are signed for the exact call;
 change one rupee and it is void."
 
-**Moment 4 (2:15-3:15) Red-Team Wall.** Show the wall; let the audience submit (or the fallback queue runs).
+**Moment 4 (2:15-3:15) Red-Team Wall.** Takes about 40 s on the stdio gateway (20 queued attacks, each spawning a tool server); the demo drawer shows `RUNNING · STEP k/4`, so talk over it. Show the wall; let the audience submit (or the fallback queue runs).
 Counters attempted/succeeded come from the audit log. Say: "Try to break it. Every attempt runs through the
 same pipeline in a separate namespace. The counter is computed from audit events, not the browser."
 Fallback: see section 7.

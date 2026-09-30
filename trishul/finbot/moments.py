@@ -258,7 +258,14 @@ async def run_moment(backend: Any, bot: FinBot, n: int, step: int | None) -> dic
     results: list[dict[str, Any]] = []
     for idx, (name, fn) in chosen:
         backend.p.bus.publish(
-            {"type": "demo", "moment": n, "step": idx, "name": name, "status": "running"}
+            {
+                "type": "demo",
+                "moment": n,
+                "step": idx,
+                "of": len(steps),
+                "name": name,
+                "status": "running",
+            }
         )
         try:
             out = await fn(backend, bot, step is None)
@@ -268,7 +275,14 @@ async def run_moment(backend: Any, bot: FinBot, n: int, step: int | None) -> dic
         except Exception as exc:  # a failed scripted step is reported, never converted to success
             out, status = {"status": "error", "error": type(exc).__name__}, "error"
         backend.p.bus.publish(
-            {"type": "demo", "moment": n, "step": idx, "name": name, "status": status}
+            {
+                "type": "demo",
+                "moment": n,
+                "step": idx,
+                "of": len(steps),
+                "name": name,
+                "status": status,
+            }
         )
         results.append({"step": idx, "name": name, **out})
     event_ids = [e for r in results for e in r.get("event_ids", [])]

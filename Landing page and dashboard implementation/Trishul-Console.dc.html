@@ -571,7 +571,8 @@ const money=p=>p==null?'—':'₹'+(Number(p)/100).toLocaleString('en-IN');
 const short=(v,n)=>{const t=String(v==null?'':v);return t.length>n?t.slice(0,n)+'… ['+t.length+' chars]':t;};
 const summary=e=>{const a=e.args||{};let s=e.tool;
   if(a.amount_paise!=null)s+=' '+money(a.amount_paise);else if(a.amount!=null)s+=' '+inr(a.amount);
-  if(a.payee_vpa)s+=' → '+a.payee_vpa;else if(a.vpa)s+=' → '+a.vpa;else if(a.to)s+=' → '+a.to;else if(a.destination)s+=' → '+a.destination;else if(a.dataset)s+=' '+a.dataset;else if(a.transcript)s+=' “'+a.transcript+'”';else if(a.customer_id)s+=' '+a.customer_id;else if(a.doc_id)s+=' '+a.doc_id;else if(a.clip_id)s+=' '+a.clip_id;
+  const tx=v=>v==null?'':typeof v!=='object'?String(v):v['$redacted']?'[redacted '+String(v.reason||'')+']':'…';  /* redacted args arrive as {$redacted,reason,digest}: never print [object Object] */
+  if(a.payee_vpa)s+=' → '+tx(a.payee_vpa);else if(a.vpa)s+=' → '+tx(a.vpa);else if(a.to)s+=' → '+tx(a.to);else if(a.destination)s+=' → '+tx(a.destination);else if(a.dataset)s+=' '+a.dataset;else if(a.transcript)s+=' “'+a.transcript+'”';else if(a.customer_id)s+=' '+a.customer_id;else if(a.doc_id)s+=' '+a.doc_id;else if(a.clip_id)s+=' '+a.clip_id;
   return short(s,90);};
 const tagOf=e=>e.tag||(((e.rules||[])[0]||'DENY')+' '+String(e.tool).toUpperCase());
 const dotX=e=>(FX[e.feature]||1670)+((hsh(e.id)%37)-18);
@@ -1213,7 +1214,7 @@ class Component extends DCLogic {
 
     /* ---- demo ---- */
     const moments=MOMENTS.map(m=>{const de2=s.demoEv[m.n],busy=s.demoBusy===m.n;const stt=busy?'running':de2?de2.status:'idle';
-      return{n:m.n,label:m.label,state:stt,status:busy?'RUNNING…':de2?String(de2.status).toUpperCase():'',col:stt==='error'?C.red:stt==='done'?C.blue:C.amber,border:busy?'rgba(232,163,61,.5)':'rgba(202,217,226,.1)',run:()=>this.moment(m.n)};});
+      return{n:m.n,label:m.label,state:stt,status:busy?'RUNNING'+(de2&&de2.step&&de2.of?' · STEP '+de2.step+'/'+de2.of:'')+'…':de2?String(de2.status).toUpperCase():'',col:stt==='error'?C.red:stt==='done'?C.blue:C.amber,border:busy?'rgba(232,163,61,.5)':'rgba(202,217,226,.1)',run:()=>this.moment(m.n)};});
     const demoLines=[];
     Object.keys(s.demoRes).sort().forEach(n=>{const r=s.demoRes[n];if(!r)return;
       demoLines.push({a:'MOMENT '+n,b:(r.steps||[]).length+' steps',col:C.muted});
