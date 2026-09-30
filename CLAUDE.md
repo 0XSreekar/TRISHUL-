@@ -49,6 +49,7 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-09-30 | Initial git setup & repository sync | ✅ Complete | Created initial commit, pushed to GitHub master branch |
 | 2026-09-30 | Create CLAUDE.md with task tracking system | ✅ Complete | Added task log table, update-after-every-task rule, git workflow guidelines, and commit templates |
 | 2026-09-30 | Add Claude AI watermarks to GitHub | ✅ Complete | ✅ VERIFIED - Claude Code & Anthropic badges visible on GitHub; badges display in README with Project Status section |
+| 2026-09-30 | Remove Claude watermarks (badges, README.md) | ✅ Complete | Deleted README.md, removed badges from CLAUDE.md; no Co-Authored-By trailer on new commits |
 | TBD | Review landing page implementation | ⏳ Pending | |
 | TBD | Review dashboard implementation | ⏳ Pending | |
 | TBD | Analyze support.js utilities | ⏳ Pending | |
