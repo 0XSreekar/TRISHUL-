@@ -1,13 +1,79 @@
 {
   "schema": {
     "file": "string: path to media file",
-    "kind": "enum: bonafide|replay|tts_clone - media classification",
+    "kind": "enum: bonafide|replay|tts|tts_clone - media classification",
     "language": "string: ISO 639-1 language code (en, hi, te, etc.)",
     "speaker_consent": "boolean: speaker has consented to use",
     "model": "string: name of speech/voice model used",
     "model_version": "string: version of the model",
     "license": "string: license type (e.g., CC-BY-4.0)",
-    "notes": "string: additional metadata or notes"
+    "notes": "string: additional metadata or notes",
+    "text": "string: spoken reference text (WER ground truth)"
   },
-  "entries": []
+  "entries": [
+    {
+      "file": "bench/audio/en_us.wav",
+      "kind": "tts",
+      "language": "en",
+      "speaker_consent": false,
+      "model": "Apple macOS system voice 'Samantha' (en_US) via say",
+      "model_version": "macOS system TTS (local)",
+      "license": "Apple system voice, generated locally; not redistributed",
+      "text": "Please check the status of my order and send me a receipt.",
+      "notes": "SYNTHETIC TTS, not human speech; file is gitignored (regenerate with script)"
+    },
+    {
+      "file": "bench/audio/en_in.wav",
+      "kind": "tts",
+      "language": "en",
+      "speaker_consent": false,
+      "model": "Apple macOS system voice 'Rishi' (en_IN) via say",
+      "model_version": "macOS system TTS (local)",
+      "license": "Apple system voice, generated locally; not redistributed",
+      "text": "Please check the status of my order and send me a receipt.",
+      "notes": "SYNTHETIC TTS, not human speech; file is gitignored (regenerate with script)"
+    },
+    {
+      "file": "bench/audio/hi_in.wav",
+      "kind": "tts",
+      "language": "hi",
+      "speaker_consent": false,
+      "model": "Apple macOS system voice 'Lekha' (hi_IN) via say",
+      "model_version": "macOS system TTS (local)",
+      "license": "Apple system voice, generated locally; not redistributed",
+      "text": "कृपया मेरे ऑर्डर की स्थिति बताइए और रसीद भेजिए।",
+      "notes": "SYNTHETIC TTS, not human speech; file is gitignored (regenerate with script)"
+    },
+    {
+      "file": "bench/audio/te_in.wav",
+      "kind": "tts",
+      "language": "te",
+      "speaker_consent": false,
+      "model": "Apple macOS system voice 'Geeta' (te_IN) via say",
+      "model_version": "macOS system TTS (local)",
+      "license": "Apple system voice, generated locally; not redistributed",
+      "text": "దయచేసి నా ఆర్డర్ స్థితిని చెప్పండి మరియు రసీదు పంపండి.",
+      "notes": "SYNTHETIC TTS, not human speech; file is gitignored (regenerate with script)"
+    },
+    {
+      "file": null,
+      "kind": "bonafide",
+      "language": null,
+      "speaker_consent": false,
+      "model": null,
+      "model_version": null,
+      "license": null,
+      "notes": "not produced - no consented human reference speaker; no bonafide sample"
+    },
+    {
+      "file": null,
+      "kind": "tts_clone",
+      "language": null,
+      "speaker_consent": false,
+      "model": null,
+      "model_version": null,
+      "license": null,
+      "notes": "not produced - no consented reference speaker for voice cloning"
+    }
+  ]
 }

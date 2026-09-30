@@ -58,6 +58,7 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-09-30 | Console UI integration seams + dev-replay honesty fixes | ✅ Complete | data-trishul-* hooks, TrishulEventSource adapter; replay proof/audit root shown as synthetic |
 | 2026-09-30 | Phase 1 gate re-verification (clean clone) | ✅ Complete | All checks green from fresh clone; fixed replay forwarding synthetic audit_verify (fake TAMPERED) and latency marked measured in replay |
 | 2026-09-30 | Phase 2 security kernel (gateway, PayShield, PurposeLock, VoiceTrust, Merkle audit, Z3) | ✅ Complete | 415 tests passed, 22 invariants UNSAT, all CSRF/approval/audit fixes verified end-to-end |
+| 2026-09-30 | VoiceTrust on real models (mlx-whisper Metal, DF_Arena 1B/500M, faster-whisper fallback) | ✅ Complete | Pinned revisions, TTS samples (en/en-IN/hi/te), bench/voice.json measured, voice_models tests; see docs/phase-2-report.md |
 
 ---
 

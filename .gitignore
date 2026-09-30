@@ -52,3 +52,4 @@ __pycache__/
 *.db
 *.db-wal
 *.db-shm
+bench/audio/

@@ -29,6 +29,14 @@ mcp = ["fastmcp>=2.9"]
 voice = [
     "mlx-whisper>=0.4",
 ]
+voice-ml = [
+    "torch",
+    "transformers",
+    "huggingface_hub",
+    "soundfile",
+    "einops",
+    "faster-whisper",
+]
 
 [project.scripts]
 trishul = "trishul.cli.main:main"
@@ -59,3 +67,6 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "voice_models: needs real voice models in the local HF cache; auto-skipped when absent",
+]

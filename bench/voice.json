@@ -1,18 +1,198 @@
 {
-  "backends": {
-    "df-arena": {
-      "reason": "package not importable or weights not in local HF cache",
-      "status": "unavailable"
+  "asr": {
+    "faster-whisper-small (CPU int8)": {
+      "pooled": {
+        "max_ms": 3857.0,
+        "p50_ms": 3204.2,
+        "p99_ms": 3857.0
+      },
+      "runs_per_sample": 10,
+      "samples": {
+        "en_in": {
+          "audio_s": 3.32,
+          "cer": 0.0,
+          "hypothesis": "please check the status of my order and send me a receipt.",
+          "language": "en",
+          "max_ms": 2773.4,
+          "p50_ms": 2763.4,
+          "p99_ms": 2773.4,
+          "reference": "Please check the status of my order and send me a receipt.",
+          "wer": 0.0
+        },
+        "en_us": {
+          "audio_s": 2.86,
+          "cer": 0.0,
+          "hypothesis": "Please check the status of my order and send me a receipt.",
+          "language": "en",
+          "max_ms": 2707.6,
+          "p50_ms": 2671.0,
+          "p99_ms": 2707.6,
+          "reference": "Please check the status of my order and send me a receipt.",
+          "wer": 0.0
+        },
+        "hi_in": {
+          "audio_s": 3.12,
+          "cer": 0.36,
+          "hypothesis": "अख्रिठ्या मेरे और दर की स्थिती बताये और रसीद भेजे",
+          "language": "hi",
+          "max_ms": 3673.0,
+          "p50_ms": 3648.0,
+          "p99_ms": 3673.0,
+          "reference": "कृपया मेरे ऑर्डर की स्थिति बताइए और रसीद भेजिए।",
+          "wer": 0.556
+        },
+        "te_in": {
+          "audio_s": 3.72,
+          "cer": 1.038,
+          "hypothesis": "दाए चीसी ना अडर सितिनी चेपपन्दी मरियो रसीदू पम्पन्दी",
+          "language": "te",
+          "max_ms": 3857.0,
+          "p50_ms": 3847.0,
+          "p99_ms": 3857.0,
+          "reference": "దయచేసి నా ఆర్డర్ స్థితిని చెప్పండి మరియు రసీదు పంపండి.",
+          "wer": 1.125
+        }
+      },
+      "status": "measured"
     },
-    "faster-whisper": {
-      "reason": "package not importable or weights not in local HF cache",
-      "status": "unavailable"
-    },
-    "mlx-whisper": {
-      "reason": "package not importable or weights not in local HF cache",
-      "status": "unavailable"
+    "mlx-whisper-large-v3-turbo (Metal)": {
+      "pooled": {
+        "max_ms": 1274.4,
+        "p50_ms": 1107.6,
+        "p99_ms": 1274.4
+      },
+      "runs_per_sample": 10,
+      "samples": {
+        "en_in": {
+          "audio_s": 3.32,
+          "cer": 0.0,
+          "hypothesis": "Please check the status of my order and send me a receipt.",
+          "language": "en",
+          "max_ms": 1044.6,
+          "p50_ms": 1010.3,
+          "p99_ms": 1044.6,
+          "reference": "Please check the status of my order and send me a receipt.",
+          "wer": 0.0
+        },
+        "en_us": {
+          "audio_s": 2.86,
+          "cer": 0.0,
+          "hypothesis": "Please check the status of my order and send me a receipt.",
+          "language": "en",
+          "max_ms": 1046.6,
+          "p50_ms": 991.1,
+          "p99_ms": 1046.6,
+          "reference": "Please check the status of my order and send me a receipt.",
+          "wer": 0.0
+        },
+        "hi_in": {
+          "audio_s": 3.12,
+          "cer": 0.24,
+          "hypothesis": "प्रिपिया मेरे और दर की स्थिती बताए और रसीद भेजे।",
+          "language": "hi",
+          "max_ms": 1229.8,
+          "p50_ms": 1210.8,
+          "p99_ms": 1229.8,
+          "reference": "कृपया मेरे ऑर्डर की स्थिति बताइए और रसीद भेजिए।",
+          "wer": 0.556
+        },
+        "te_in": {
+          "audio_s": 3.72,
+          "cer": 1.0,
+          "hypothesis": "124 ओडर्स थितिनी चेपपंडी मरियू रसीदु पमपंडी",
+          "language": "te",
+          "max_ms": 1274.4,
+          "p50_ms": 1251.8,
+          "p99_ms": 1274.4,
+          "reference": "దయచేసి నా ఆర్డర్ స్థితిని చెప్పండి మరియు రసీదు పంపండి.",
+          "wer": 1.0
+        }
+      },
+      "status": "measured"
     }
   },
-  "reason": "no ASR or spoof backend available locally; nothing measured",
-  "status": "unavailable"
+  "corpus": "synthetic Apple-TTS clips only; NO bonafide human speech",
+  "machine": "arm64 macOS-26.6.2-arm64-arm-64bit",
+  "revisions": {
+    "Speech-Arena-2025/DF_Arena_1B_V_1": "fb6ce85de12c2c5a509d89114adaf827dd75f49f",
+    "Speech-Arena-2025/DF_Arena_500M_V_1": "8258fa8e74ff9b8ad20d4c939c1a7f694a6e4080",
+    "Systran/faster-whisper-small": "536b0662742c02347bc0e980a01041f333bce120",
+    "facebook/wav2vec2-xls-r-300m": "1a640f32ac3e39899438a2931f9924c02f080a54",
+    "mlx-community/whisper-large-v3-turbo": "a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb"
+  },
+  "spoof": {
+    "DF_Arena_1B/cpu": {
+      "actual_device": [
+        "cpu"
+      ],
+      "max_ms": 971.1,
+      "p50_ms": 769.0,
+      "p99_ms": 971.1,
+      "requested_device": "cpu",
+      "runs_per_sample": 10,
+      "spoof_scores": {
+        "en_in": 0.9996,
+        "en_us": 0.9994,
+        "hi_in": 0.9996,
+        "te_in": 0.9997
+      },
+      "status": "measured"
+    },
+    "DF_Arena_1B/mps": {
+      "actual_device": [
+        "mps"
+      ],
+      "max_ms": 512.9,
+      "p50_ms": 397.9,
+      "p99_ms": 512.9,
+      "requested_device": "mps",
+      "runs_per_sample": 10,
+      "spoof_scores": {
+        "en_in": 0.9996,
+        "en_us": 0.9994,
+        "hi_in": 0.9996,
+        "te_in": 0.9997
+      },
+      "status": "measured"
+    },
+    "DF_Arena_500M/cpu": {
+      "actual_device": [
+        "cpu"
+      ],
+      "max_ms": 454.1,
+      "p50_ms": 399.3,
+      "p99_ms": 454.1,
+      "requested_device": "cpu",
+      "runs_per_sample": 10,
+      "spoof_scores": {
+        "en_in": 1.0,
+        "en_us": 1.0,
+        "hi_in": 1.0,
+        "te_in": 1.0
+      },
+      "status": "measured"
+    },
+    "DF_Arena_500M/mps": {
+      "actual_device": [
+        "mps"
+      ],
+      "max_ms": 201.7,
+      "p50_ms": 158.8,
+      "p99_ms": 201.7,
+      "requested_device": "mps",
+      "runs_per_sample": 10,
+      "spoof_scores": {
+        "en_in": 1.0,
+        "en_us": 1.0,
+        "hi_in": 1.0,
+        "te_in": 1.0
+      },
+      "status": "measured"
+    }
+  },
+  "spoof_selected": {
+    "rule": "1B unless best-device p50 > 2000 ms",
+    "size": "1B"
+  },
+  "status": "measured"
 }

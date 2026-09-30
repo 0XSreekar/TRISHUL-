@@ -37,12 +37,54 @@ All run through `fastmcp.Client → TRISHUL gateway → tool servers` in `tests/
 | 9 | Tampered mandate signature | DENY | ✅ |
 | 10 | Tampered Merkle leaf byte | verify fails with exact leaf index | ✅ |
 
-Voice scenarios 7–8 use a scripted ASR test double (no speech model installed).
+Voice scenarios 7–8 still use a scripted ASR test double (deterministic, fast). The same behaviours are
+also exercised against the real models in `tests/integration/test_voice_real.py` (marker `voice_models`,
+auto-skipped when the models are absent).
+
+## VoiceTrust on real models (measured, `bench/voice.json`)
+Apple M5 (arm64), warm, 10 runs per sample x 4 samples pooled (p99 of 40 is effectively the max).
+Reproduce: `uv sync --all-extras`, `uv run python scripts/make_voice_samples.py`, `uv run python scripts/bench_voice.py`.
+
+| Backend | Device | p50 ms | p99 ms | Notes |
+|---|---|---|---|---|
+| mlx-whisper large-v3-turbo (multilingual, auto language) | Metal | 1108 | 1274 | primary ASR |
+| faster-whisper small int8 | CPU | 3204 | 3857 | fallback; only used if MLX fails |
+| DF_Arena 1B | mps | 398 | 513 | **selected** (p50 < 2 s) |
+| DF_Arena 1B | cpu | 769 | 971 | |
+| DF_Arena 500M | mps | 159 | 202 | |
+| DF_Arena 500M | cpu | 399 | 454 | |
+
+Transcription accuracy (mlx-whisper, synthetic Apple-TTS clips, one clip per language):
+
+| Language | Voice | WER | CER |
+|---|---|---|---|
+| English (en-US) | Samantha | 0.00 | 0.00 |
+| English (en-IN) | Rishi | 0.00 | 0.00 |
+| Hindi | Lekha | 0.56 | 0.24 |
+| Telugu | Geeta | 1.00 | 1.00 (output came back in Devanagari/garbled; language auto-detect failed) |
+
+Anti-spoof (DF_Arena 500M and 1B, both devices): every TTS clip scored P(spoof) >= 0.999 (en-US, en-IN, Hindi,
+Telugu), i.e. all were flagged as spoof, so a TTS clip through the real gateway gets DENY `VOICETRUST.SPOOF.HIGH`.
+mps and cpu agree to 4 decimals of rounding.
+
+Pinned revisions (weights loaded only from these snapshot hashes; see `REVISIONS` in `voice_adapters.py`):
+whisper-large-v3-turbo `a4aaeec0`, DF_Arena_500M `8258fa8e`, DF_Arena_1B `fb6ce85d`,
+xls-r-300m config `1a640f32`, faster-whisper-small `536b0662`. DF_Arena remote code (wav2vec2 + conformer)
+was reviewed before `trust_remote_code=True`. Loading uses the pinned local snapshot directory rather than
+`repo_id + revision=` because transformers 5.17 fails to stage the transitive `conformer.py` for hub-id loads.
+Kokoro voice-clone TTS was not produced: it needs system espeak-ng (not installed), so it does not install cleanly.
 
 ## Known Limitations
-- ASR/anti-spoof model weights not installed (1.7 GB/4.6 GB awaiting user approval; DF_Arena non-commercial)
-- VoiceTrust uses labelled deterministic adapters (ran=false); every voice command ≥ STEP_UP
-- Hindi/Telugu and voice-clone samples not tested
+- Voice corpus is TTS only (Apple system voices, gitignored, regenerated locally). There is NO bonafide human speech
+  sample and no consented speaker, so false-reject rate for real humans and detection of real replay/clone
+  attacks are unmeasured; only "TTS is flagged as spoof" (score >= 0.999) is demonstrated. No voice-clone sample.
+- DF_Arena models are licensed non-commercial research use only; not usable in a commercial deployment.
+- Telugu: TTS voice exists (Geeta) but mlx-whisper with auto language detect fails (CER 1.0); Hindi is weak
+  (WER 0.56). Only English is reliable. Forcing `language=` per user would likely help (untested).
+- Nonce liveness uses word-level edit distance on a bare 3-word phrase: real ASR misheard a word in a few
+  percent of attempts (1/60 in one run, up to ~3/8 test runs in another), and run-together transcripts
+  ("TurtlePalmSailor") also fail. This fails closed (DENY, user retries), never open.
+- Latency figures vary by run and machine load (e.g. mlx-whisper p50 measured 760 ms in an earlier run).
 - Approvals/tasks REST unauthenticated localhost (trusted channel assumption)
 - CLI approve/reject/ml changes don't push live WS events to running gateway
 - Demo clock fixed; TaintRegistry substring matching linear

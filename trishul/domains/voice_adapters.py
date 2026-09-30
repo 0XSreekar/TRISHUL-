@@ -7,12 +7,13 @@ AND the weights are already in the local Hugging Face cache (nothing is ever dow
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar, Protocol
+from typing import Any, ClassVar, Protocol
 
 from trishul.domains.voice_audio import Samples
 
@@ -31,9 +32,28 @@ def hf_cache_dir() -> Path:
     return Path(home)
 
 
-def local_snapshot(repo_id: str) -> Path | None:
-    """Path of a fully-cached snapshot for ``repo_id`` (local_files_only semantics), else None."""
+# Reviewed snapshot revisions (remote code for DF_Arena was read by the lead: wav2vec2 + conformer,
+# benign). Weights are only ever loaded from exactly these commit hashes.
+REVISIONS: dict[str, str] = {
+    "mlx-community/whisper-large-v3-turbo": "a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb",
+    "Speech-Arena-2025/DF_Arena_500M_V_1": "8258fa8e74ff9b8ad20d4c939c1a7f694a6e4080",
+    "Speech-Arena-2025/DF_Arena_1B_V_1": "fb6ce85de12c2c5a509d89114adaf827dd75f49f",
+    "facebook/wav2vec2-xls-r-300m": "1a640f32ac3e39899438a2931f9924c02f080a54",
+    "Systran/faster-whisper-small": "536b0662742c02347bc0e980a01041f333bce120",
+}
+WHISPER_REPO = "mlx-community/whisper-large-v3-turbo"
+
+
+def local_snapshot(repo_id: str, revision: str | None = None) -> Path | None:
+    """Path of a fully-cached snapshot for ``repo_id`` (local_files_only semantics), else None.
+
+    A repo with a pinned revision in ``REVISIONS`` resolves only to that exact snapshot.
+    """
     root = hf_cache_dir() / ("models--" + repo_id.replace("/", "--")) / "snapshots"
+    revision = revision or REVISIONS.get(repo_id)
+    if revision is not None:
+        pinned = root / revision
+        return pinned if pinned.is_dir() and any(pinned.iterdir()) else None
     try:
         snaps = sorted(p for p in root.iterdir() if p.is_dir() and any(p.iterdir()))
     except OSError:
@@ -94,7 +114,7 @@ class ScriptedASR:
 class MlxWhisperASR:
     name = "mlx-whisper"
 
-    def __init__(self, repo_id: str = "mlx-community/whisper-small-mlx") -> None:
+    def __init__(self, repo_id: str = WHISPER_REPO) -> None:
         self.repo_id = repo_id
 
     def available(self) -> bool:
@@ -105,10 +125,12 @@ class MlxWhisperASR:
         if not _importable("mlx_whisper") or snap is None:
             return ASRResult(None, False, self.name, None, "mlx_whisper or weights not local")
         try:
-            import mlx_whisper  # type: ignore[import-not-found,unused-ignore]
+            import mlx_whisper  # type: ignore[import-not-found,import-untyped,unused-ignore]
 
             t0 = time.perf_counter()
-            out = mlx_whisper.transcribe(samples, path_or_hf_repo=str(snap))
+            out = mlx_whisper.transcribe(
+                samples, path_or_hf_repo=str(snap), language=None, verbose=None
+            )
             ms = (time.perf_counter() - t0) * 1000
             return ASRResult(str(out.get("text", "")).strip(), True, self.name, ms)
         except Exception as exc:
@@ -129,9 +151,9 @@ class FasterWhisperASR:
         if not _importable("faster_whisper") or snap is None:
             return ASRResult(None, False, self.name, None, "faster_whisper or weights not local")
         try:
-            from faster_whisper import WhisperModel  # type: ignore[import-not-found,unused-ignore]
+            whisper_model: Any = importlib.import_module("faster_whisper").WhisperModel
 
-            model = WhisperModel(
+            model = whisper_model(
                 str(snap), device="cpu", compute_type="int8", local_files_only=True
             )
             t0 = time.perf_counter()
@@ -210,7 +232,9 @@ class DFArenaSpoof:
     }
     P50_LIMIT_MS: ClassVar[float] = 2000.0
 
-    def __init__(self) -> None:
+    def __init__(self, size: str | None = None, device: str | None = None) -> None:
+        self.size_override = size  # benchmarks only; production uses ``choose_size``
+        self.device_override = device
         self._latencies: dict[str, list[float]] = {"1B": [], "500M": []}
         self._pipes: dict[str, object] = {}
 
@@ -220,6 +244,8 @@ class DFArenaSpoof:
     def choose_size(self) -> str | None:
         """Model size per spec: 1B, degrading to 500M if 1B p50 > 2 s; None if none is cached."""
         have = [s for s, r in self.REPOS.items() if local_snapshot(r) is not None]
+        if self.size_override is not None:
+            return self.size_override if self.size_override in have else None
         if not have:
             return None
         lat = sorted(self._latencies["1B"])
@@ -236,25 +262,33 @@ class DFArenaSpoof:
         if not self._deps() or size is None:
             return SpoofResult(None, False, self.label, None, None, "torch/weights not local")
         snap = local_snapshot(self.REPOS[size])
+        assert snap is not None  # noqa: S101 - choose_size() guarantees a cached snapshot
         try:
-            import torch  # type: ignore[import-not-found,unused-ignore]
-            from transformers import pipeline  # type: ignore[import-not-found,unused-ignore]
+            import torch  # type: ignore[import-not-found,import-untyped,unused-ignore]
 
-            device = "mps" if torch.backends.mps.is_available() else "cpu"
+            device = self.device_override or ("mps" if torch.backends.mps.is_available() else "cpu")
             pipe = self._pipes.get(size + device)
             if pipe is None:
+                # Loading from the pinned snapshot directory is equivalent to
+                # ``revision=<hash>`` and avoids a transformers dynamic-module bug that drops
+                # transitive relative imports (conformer.py) for hub-id loads.
                 try:
-                    pipe = pipeline(
-                        "antispoofing", model=str(snap), trust_remote_code=True, device=device
-                    )
+                    pipe = _make_pipe(snap, device)
                 except Exception:
                     device = "cpu"
-                    pipe = pipeline(
-                        "antispoofing", model=str(snap), trust_remote_code=True, device=device
-                    )
+                    pipe = self._pipes.get(size + device) or _make_pipe(snap, device)
                 self._pipes[size + device] = pipe
             t0 = time.perf_counter()
-            out = pipe(samples)  # type: ignore[operator]
+            try:
+                out = pipe(samples)  # type: ignore[operator]
+            except Exception:
+                if device == "cpu":
+                    raise
+                device = "cpu"  # MPS runtime failure: fall back to cpu
+                pipe = self._pipes.get(size + device) or _make_pipe(snap, device)
+                self._pipes[size + device] = pipe
+                t0 = time.perf_counter()
+                out = pipe(samples)  # type: ignore[operator]
             ms = (time.perf_counter() - t0) * 1000
             self._latencies[size].append(ms)
             spoof = _spoof_probability(out)
@@ -269,11 +303,30 @@ def _spoof_probability(out: object) -> float | None:
     """Extract P(spoof) from a pipeline output ({label, score} or list thereof)."""
     items = out if isinstance(out, list) else [out]
     for it in items:
-        if isinstance(it, dict) and "spoof" in str(it.get("label", "")).lower():
-            s = it.get("score")
-            if isinstance(s, int | float) and 0.0 <= float(s) <= 1.0:
+        if not isinstance(it, dict):
+            continue
+        scores = it.get("all_scores")
+        if isinstance(scores, dict):
+            p = scores.get("spoof")
+            if isinstance(p, int | float) and 0.0 <= float(p) <= 1.0:
+                return float(p)
+            continue
+        # {label, score}: ``score`` is the probability of the *named* label
+        s = it.get("score")
+        if isinstance(s, int | float) and 0.0 <= float(s) <= 1.0:
+            label = str(it.get("label", "")).lower()
+            if "spoof" in label:
                 return float(s)
+            if "bonafide" in label:
+                return 1.0 - float(s)
     return None
+
+
+def _make_pipe(snap: Path, device: str) -> object:
+    import transformers  # type: ignore[import-not-found,import-untyped,unused-ignore]
+
+    factory: Any = transformers.pipeline
+    return factory("antispoofing", model=str(snap), trust_remote_code=True, device=device)
 
 
 def default_spoof_adapter() -> SpoofAdapter:

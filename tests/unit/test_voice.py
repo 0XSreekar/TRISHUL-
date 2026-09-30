@@ -7,6 +7,7 @@ from tests.conftest import POLICY_DIR, make_call, make_ctx
 from trishul.contracts.decisions import Decision
 from trishul.contracts.labels import Level
 from trishul.domains.voice_adapters import (
+    REVISIONS,
     ChainASR,
     DeterministicSpoofAdapter,
     DFArenaSpoof,
@@ -238,7 +239,8 @@ def test_adapters_report_not_ran_when_absent(
 
 def test_df_arena_size_selection(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     for repo in DFArenaSpoof.REPOS.values():
-        snap = tmp_path / ("models--" + repo.replace("/", "--")) / "snapshots" / "abc"
+        rev = REVISIONS[repo]
+        snap = tmp_path / ("models--" + repo.replace("/", "--")) / "snapshots" / rev
         snap.mkdir(parents=True)
         (snap / "config.json").write_text("{}")
     monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
