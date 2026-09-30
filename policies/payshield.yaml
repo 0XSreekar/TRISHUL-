@@ -1,0 +1,93 @@
+version: 1
+id: payshield.mandate
+tools:
+  pay_upi:
+    category: PAYMENT
+    args:
+      payee_vpa: {type: string, required: true, sink: true}
+      amount_paise: {type: integer, required: true, sink: true}
+      note: {type: string}
+  list_payees:
+    category: READ
+    args: {}
+  add_payee:
+    category: WRITE
+    args:
+      vpa: {type: string, required: true, sink: true}
+      name: {type: string, required: true}
+rules:
+  - id: PAYSHIELD.MANDATE.SIGNATURE
+    stage: MANDATE
+    then: DENY
+    explain: "Mandate signature missing or invalid"
+    when:
+      all:
+        - tool: pay_upi
+        - not: {fact: mandate_sig_valid}
+  - id: PAYSHIELD.MANDATE.TIME
+    stage: MANDATE
+    then: DENY
+    explain: "Mandate is expired or not yet valid"
+    when:
+      all:
+        - tool: pay_upi
+        - not: {fact: mandate_time_valid}
+  - id: PAYSHIELD.MANDATE.REPLAY
+    stage: MANDATE
+    then: DENY
+    explain: "Mandate nonce was already used by a different mandate (replay)"
+    when:
+      all:
+        - tool: pay_upi
+        - not: {fact: mandate_nonce_fresh}
+  - id: PAYSHIELD.MANDATE.PAYEE
+    stage: MANDATE
+    then: DENY
+    explain: "Payee is not covered by the mandate"
+    when:
+      all:
+        - tool: pay_upi
+        - not: {fact: payee_in_mandate}
+  - id: PAYSHIELD.MANDATE.CATEGORY
+    stage: MANDATE
+    then: DENY
+    explain: "Task category is not covered by the mandate"
+    when:
+      all:
+        - tool: pay_upi
+        - not: {fact: category_matches}
+  - id: PAYSHIELD.CAP.PAYEE
+    stage: CAP
+    then: STEP_UP
+    explain: "Amount exceeds the payee cap; human approval required"
+    when:
+      all:
+        - tool: pay_upi
+        - not: {fact: amount_within_payee_cap}
+        - not: {fact: approval_valid}
+  - id: PAYSHIELD.CAP.PER_TXN
+    stage: CAP
+    then: STEP_UP
+    explain: "Amount exceeds the per-transaction cap; human approval required"
+    when:
+      all:
+        - tool: pay_upi
+        - not: {fact: amount_within_per_txn_cap}
+        - not: {fact: approval_valid}
+  - id: PAYSHIELD.CAP.DAILY
+    stage: CAP
+    then: STEP_UP
+    explain: "Amount exceeds the daily cap; human approval required"
+    when:
+      all:
+        - tool: pay_upi
+        - not: {fact: amount_within_daily_cap}
+        - not: {fact: approval_valid}
+  - id: PAYSHIELD.APPROVAL.BINDING_MISMATCH
+    stage: APPROVAL
+    then: DENY
+    explain: "An approval exists but is bound to different arguments"
+    when:
+      all:
+        - tool: pay_upi
+        - fact: approval_binding_mismatch

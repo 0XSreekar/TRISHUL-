@@ -4,8 +4,9 @@ tools:
   pay_upi:
     category: PAYMENT
     args:
-      payee_vpa: {type: string, required: true}
-      amount_paise: {type: integer, required: true}
+      payee_vpa: {type: string, required: true, sink: true}
+      amount_paise: {type: integer, required: true, sink: true}
+      note: {type: string}
 rules:
   - id: PAYSHIELD.TAINT.UNTRUSTED_PAYEE
     stage: LABEL

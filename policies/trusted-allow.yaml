@@ -4,7 +4,7 @@ tools:
   get_balance:
     category: READ
     args:
-      account_id: {type: string, required: true}
+      account_id: {type: string}
 rules:
   - id: CORE.TAINT.UNTRUSTED_ACCOUNT
     stage: LABEL
