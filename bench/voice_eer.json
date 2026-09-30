@@ -1,0 +1,273 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-09-30T21:36:49+00:00",
+ "git_commit": "fccf54d2bf3c92816bcd9bf051757d06355a766f",
+ "environment": {
+  "machine": "arm64",
+  "os": "macOS-26.6.2-arm64-arm-64bit"
+ },
+ "corpus": {
+  "sources_sha256": {
+   "bench/audio/librispeech/dev-clean-dummy.parquet": "4e69a06fa5edc90921e5e7e39a7084881f8b3ed9c805c574f4f39c6fde27c603",
+   "bench/audio/fleurs/hi_in-validation.parquet": "2c6286b884069103be9a8051b12dd9dfbfe1c0c3d4834ad7ecaab1a7689518c5",
+   "bench/audio/fleurs/te_in-validation.parquet": "8b60e97e369c4d905dc945801c896f1ce2a325f717326ec37bec335e4c44b637"
+  },
+  "counts": {
+   "bonafide_en": 74,
+   "bonafide_hi": 30,
+   "bonafide_te": 30,
+   "spoof_en": 30,
+   "spoof_hi": 30,
+   "spoof_te": 30
+  },
+  "notes": [
+   "bonafide en = LibriSpeech dev-clean dummy subset: 73 clips, ONE speaker",
+   "bonafide hi/te = FLEURS validation, 30 clips each, multiple speakers",
+   "spoof = macOS `say` TTS speaking the same sentences (content-matched); no neural voice clone is included unless bench/audio/user/clone/ has clips",
+   "owner clip = one WhatsApp voice note (Opus-compressed at ~18 kbit/s before decoding), reported individually, not a population estimate",
+   "phone_mulaw_8k is a synthetic PSTN approximation, not a VoIP/Opus/AMR codec"
+  ]
+ },
+ "detector": {
+  "1B": {
+   "status": "measured",
+   "conditions": {
+    "clean": {
+     "eer": 0.0,
+     "eer_threshold": 0.998513,
+     "threshold": 0.5,
+     "frr_real_flagged": 0.0224,
+     "far_spoof_accepted": 0.0,
+     "accuracy": 0.9866,
+     "n_bonafide": 134,
+     "n_spoof": 90,
+     "by_lang": {
+      "en": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.0135,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.9904,
+       "n_bonafide": 74,
+       "n_spoof": 30
+      },
+      "hi": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.0333,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.9833,
+       "n_bonafide": 30,
+       "n_spoof": 30
+      },
+      "te": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.0333,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.9833,
+       "n_bonafide": 30,
+       "n_spoof": 30
+      }
+     },
+     "owner_clips": [
+      {
+       "path": "bench/audio/eer/bonafide/user_user_whatsapp_opus_01.wav",
+       "label": "bonafide",
+       "score": 0.9106056094169617
+      }
+     ],
+     "score_failures": 0,
+     "latency_ms_p50": 267.4
+    },
+    "phone_mulaw_8k": {
+     "eer": 0.0,
+     "eer_threshold": 0.993286,
+     "threshold": 0.5,
+     "frr_real_flagged": 0.194,
+     "far_spoof_accepted": 0.0,
+     "accuracy": 0.8839,
+     "n_bonafide": 134,
+     "n_spoof": 90,
+     "by_lang": {
+      "en": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.027,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.9808,
+       "n_bonafide": 74,
+       "n_spoof": 30
+      },
+      "hi": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.4,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.8,
+       "n_bonafide": 30,
+       "n_spoof": 30
+      },
+      "te": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.4,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.8,
+       "n_bonafide": 30,
+       "n_spoof": 30
+      }
+     },
+     "owner_clips": [
+      {
+       "path": "bench/audio/eer/bonafide/user_user_whatsapp_opus_01.wav",
+       "label": "bonafide",
+       "score": 0.8924451470375061
+      }
+     ],
+     "score_failures": 0,
+     "latency_ms_p50": 354.3
+    }
+   }
+  },
+  "500M": {
+   "status": "measured",
+   "conditions": {
+    "clean": {
+     "eer": 0.0093,
+     "eer_threshold": 0.999956,
+     "threshold": 0.5,
+     "frr_real_flagged": 0.2463,
+     "far_spoof_accepted": 0.0,
+     "accuracy": 0.8527,
+     "n_bonafide": 134,
+     "n_spoof": 90,
+     "by_lang": {
+      "en": {
+       "eer": 0.0068,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.0135,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.9904,
+       "n_bonafide": 74,
+       "n_spoof": 30
+      },
+      "hi": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.7,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.65,
+       "n_bonafide": 30,
+       "n_spoof": 30
+      },
+      "te": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.3667,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.8167,
+       "n_bonafide": 30,
+       "n_spoof": 30
+      }
+     },
+     "owner_clips": [
+      {
+       "path": "bench/audio/eer/bonafide/user_user_whatsapp_opus_01.wav",
+       "label": "bonafide",
+       "score": 0.9999349117279053
+      }
+     ],
+     "score_failures": 0,
+     "latency_ms_p50": 147.1
+    },
+    "phone_mulaw_8k": {
+     "eer": 0.0093,
+     "eer_threshold": 0.999883,
+     "threshold": 0.5,
+     "frr_real_flagged": 0.6045,
+     "far_spoof_accepted": 0.0,
+     "accuracy": 0.6384,
+     "n_bonafide": 134,
+     "n_spoof": 90,
+     "by_lang": {
+      "en": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.4324,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.6923,
+       "n_bonafide": 74,
+       "n_spoof": 30
+      },
+      "hi": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.9,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.55,
+       "n_bonafide": 30,
+       "n_spoof": 30
+      },
+      "te": {
+       "eer": 0.0,
+       "threshold": 0.5,
+       "frr_real_flagged": 0.7333,
+       "far_spoof_accepted": 0.0,
+       "accuracy": 0.6333,
+       "n_bonafide": 30,
+       "n_spoof": 30
+      }
+     },
+     "owner_clips": [
+      {
+       "path": "bench/audio/eer/bonafide/user_user_whatsapp_opus_01.wav",
+       "label": "bonafide",
+       "score": 0.9998056292533875
+      }
+     ],
+     "score_failures": 0,
+     "latency_ms_p50": 149.1
+    }
+   }
+  }
+ },
+ "asr": {
+  "status": "measured",
+  "model": "mlx-community/whisper-large-v3-turbo",
+  "per_lang": 10,
+  "hi": {
+   "auto": {
+    "wer_mean": 0.3557,
+    "cer_mean": 0.2785,
+    "detected_language_counts": {
+     "hi": 8,
+     "ur": 2
+    }
+   },
+   "forced": {
+    "wer_mean": 0.1911,
+    "cer_mean": 0.0726,
+    "detected_language_counts": {
+     "hi": 10
+    }
+   }
+  },
+  "te": {
+   "auto": {
+    "wer_mean": 1.0111,
+    "cer_mean": 0.9353,
+    "detected_language_counts": {
+     "ta": 10
+    }
+   },
+   "forced": {
+    "wer_mean": 0.6599,
+    "cer_mean": 0.2249,
+    "detected_language_counts": {
+     "te": 10
+    }
+   }
+  }
+ }
+}
