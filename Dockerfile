@@ -12,9 +12,11 @@ COPY bench ./bench
 COPY ["Landing page and dashboard implementation", "./Landing page and dashboard implementation"]
 # editable install keeps trishul/ at /app so the gateway finds the console directory
 RUN uv sync --frozen --no-dev
-RUN useradd --system --create-home trishul && mkdir /data && chown trishul /data
+RUN useradd --system --create-home trishul && mkdir /data /keys && chown trishul /data /keys \
+    && chmod 700 /keys
 USER trishul
-ENV TRISHUL_DB=/data/trishul.db PATH="/app/.venv/bin:$PATH"
+# /keys holds the private signing keys (gateway only); /data holds SQLite + exported public keys
+ENV TRISHUL_DB=/data/trishul.db TRISHUL_HOME=/keys PATH="/app/.venv/bin:$PATH"
 VOLUME /data
 EXPOSE 8787 8788
 CMD ["trishul", "start", "--db", "/data/trishul.db", "--host", "0.0.0.0", "--port", "8787", "--mcp-port", "8788"]

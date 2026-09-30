@@ -13,7 +13,7 @@ from typing import NamedTuple
 from trishul.contracts.authz import ApprovalToken
 from trishul.contracts.calls import ToolCall
 from trishul.contracts.canonical import canonical_json
-from trishul.crypto.keys import KeyRing
+from trishul.crypto.keys import KeyRing, purpose_of
 from trishul.store.db import iso, parse_iso, transaction
 from trishul.store.ids import IdGen
 
@@ -40,6 +40,7 @@ def token_payload(token: ApprovalToken) -> dict[str, object]:
         "issued_at": iso(token.issued_at),
         "expires_at": iso(token.expires_at),
         "nonce": token.nonce,
+        "kid": token.key_id,
     }
 
 
@@ -54,7 +55,7 @@ class ApprovalService:
         keys: KeyRing,
         ids: IdGen,
         *,
-        key_id: str = "approver",
+        key_id: str | None = None,  # default: the active approval-signer key
         ttl_seconds: int = DEFAULT_TTL_SECONDS,
         clock: Callable[[], datetime] = _now,
     ) -> None:
@@ -121,8 +122,10 @@ class ApprovalService:
                 issued_at=issued,
                 expires_at=issued + self.ttl,
                 nonce=self.ids.new("nonce"),
+                key_id=self.key_id or self.keys.active_kid("approval-signer"),
             )
-            signature = self.keys.sign(self.key_id, token_payload(token))
+            assert token.key_id is not None  # noqa: S101
+            signature = self.keys.sign(token.key_id, token_payload(token))
             signed = token.model_copy(update={"signature": signature})
             body = {**token_payload(signed), "signature": signature}
             self.conn.execute(
@@ -162,6 +165,7 @@ class ApprovalService:
                 issued_at=parse_iso(body["issued_at"]),
                 expires_at=parse_iso(body["expires_at"]),
                 nonce=body["nonce"],
+                key_id=body["kid"],
                 signature=body["signature"],
             )
         except (ValueError, KeyError, TypeError):
@@ -182,8 +186,11 @@ class ApprovalService:
             if token is None or not token.issued_at <= now < token.expires_at:
                 continue
             live = True
-            signature_ok = token.signature is not None and self.keys.verify(
-                self.key_id, token_payload(token), token.signature
+            signature_ok = (
+                token.signature is not None
+                and token.key_id is not None
+                and purpose_of(token.key_id) == "approval-signer"
+                and self.keys.verify(token.key_id, token_payload(token), token.signature)
             )
             if signature_ok and token.call_digest == digest:
                 return ApprovalCheck(True, False, token)

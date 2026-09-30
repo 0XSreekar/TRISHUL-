@@ -9,6 +9,7 @@ from typing import Any
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
+from trishul.crypto.toolauth import ToolAuthMiddleware, ToolTokenVerifier
 from trishul.store.db import DEMO_NOW, DEMO_PRINCIPAL, iso, transaction
 from trishul.store.ids import IdGen
 
@@ -86,10 +87,12 @@ def build_upi_server(
     conn: sqlite3.Connection,
     ids: IdGen,
     *,
+    verifier: ToolTokenVerifier,
     principal: str = DEMO_PRINCIPAL,
     clock: Callable[[], datetime] = lambda: DEMO_NOW,
 ) -> FastMCP:
     server = FastMCP("upi")
+    server.add_middleware(ToolAuthMiddleware(verifier, "upi"))
 
     # Tools are async without awaits: they run atomically on the event loop, so the shared
     # SQLite connection is never used from two threads at once.

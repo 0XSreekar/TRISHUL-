@@ -6,9 +6,12 @@ from typing import Any
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
+from trishul.crypto.toolauth import ToolAuthMiddleware, ToolTokenVerifier
 
-def build_files_server(conn: sqlite3.Connection) -> FastMCP:
+
+def build_files_server(conn: sqlite3.Connection, *, verifier: ToolTokenVerifier) -> FastMCP:
     server = FastMCP("files")
+    server.add_middleware(ToolAuthMiddleware(verifier, "files"))
 
     @server.tool
     async def read_document(doc_id: str) -> dict[str, Any]:

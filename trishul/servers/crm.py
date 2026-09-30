@@ -7,6 +7,8 @@ from typing import Any
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
+from trishul.crypto.toolauth import ToolAuthMiddleware, ToolTokenVerifier
+
 
 def _record(row: sqlite3.Row) -> dict[str, Any]:
     record: dict[str, Any] = {
@@ -16,8 +18,9 @@ def _record(row: sqlite3.Row) -> dict[str, Any]:
     return record
 
 
-def build_crm_server(conn: sqlite3.Connection) -> FastMCP:
+def build_crm_server(conn: sqlite3.Connection, *, verifier: ToolTokenVerifier) -> FastMCP:
     server = FastMCP("crm")
+    server.add_middleware(ToolAuthMiddleware(verifier, "crm"))
 
     def fetch(customer_id: str) -> dict[str, Any]:
         row = conn.execute("SELECT * FROM customers WHERE customer_id=?", (customer_id,)).fetchone()

@@ -37,6 +37,7 @@ class ApprovalToken(BaseModel):
     issued_at: UtcDatetime
     expires_at: UtcDatetime
     nonce: str = Field(min_length=1)
+    key_id: str | None = None  # kid of the approval-signer key that signed this token
     signature: str | None = None
 
     @model_validator(mode="after")

@@ -18,6 +18,14 @@ TRUSTED = Label.make(Level.TRUSTED_USER, sources=[SourceRef(kind="user", id="u1"
 UNTRUSTED = Label.make(Level.UNTRUSTED, sources=[SourceRef(kind="email", id="m1")])
 
 
+@pytest.fixture(autouse=True)
+def _isolated_key_home(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Runtime keys live under TRISHUL_HOME; never let a test touch ./.trishul."""
+    monkeypatch.setenv("TRISHUL_HOME", str(tmp_path_factory.mktemp("trishul_home")))
+
+
 @pytest.fixture(scope="session")
 def policy() -> CompiledPolicy:
     return compile_files([POLICY_DIR])

@@ -14,6 +14,8 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         "api_key",
         re.compile(r"(?i)\b(?:api[_-]?key|secret|token|passwd|password)\s*[:=]\s*[^\s,;\"']{6,}"),
     ),
+    # gateway->tool call token: b64url(claims) "." b64url(Ed25519 signature)
+    ("tool_token", re.compile(_B + r"[A-Za-z0-9_-]{60,}\.[A-Za-z0-9_-]{80,}" + _E)),
     ("email", re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")),
     ("aadhaar", re.compile(_B + r"\d{4}[ -]?\d{4}[ -]?\d{4}" + _E)),
     ("pan", re.compile(_B + r"[A-Z]{5}[0-9]{4}[A-Z]" + _E)),

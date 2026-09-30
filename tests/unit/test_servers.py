@@ -4,9 +4,9 @@ import json
 import sqlite3
 
 import pytest
-from fastmcp import Client
 from fastmcp.exceptions import ToolError
 
+from tests.toolauth_helpers import TokenClient
 from trishul.servers import (
     build_crm_server,
     build_files_server,
@@ -31,7 +31,7 @@ def balance(conn: sqlite3.Connection) -> int:
 
 async def test_pay_upi_commits_ledger_and_balance(db: tuple[sqlite3.Connection, IdGen]) -> None:
     conn, ids = db
-    async with Client(build_upi_server(conn, ids)) as c:
+    async with TokenClient("upi", lambda v: build_upi_server(conn, ids, verifier=v), conn) as c:
         res = await c.call_tool("pay_upi", {"payee_vpa": ACME, "amount_paise": 450_000})
     assert res.data["balance_after"] == DEMO_BALANCE_PAISE - 450_000
     assert balance(conn) == DEMO_BALANCE_PAISE - 450_000
@@ -43,7 +43,7 @@ async def test_insufficient_funds_errors_without_change(
     db: tuple[sqlite3.Connection, IdGen],
 ) -> None:
     conn, ids = db
-    async with Client(build_upi_server(conn, ids)) as c:
+    async with TokenClient("upi", lambda v: build_upi_server(conn, ids, verifier=v), conn) as c:
         with pytest.raises(ToolError, match="insufficient funds"):
             await c.call_tool(
                 "pay_upi", {"payee_vpa": ACME, "amount_paise": DEMO_BALANCE_PAISE + 1}
@@ -55,7 +55,7 @@ async def test_insufficient_funds_errors_without_change(
 
 async def test_nonpositive_amount_rejected(db: tuple[sqlite3.Connection, IdGen]) -> None:
     conn, ids = db
-    async with Client(build_upi_server(conn, ids)) as c:
+    async with TokenClient("upi", lambda v: build_upi_server(conn, ids, verifier=v), conn) as c:
         for bad in (0, -5):
             with pytest.raises(ToolError):
                 await c.call_tool("pay_upi", {"payee_vpa": ACME, "amount_paise": bad})
@@ -64,7 +64,7 @@ async def test_nonpositive_amount_rejected(db: tuple[sqlite3.Connection, IdGen])
 
 async def test_balance_payees_add_payee(db: tuple[sqlite3.Connection, IdGen]) -> None:
     conn, ids = db
-    async with Client(build_upi_server(conn, ids)) as c:
+    async with TokenClient("upi", lambda v: build_upi_server(conn, ids, verifier=v), conn) as c:
         assert (await c.call_tool("get_balance", {})).data["balance_paise"] == DEMO_BALANCE_PAISE
         vpas = [p["vpa"] for p in (await c.call_tool("list_payees", {})).data["payees"]]
         assert ACME in vpas and len(vpas) == 3
@@ -77,18 +77,18 @@ async def test_balance_payees_add_payee(db: tuple[sqlite3.Connection, IdGen]) ->
 
 async def test_reset_is_deterministic(db: tuple[sqlite3.Connection, IdGen]) -> None:
     conn, ids = db
-    async with Client(build_upi_server(conn, ids)) as c:
+    async with TokenClient("upi", lambda v: build_upi_server(conn, ids, verifier=v), conn) as c:
         first = (await c.call_tool("pay_upi", {"payee_vpa": ACME, "amount_paise": 100})).data
     ids = reset(conn)
     assert balance(conn) == DEMO_BALANCE_PAISE
-    async with Client(build_upi_server(conn, ids)) as c:
+    async with TokenClient("upi", lambda v: build_upi_server(conn, ids, verifier=v), conn) as c:
         second = (await c.call_tool("pay_upi", {"payee_vpa": ACME, "amount_paise": 100})).data
     assert first == second
 
 
 async def test_crm_returns_full_record(db: tuple[sqlite3.Connection, IdGen]) -> None:
     conn, _ = db
-    async with Client(build_crm_server(conn)) as c:
+    async with TokenClient("crm", lambda v: build_crm_server(conn, verifier=v), conn) as c:
         rec = (
             await c.call_tool("read_customer_data", {"customer_id": "C-1042", "fields": ["name"]})
         ).data
@@ -108,7 +108,7 @@ async def test_mail_outbox_and_inbox(db: tuple[sqlite3.Connection, IdGen]) -> No
         "INSERT INTO inbox(mail_id, sender, subject, body, ts)"
         " VALUES ('m1','a@x.example','hi','yo','2026-09-30T00:00:00Z')"
     )
-    async with Client(build_mail_server(conn, ids)) as c:
+    async with TokenClient("mail", lambda v: build_mail_server(conn, ids, verifier=v), conn) as c:
         sent = (
             await c.call_tool("send_email", {"to": "b@x.example", "subject": "s", "body": "b"})
         ).data
@@ -124,7 +124,7 @@ async def test_mail_outbox_and_inbox(db: tuple[sqlite3.Connection, IdGen]) -> No
 async def test_files_read_document(db: tuple[sqlite3.Connection, IdGen]) -> None:
     conn, _ = db
     docs = {r["name"]: r["doc_id"] for r in conn.execute("SELECT doc_id, name FROM documents")}
-    async with Client(build_files_server(conn)) as c:
+    async with TokenClient("files", lambda v: build_files_server(conn, verifier=v), conn) as c:
         good = (await c.call_tool("read_document", {"doc_id": docs["inv_trusted.html"]})).data
         bad = (await c.call_tool("read_document", {"doc_id": docs["inv_injected.html"]})).data
         assert good["trust"] == "user_upload" and "acme@okaxis" in good["content"]

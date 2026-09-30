@@ -73,5 +73,6 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
+    "acceptance(n): proves acceptance test n of docs/phase-4-plan.md section 7",
     "voice_models: needs real voice models in the local HF cache; auto-skipped when absent",
 ]

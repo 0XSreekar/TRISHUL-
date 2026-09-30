@@ -114,7 +114,7 @@ class Runner:
         self.counter += 1
         conn = connect(self.tmp / f"b{self.counter}.db")
         ids = reset(conn, seed=self.seed)
-        keys = KeyRing.from_seed(self.seed)
+        keys = KeyRing.generate()
         clock = Clock()
         seed_demo_mandate(conn, keys, now=DEMO_NOW)
         for doc in scenario.get("docs", []):

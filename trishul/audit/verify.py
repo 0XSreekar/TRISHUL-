@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 from trishul.audit import merkle
 from trishul.audit.log import SignedTreeHead, sth_from_row
-from trishul.crypto.keys import KeyRing
+from trishul.crypto.keys import KeyRing, purpose_of
 
 
 class VerifyResult(BaseModel):
@@ -19,7 +19,9 @@ class VerifyResult(BaseModel):
 
 
 def verify_sth(sth: SignedTreeHead, keys: KeyRing) -> bool:
-    return keys.verify(sth.key_id, sth.signed_payload(), sth.sig)
+    return purpose_of(sth.key_id) == "tree-head-signer" and keys.verify(
+        sth.key_id, sth.signed_payload(), sth.sig
+    )
 
 
 def verify(conn: sqlite3.Connection, keys: KeyRing) -> VerifyResult:

@@ -17,10 +17,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from trishul.approvals import ApprovalService
 from trishul.contracts.calls import ToolCall, ToolCategory
 from trishul.crypto.jcs import jcs
-from trishul.crypto.keys import KeyRing
+from trishul.crypto.keys import KeyRing, purpose_of
 from trishul.store.db import iso, parse_iso
-
-MANDATE_KEY_ID = "mandate-issuer"
 
 FACT_NAMES = (
     "mandate_sig_valid",
@@ -86,9 +84,10 @@ def issue_mandate(
     nbf: datetime,
     exp: datetime,
     nonce: str,
-    key_id: str = MANDATE_KEY_ID,
+    key_id: str | None = None,  # default: the active mandate-signer key
 ) -> SignedMandate:
-    """Sign a mandate with Ed25519 over the JCS of its body (key ``mandate-issuer``)."""
+    """Sign a mandate with Ed25519 over the JCS of its body (active ``mandate-signer`` key)."""
+    key_id = key_id or keys.active_kid("mandate-signer")
     unsigned: dict[str, Any] = {
         "principal": principal,
         "payees": [p.model_dump(mode="json") for p in payees],
@@ -184,7 +183,7 @@ def payshield_facts(
         return facts
 
     facts["mandate_sig_valid"] = (
-        mandate.key_id == MANDATE_KEY_ID
+        purpose_of(mandate.key_id) == "mandate-signer"
         and mandate.principal == call.principal
         and keys.verify(mandate.key_id, mandate.signed_payload(), mandate.sig)
     )
