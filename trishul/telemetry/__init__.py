@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Gateway telemetry: event bus, OpenTelemetry stage metrics and the console REST/WS API."""
 
 from trishul.telemetry.events import EventBus, Subscription

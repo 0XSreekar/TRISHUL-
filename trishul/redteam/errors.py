@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Refusal raised by the red-team service; ``status`` is the HTTP status the API maps it to."""
 
 

@@ -76,9 +76,9 @@ From `bench/results.json` regenerated 2026-09-30T21:51:37Z at commit a924c5b (cl
 | Latency samples | 750 (5 repeats) |
 | Ablation (rules_only / rules_classifier / full) | ASR 0.0 and utility 0.8529 in all three |
 | Benign blocked (the 5 failures) | B-VOI-01..05: legitimate voice payments wait for out-of-band approval by design |
-| Voice anti-spoof (DF_Arena 1B, 134 real / 90 TTS) | clean: real flagged 2.2 %, TTS accepted 0 %, accuracy 0.9866, EER 0.0; phone 8 kHz mu-law: real flagged 19.4 % (hi/te 40 %), accuracy 0.8839. 500M: clean 24.6 % real flagged. Owner WhatsApp clip scored 0.91 (flagged). |
+| Voice anti-spoof (`Speech-Arena-2025/DF_Arena_1B_V_1`, 134 real / 90 TTS) | clean: real flagged 2.2 %, TTS accepted 0 %, accuracy 0.9866, EER 0.0; phone 8 kHz mu-law: real flagged 19.4 % (hi/te 40 %), accuracy 0.8839. 500M: clean 24.6 % real flagged. Owner WhatsApp clip scored 0.91 (flagged). |
 | ASR hi/te (mlx-whisper, 10 clips each) | Hindi WER 0.36 auto / 0.19 forced; Telugu CER 0.94 auto (detected as Tamil 10/10) / 0.22 forced |
-| AgentDojo (banking subset) | status `ok`; qwen3:8b via Ollama, temp 0, seed 42, attack `important_instructions`; 8/16 user tasks x 4/9 injection tasks (default subset of this run; an earlier uncommitted-tree run used 16 x 6 and is superseded). ASR 0.2188 without -> 0.0 with TRISHUL; clean utility 0.375 -> 0.25; utility under attack 0.2188 both sides. |
+| AgentDojo (banking subset) | status `ok`; `Qwen/Qwen3-8B` (Ollama `qwen3:8b`) via Ollama, temp 0, seed 42, attack `important_instructions`; 8/16 user tasks x 4/9 injection tasks (default subset of this run; an earlier uncommitted-tree run used 16 x 6 and is superseded). ASR 0.2188 without -> 0.0 with TRISHUL; clean utility 0.375 -> 0.25; utility under attack 0.2188 both sides. |
 
 The ablation being identical across configs means the India suite is decided by the rules, not the ML signals;
 do not present the ML as contributing to these numbers.
@@ -123,7 +123,7 @@ timeout test showing UNKNOWN is never reported as UNSAT (`::test_timeout_is_unkn
 
 ## What was not run and why
 - AgentDojo: workspace and slack suites, and banking injection tasks 6-8, not run (time budget). Only banking was run.
-- Real voice models (mlx-whisper, DF_Arena) and macOS `say` tests: 5 tests skipped, models not available in the
+- Real voice models (mlx-whisper, `Speech-Arena-2025/DF_Arena_1B_V_1`) and macOS `say` tests: 5 tests skipped, models not available in the
   test environment. Docker `/readyz` also reports `voice_models: unavailable`.
 - Browser clicking of every console drawer, panel and state: not done. The console is served and its sink safety
   is statically tested, but no automated or manual pass covered each UI path.
@@ -196,7 +196,7 @@ Phase 3 brief) found and fixed the following. Commits: b554679, fccf54d, a924c5b
 | 4 | Stale cached console served after edits | Rehearsal fixes hidden | `Cache-Control: no-cache` on `/console` | `test_console_static_is_revalidated_every_load` |
 | 5 | Console said "open the URL printed by `trishul start`" but none was printed | Operator buttons unusable on stage | `start` prints a command that expands `#op=` from the token file (token never printed) | manual |
 | 6 | Landing "Benchmark results" link 404 when served by the gateway | Broken link | `/console/bench/results.json` alias | `test_bench_results_reachable_from_console_relative_link` |
-| 7 | Voice models warmed in a separate process only; first in-gateway DF_Arena call took ~93 s (MPS compile) and permanently downgraded 1B -> 500M | Voice moment times out; worse detector (500M FRR 24.6 % vs 2.2 %) | In-process background warm-up at `start`, model lock, warm-up timings discarded; `/readyz` shows `warming` | `test_warmup_*`, `test_dfarena_warmup_does_not_record_latency` |
+| 7 | Voice models warmed in a separate process only; first in-gateway `Speech-Arena-2025/DF_Arena_1B_V_1` call took ~93 s (MPS compile) and permanently downgraded 1B -> 500M | Voice moment times out; worse detector (500M FRR 24.6 % vs 2.2 %) | In-process background warm-up at `start`, model lock, warm-up timings discarded; `/readyz` shows `warming` | `test_warmup_*`, `test_dfarena_warmup_does_not_record_latency` |
 | 8 | Approved voice retry reported `liveness: mismatch` (raw re-check of the consumed nonce) | Moment 6 success looked like failure | Reports `match` + `resumed_after_approval: true` (execution still requires the same nonce to have matched for this exact call digest + valid approval) | `test_d_live_voice_never_allows_high_risk_sink` (real models) |
 | 9 | Real-model voice test was stale vs the Phase 3 "voice always needs approval" rule and was silently skipped | Security test not exercised | Test follows STEP_UP -> approve -> exact retry; voice extras installed, all 5 real-model tests now run | 491 passed, 0 skipped |
 | 10 | `bench/results.json` came from a dirty tree at an older commit; README contradicted itself on AgentDojo | Traceability | Regenerated at a clean commit; README rewritten from the file | `git_dirty: false` |
@@ -204,7 +204,7 @@ Phase 3 brief) found and fixed the following. Commits: b554679, fccf54d, a924c5b
 
 ### Test status after the addendum
 `uv run pytest -q`: 491 passed, 0 skipped (the 5 real-model voice tests now run: `uv sync --all-extras`
-with locally cached mlx-whisper and DF_Arena). `ruff check`, `ruff format --check`, `mypy trishul` (strict): clean.
+with locally cached mlx-whisper and `Speech-Arena-2025/DF_Arena_1B_V_1`). `ruff check`, `ruff format --check`, `mypy trishul` (strict): clean.
 AT-07/AT-08 real-model variants: PASS (`tests/integration/test_voice_real.py`).
 
 ### Still not run / still risky

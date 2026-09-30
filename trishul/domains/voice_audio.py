@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Audio ingest for VoiceTrust: 16 kHz mono PCM wav loading, quality gate, energy VAD.
 
 Deliberately resample-free and ffmpeg-free (`wave` + numpy). Any file that is not 16 kHz,

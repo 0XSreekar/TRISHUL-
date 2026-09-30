@@ -1,0 +1,20 @@
+# Secret scan config. Extends the default ruleset; allowlists only known-safe dummies.
+title = "TRISHUL gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test dummies, integrity hashes, model commit shas, lockfile"
+paths = [
+  '''tests/unit/test_redaction\.py''',
+  '''uv\.lock''',
+  '''Landing page and dashboard implementation/.*\.html''',
+  '''bench/.*\.json''',
+  '''tests/fixtures/.*''',
+]
+regexes = [
+  '''sha(256|384|512)-[A-Za-z0-9+/=]{20,}''',
+  '''(?i)(revision|sha|commit)["' :=]+[0-9a-f]{40}''',
+  '''(?i)(dummy|example|placeholder|changeme)''',
+]

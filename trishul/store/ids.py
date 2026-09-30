@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Seeded deterministic id generator so ``demo reset --seed N`` reproduces event ids."""
 
 import hashlib

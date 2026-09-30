@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """CRM demo server. Returns full records; response minimisation is applied later by the gateway."""
 
 import json

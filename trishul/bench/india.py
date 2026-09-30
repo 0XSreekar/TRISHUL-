@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """India suite runner: replays ``bench/datasets/india_v1.json`` through the real gateway pipeline.
 
 "With TRISHUL" runs the scenario with the pipeline ON. "Without TRISHUL" runs the same calls

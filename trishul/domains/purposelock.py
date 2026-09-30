@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """PurposeLock: consent registry, purpose-bound facts, minimisation and response labelling.
 
 Purpose comes only from the bound task (trusted channel). Anything an agent supplies as a

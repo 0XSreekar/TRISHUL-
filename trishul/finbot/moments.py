@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """The six scripted demo moments (spec section 3). Each step is real traffic through the gateway;
 results are plain dicts, and every step also publishes a ``demo`` WS event."""
 

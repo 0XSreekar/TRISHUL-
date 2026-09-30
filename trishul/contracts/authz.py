@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Authorization artefacts: approvals, mandates, consents.
 
 Signatures are carried but **not verified** in Phase 1 (Ed25519 arrives in Phase 2). The

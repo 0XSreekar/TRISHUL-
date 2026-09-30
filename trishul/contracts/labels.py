@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Security labels: a product lattice ``(level, sources, tags)`` (A5)."""
 
 from collections.abc import Iterable

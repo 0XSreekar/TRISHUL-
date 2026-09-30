@@ -30,7 +30,7 @@ flowchart LR
   API["trishul.telemetry (REST + WS /events, CSRF guard, /console static)"]
   UI["Console + Landing (static HTML)"]
   Z3["trishul.verify (z3_policy, invariants)"]
-  ML["Native models: mlx-whisper, DF_Arena, Ollama"]
+  ML["Native models: mlx-whisper, Speech-Arena-2025/DF_Arena_1B_V_1, Ollama"]
   FB --> MW
   EXT --> MW
   RT --> MW

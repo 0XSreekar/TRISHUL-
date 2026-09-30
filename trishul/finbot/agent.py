@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic scripted agent (no LLM anywhere). It speaks real MCP through a ``fastmcp.Client``
 (in-memory transport or the gateway URL) and reaches the trusted channel (task binding, approvals,
 mode) only through the injected ``control`` object, exactly like the console/CLI would.

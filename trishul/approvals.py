@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Out-of-band step-up approvals bound to a call digest (spec section 5).
 
 Approval is only reachable from the CLI/REST/console, never through an MCP tool or voice.

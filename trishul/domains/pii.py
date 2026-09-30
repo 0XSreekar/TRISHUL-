@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """PII recognizers (email, Indian mobile, PAN, Aadhaar with Verhoeff) and label derivation."""
 
 import re

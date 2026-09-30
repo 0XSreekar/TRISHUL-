@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """SQLite store shared by servers, guards, approvals and the audit log (WAL, one schema).
 
 Connections are in autocommit mode (``isolation_level=None``); callers open transactions

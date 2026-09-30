@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """VoiceTrust: nonce liveness, quality/ASR/spoof signals and the pure decision table (T4)."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """PolicyEvent: the UI/audit record. Args are redacted by construction."""
 
 from datetime import datetime

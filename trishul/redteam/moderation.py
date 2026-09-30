@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic display filter for public red-team text.
 
 Moderation only affects what is *shown*: a moderated submission is still evaluated by the real

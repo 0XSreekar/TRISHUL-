@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Measure DF_Arena anti-spoof EER on real (bonafide) vs TTS (spoof) speech, clean and through a
 phone codec, and mlx-whisper WER/CER for Hindi/Telugu with auto vs forced language.
 

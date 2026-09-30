@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Gateway-native tools: the quarantined reader ``extract_field`` and ``voice_command``.
 
 The FastMCP tool bodies are schema stubs: every call is intercepted by ``PolicyMiddleware`` and

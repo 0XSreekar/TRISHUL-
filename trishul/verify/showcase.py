@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """``POST /prove`` support: prove the live policy, or a separately compiled unsafe fixture.
 
 The unsafe fixture (``trishul/fixtures/unsafe_policy``: the live policy minus its taint rules) is

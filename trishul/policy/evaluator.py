@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Pure, total, three-valued policy evaluator (A7, A8, A10, A11).
 
 No I/O, no clock, no randomness: everything comes in through ``ToolCall`` and ``EvalContext``.

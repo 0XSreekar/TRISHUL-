@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Starlette REST + WebSocket API consumed by the console."""
 
 import asyncio

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Provenance for the gateway (spec section 3): task binding, taint registry, handles,
 deterministic quarantined extractors and hidden-text (injection) detection.
 

@@ -83,7 +83,7 @@ No LLM in the scripted path. Moments:
 4. Red-Team Wall (public route if enabled, else fallback queue).
 5. `ml off` → re-run top 5 attacks → still DENY; `POST /prove {live}` I1; `{unsafe_fixture}` → counterexample
    + replay; restore (nothing to restore: live never swapped — UI states this).
-6. Voice: TTS/cloned fixture → spoof DENY or STEP_UP (real DF_Arena if available, else
+6. Voice: TTS/cloned fixture → spoof DENY or STEP_UP (real `Speech-Arena-2025/DF_Arena_1B_V_1` if available, else
    deterministic adapter → STEP_UP, labelled); real voice path nonce+approval; replayed recording →
    nonce mismatch DENY. Audit tamper: `trishul demo tamper --idx N` does
    `UPDATE audit_leaves SET payload=? WHERE idx=?` via sqlite3 (payload JSON field mutated), then
@@ -101,7 +101,7 @@ ablation:[{config:"rules_only"|"rules_classifier"|"full", asr, utility}]}, failu
 - Without-TRISHUL = the same calls through the OFF namespace (executes, measures what would succeed).
 - AgentDojo: adapter module `trishul/bench/agentdojo_adapter.py` with a `BasePipelineElement` placed
   before `ToolsExecutor` calling the policy core in-process. Runs only if `agentdojo` importable **and**
-  a local OpenAI-compatible endpoint answers (`OLLAMA` `http://localhost:11434/v1`, model `qwen3:8b`,
+  a local OpenAI-compatible endpoint answers (`OLLAMA` `http://localhost:11434/v1`, model `Qwen/Qwen3-8B` (Ollama `qwen3:8b`),
   or vLLM `LOCAL_LLM_PORT=8000`). Otherwise `status:"not_run"` with reason. Never a paid API.
 - Voice: EER needs bonafide clips; current corpus is TTS-only → `eer:null`, `status:"partial"`,
   note from phase-2 report. Never fabricate.

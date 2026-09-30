@@ -21,7 +21,7 @@ decision latency p99 1.754 ms in-process). Never quote a number that is not in t
 
 ## 3. Warm-up
 `scripts/prewarm.sh` pings Ollama (`keep_alive` 30 min) and runs one silent clip through mlx-whisper and
-DF_Arena so the first voice moment is not a cold load. Then run moment 3 once privately and reset.
+`Speech-Arena-2025/DF_Arena_1B_V_1` so the first voice moment is not a cold load. Then run moment 3 once privately and reset.
 
 ## 4. Reset (between runs and rehearsals)
 `uv run trishul demo reset --seed 42` (running gateway picks up the control row) or
@@ -80,7 +80,7 @@ Be candid: "Voice is different: a voice command can never pay on its own. Every 
 fresh nonce and an out-of-band approval whatever the detector says, so on our India suite 0 of 49 attacks
 succeed, at the cost of benign utility 0.8529 because legitimate voice payments wait for approval."
 
-**Moment 6 (4:15-5:00) Voice, audit tamper, DPDP.** Voice fixture: DENY `VOICETRUST.SPOOF.HIGH` (real DF_Arena)
+**Moment 6 (4:15-5:00) Voice, audit tamper, DPDP.** Voice fixture: DENY `VOICETRUST.SPOOF.HIGH` (real `Speech-Arena-2025/DF_Arena_1B_V_1`)
 or STEP_UP (deterministic adapter, labelled). Real voice: speak the nonce phrase -> STEP_UP -> approve in the
 console -> the exact retry runs (summary shows `liveness: match`, `resumed_after_approval: true`). Replayed
 recording: nonce mismatch DENY. Check `/readyz` shows `voice_models: available` (not `warming`) before this

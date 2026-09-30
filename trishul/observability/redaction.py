@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Redaction (§6): label-driven, plus a pattern backstop for unlabeled leaks."""
 
 import hashlib

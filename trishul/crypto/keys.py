@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Ed25519 key ring. Deterministic from a seed for the demo; signatures cover JCS bytes."""
 
 import base64

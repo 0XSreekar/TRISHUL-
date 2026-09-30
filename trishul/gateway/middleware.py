@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """FastMCP middleware that routes every ``tools/call`` through the gateway pipeline."""
 
 import re

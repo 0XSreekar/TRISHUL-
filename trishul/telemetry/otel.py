@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """In-memory OpenTelemetry tracing: per-stage span durations and percentiles."""
 
 import math

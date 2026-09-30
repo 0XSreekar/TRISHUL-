@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """YAML -> schema validation -> AST -> ``CompiledPolicy``. Errors are collected, with locations."""
 
 import re

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Opaque handles for the planner / quarantined-reader split (A12)."""
 
 import re

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Secret / PII detection patterns shared by redaction, event validation and log scrubbing."""
 
 import re

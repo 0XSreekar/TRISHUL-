@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """AgentDojo adapter: a ``BasePipelineElement`` placed before ``ToolsExecutor``.
 
 The element hands every model-proposed money-moving tool call to the TRISHUL policy core

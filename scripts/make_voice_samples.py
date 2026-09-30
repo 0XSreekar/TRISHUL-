@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Generate SYNTHETIC TTS voice samples into the gitignored ``bench/audio/`` directory.
 
 Uses the macOS ``say`` + ``afconvert`` (Apple system voices, generated locally, never

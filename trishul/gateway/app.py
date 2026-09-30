@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Gateway assembly: FastMCP proxy + PolicyMiddleware + servers + telemetry.
 
 In-process mode mounts the four demo servers (real MCP protocol, no subprocesses) and is what

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Build the bonafide-vs-spoof voice corpus used by ``scripts/bench_voice_eer.py``.
 
 Run (pyarrow is only needed for this one-off extraction):

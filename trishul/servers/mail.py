@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Mail demo server: sends into an outbox table, reads a seeded inbox."""
 
 import sqlite3

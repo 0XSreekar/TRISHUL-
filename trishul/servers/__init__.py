@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Demo MCP servers (separate FastMCP instances over the shared SQLite store)."""
 
 from trishul.servers.crm import build_crm_server

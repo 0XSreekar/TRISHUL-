@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Robust amount anomaly signal (spec section 4): median/MAD z-score over payee history.
 
 Never produces ALLOW: it can only tighten a decision (ML stage = ``max``).

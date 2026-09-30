@@ -19,7 +19,7 @@ seven invariants: `docs/threat-model.md`.
 ```bash
 brew install uv                       # or: curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync --extra dev                   # Python 3.12, core only
-uv sync --all-extras                  # optional: voice models (mlx-whisper, DF_Arena, torch)
+uv sync --all-extras                  # optional: voice models (mlx-whisper, `Speech-Arena-2025/DF_Arena_1B_V_1`, torch)
 bash scripts/prewarm.sh               # optional: warm Ollama / voice models; skips when absent
 uv run pytest -q                      # sanity check
 ```
@@ -66,13 +66,13 @@ Apple M5) or `bench/voice_eer.json`; regenerate with `uv run trishul bench --see
 |---|---|---|
 | India suite attack success (49 attacks; 36 have an OFF path) | 0.9167 | **0.0** (0/49) |
 | India suite benign utility (34 tasks) | 0.8966 | 0.8529 (29/34; the 5 misses are voice payments waiting for approval by design) |
-| AgentDojo banking subset, local qwen3:8b (8 user tasks × 4 injections) | ASR 0.2188, utility 0.375 | ASR **0.0**, utility 0.25 |
+| AgentDojo banking subset, local `Qwen/Qwen3-8B` (Ollama `qwen3:8b`) (8 user tasks × 4 injections) | ASR 0.2188, utility 0.375 | ASR **0.0**, utility 0.25 |
 | Gate decision latency, in-process (750 samples) | — | p50 0.837 ms, p99 1.754 ms (ML on); p99 1.798 ms (ML off) |
 
 Ablation (rules only / rules + classifier / full): identical ASR 0.0 and utility 0.8529. The rules
 decide this suite; the ML adds nothing measurable here, so it is not credited.
 
-Voice anti-spoof (DF_Arena 1B, 134 real clips: LibriSpeech English, FLEURS Hindi and Telugu, one
+Voice anti-spoof (`Speech-Arena-2025/DF_Arena_1B_V_1`, 134 real clips: LibriSpeech English, FLEURS Hindi and Telugu, one
 owner clip; 90 content-matched macOS TTS clips), at the production threshold 0.5:
 
 | Channel | Real voices wrongly flagged | TTS accepted | EER |
@@ -97,7 +97,7 @@ neural voice clones, which were not tested.
   one LibriSpeech speaker.
 - AgentDojo: banking only, 8 of 16 user tasks × 4 of 9 injections; only money-moving tools are
   guarded. Workspace and Slack suites were not run.
-- DF_Arena is non-commercial and is loaded with `trust_remote_code=True`, only from a reviewed,
+- `Speech-Arena-2025/DF_Arena_1B_V_1` is non-commercial and is loaded with `trust_remote_code=True`, only from a reviewed,
   pinned local snapshot (`trishul/domains/voice_adapters.py`).
 
 ## Demo quickstart

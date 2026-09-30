@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Entry point for one demo server as a stdio subprocess: ``python -m trishul.gateway.server_main
 <upi|crm|mail|files> --db PATH --id-base N``. All servers share the WAL SQLite file."""
 

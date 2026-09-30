@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Assemble ``bench/results.json`` from real measurements (never fabricated)."""
 
 import asyncio

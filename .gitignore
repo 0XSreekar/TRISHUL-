@@ -56,3 +56,14 @@ bench/audio/
 
 # operator secret written by `trishul start`
 operator.token
+
+# Phase 4: local state, secrets, models, raw data
+.trishul/
+models/
+bench/raw/
+recordings/
+data/voice/*
+!data/voice/README.md
+!data/voice/manifest.csv
+*.key
+*.pem

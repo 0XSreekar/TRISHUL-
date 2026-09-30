@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Join / order on labels. Pure functions; no declassification exists (A6)."""
 
 from collections.abc import Iterable

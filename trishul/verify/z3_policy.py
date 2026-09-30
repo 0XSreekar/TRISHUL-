@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Translate a ``CompiledPolicy`` to Z3 (spec section 9).
 
 The constraints are derived by walking the *same* AST the runtime evaluator uses; there are no

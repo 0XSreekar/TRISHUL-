@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """The gateway decision pipeline (spec section 2).
 
 Stages run in this order (spec numbering in brackets): ingress [1], handles [2], provenance [3],

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Structlog-free JSON logging that scrubs secrets/PII before anything is written."""
 
 import json

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Audit-log contracts (implementation is Phase 2)."""
 
 from typing import Literal

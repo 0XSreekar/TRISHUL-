@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Phase 3 operator/showcase surface of ``Backend`` (kept apart from the core backend).
 
 Everything here follows the API conventions of ``backend.py`` (``KeyError`` -> 404, ``ValueError``

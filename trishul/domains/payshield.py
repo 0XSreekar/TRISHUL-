@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """PayShield: signed mandates + facts for payment tools (spec section 4).
 
 ``payshield_facts`` is the guard: it verifies the mandate cryptographically, checks caps against

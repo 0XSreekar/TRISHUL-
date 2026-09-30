@@ -19,7 +19,7 @@ Phase 1 (`docs/phase-1-plan.md`) decisions A1–A14 still hold unless overridden
 ### Dependency / licence / environment risks
 | Risk | Impact | Mitigation |
 |---|---|---|
-| DF_Arena (Speech-Arena-2025) licence = **non-commercial research only**; `trust_remote_code=True` (code reviewed: wav2vec2-XLS-R-300m + conformer, no network/exec); weights 1.7 GB (500M) / 4.6 GB (1B); needs torch+transformers | Demo-only use; large download | Optional extra `voice-ml`; **download only after user approval**; default = labelled deterministic adapter (`detector_ran=false`). |
+| `Speech-Arena-2025/DF_Arena_*_V_1` licence = **non-commercial research only**; `trust_remote_code=True` (code reviewed: wav2vec2-XLS-R-300m + conformer, no network/exec); weights 1.7 GB (500M) / 4.6 GB (1B); needs torch+transformers | Demo-only use; large download | Optional extra `voice-ml`; **download only after user approval**; default = labelled deterministic adapter (`detector_ran=false`). |
 | mlx-whisper model weights not cached; no `ffmpeg` on host | ASR unavailable | Feed numpy float32 16 kHz arrays (no ffmpeg); faster-whisper CPU fallback; else transcript adapter labelled `asr=unavailable` → STEP_UP. |
 | Hindi/Telugu and voice-clone samples not present | Coverage gap | Report as limitation; media manifest records model/licence/consent when added. |
 | Python pinned 3.12 (host default 3.14) | Wheels (z3, mlx) | Always `uv run`. |

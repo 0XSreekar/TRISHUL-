@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Concrete ``GatewayBackend`` for the REST API and CLI (trusted, out-of-band channel).
 
 Errors follow the API conventions: ``KeyError`` -> 404, ``ValueError`` / ``PermissionError`` ->

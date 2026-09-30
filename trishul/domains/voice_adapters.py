@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """ASR and anti-spoof adapters for VoiceTrust.
 
 Honesty contract: an adapter reports ``ran=True`` only if inference actually executed on the

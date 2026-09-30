@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """RFC 6962 Merkle tree: hashing, roots, inclusion and consistency proofs and verifiers.
 
 All functions take/return raw 32-byte digests; ``hexd``/``unhex`` convert for storage.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """``trishul`` CLI: ``policy`` tools plus the gateway operator commands
 (``start``, ``verify``, ``prove``, ``report``, ``ml``, ``demo``, ``approve``, ``reject``, ``task``).
 

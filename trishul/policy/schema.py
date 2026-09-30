@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """YAML source model. Predicates (``when``) stay raw here and are parsed by the compiler
 so that every nested node can be reported with its own line/column."""
 

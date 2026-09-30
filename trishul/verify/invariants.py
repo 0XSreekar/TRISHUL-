@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Invariant checks over the Z3 encoding (spec section 9) and the invariant -> test map.
 
 Each check asserts the *negation* of an invariant for one tool; UNSAT means the invariant holds

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Red-team submission service: validation, rate limiting, moderation, real-pipeline run, stats.
 
 Counters are derived from the audit log (``redteam_attempt`` leaves), never kept in memory.

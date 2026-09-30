@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Canonical JSON (A4), SHA-256 digests, float rejection (A3) and JSON-pointer helpers."""
 
 import hashlib

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Formal verification of the compiled policy (Z3)."""
 
 from trishul.verify.invariants import prove_all

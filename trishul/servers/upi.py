@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """UPI demo server. ``pay_upi`` succeeds only if the ledger row and the balance change commit
 atomically; ``preview_pay_upi`` runs the same logic inside a SAVEPOINT and rolls it back."""
 

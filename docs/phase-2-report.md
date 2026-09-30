@@ -49,10 +49,10 @@ Reproduce: `uv sync --all-extras`, `uv run python scripts/make_voice_samples.py`
 |---|---|---|---|---|
 | mlx-whisper large-v3-turbo (multilingual, auto language) | Metal | 1108 | 1274 | primary ASR |
 | faster-whisper small int8 | CPU | 3204 | 3857 | fallback; only used if MLX fails |
-| DF_Arena 1B | mps | 398 | 513 | **selected** (p50 < 2 s) |
-| DF_Arena 1B | cpu | 769 | 971 | |
-| DF_Arena 500M | mps | 159 | 202 | |
-| DF_Arena 500M | cpu | 399 | 454 | |
+| `Speech-Arena-2025/DF_Arena_1B_V_1` | mps | 398 | 513 | **selected** (p50 < 2 s) |
+| `Speech-Arena-2025/DF_Arena_1B_V_1` | cpu | 769 | 971 | |
+| `Speech-Arena-2025/DF_Arena_500M_V_1` | mps | 159 | 202 | |
+| `Speech-Arena-2025/DF_Arena_500M_V_1` | cpu | 399 | 454 | |
 
 Transcription accuracy (mlx-whisper, synthetic Apple-TTS clips, one clip per language):
 
@@ -63,13 +63,13 @@ Transcription accuracy (mlx-whisper, synthetic Apple-TTS clips, one clip per lan
 | Hindi | Lekha | 0.56 | 0.24 |
 | Telugu | Geeta | 1.00 | 1.00 (output came back in Devanagari/garbled; language auto-detect failed) |
 
-Anti-spoof (DF_Arena 500M and 1B, both devices): every TTS clip scored P(spoof) >= 0.999 (en-US, en-IN, Hindi,
+Anti-spoof (`Speech-Arena-2025/DF_Arena_500M_V_1` and 1B, both devices): every TTS clip scored P(spoof) >= 0.999 (en-US, en-IN, Hindi,
 Telugu), i.e. all were flagged as spoof, so a TTS clip through the real gateway gets DENY `VOICETRUST.SPOOF.HIGH`.
 mps and cpu agree to 4 decimals of rounding.
 
 Pinned revisions (weights loaded only from these snapshot hashes; see `REVISIONS` in `voice_adapters.py`):
-whisper-large-v3-turbo `a4aaeec0`, DF_Arena_500M `8258fa8e`, DF_Arena_1B `fb6ce85d`,
-xls-r-300m config `1a640f32`, faster-whisper-small `536b0662`. DF_Arena remote code (wav2vec2 + conformer)
+whisper-large-v3-turbo `a4aaeec0`, `Speech-Arena-2025/DF_Arena_500M_V_1` `8258fa8e`, `Speech-Arena-2025/DF_Arena_1B_V_1` `fb6ce85d`,
+xls-r-300m config `1a640f32`, faster-whisper-small `536b0662`. `Speech-Arena-2025/DF_Arena_1B_V_1` remote code (wav2vec2 + conformer)
 was reviewed before `trust_remote_code=True`. Loading uses the pinned local snapshot directory rather than
 `repo_id + revision=` because transformers 5.17 fails to stage the transitive `conformer.py` for hub-id loads.
 Kokoro voice-clone TTS was not produced: it needs system espeak-ng (not installed), so it does not install cleanly.
@@ -78,7 +78,7 @@ Kokoro voice-clone TTS was not produced: it needs system espeak-ng (not installe
 - Voice corpus is TTS only (Apple system voices, gitignored, regenerated locally). There is NO bonafide human speech
   sample and no consented speaker, so false-reject rate for real humans and detection of real replay/clone
   attacks are unmeasured; only "TTS is flagged as spoof" (score >= 0.999) is demonstrated. No voice-clone sample.
-- DF_Arena models are licensed non-commercial research use only; not usable in a commercial deployment.
+- `Speech-Arena-2025/DF_Arena_1B_V_1` and `Speech-Arena-2025/DF_Arena_500M_V_1` models are licensed non-commercial research use only; not usable in a commercial deployment.
 - Telugu: TTS voice exists (Geeta) but mlx-whisper with auto language detect fails (CER 1.0); Hindi is weak
   (WER 0.56). Only English is reliable. Forcing `language=` per user would likely help (untested).
 - Nonce liveness uses word-level edit distance on a bare 3-word phrase: real ASR misheard a word in a few

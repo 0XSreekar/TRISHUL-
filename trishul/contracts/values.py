@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Sentinels and value wrappers that keep absent / null / empty / redacted distinct."""
 
 from collections.abc import Callable

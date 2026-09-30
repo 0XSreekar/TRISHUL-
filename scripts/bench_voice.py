@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Measure real VoiceTrust backends on generated TTS samples. Writes bench/voice.json.
 
 Only measured numbers are written; a backend that cannot run is recorded as unavailable.

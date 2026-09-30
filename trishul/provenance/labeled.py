@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """``Labeled[T]``: values that cannot be relabelled downward through the public API."""
 
 from collections.abc import Callable

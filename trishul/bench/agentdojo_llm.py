@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """OpenAI-compatible local LLM element for AgentDojo (Ollama / vLLM), deterministic settings.
 
 AgentDojo's stock ``OpenAILLM`` turns ``temperature=0`` into "not given" (``temperature or

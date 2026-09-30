@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """DPDP report: every PurposeLock audit event with a Merkle inclusion proof and a signed head."""
 
 import json

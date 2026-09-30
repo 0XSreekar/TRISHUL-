@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Typed policy AST (A9). Small, first-order, discriminated on ``kind``."""
 
 from typing import Annotated, Literal, Self

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """In-process event bus with sequence numbers, replay ring, dedup and bounded subscribers."""
 
 import asyncio

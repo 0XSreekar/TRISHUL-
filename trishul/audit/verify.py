@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Whole-log verification: exact first bad leaf plus every stored signed tree head."""
 
 import sqlite3

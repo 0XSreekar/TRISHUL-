@@ -12,7 +12,7 @@
    server still binds 127.0.0.1 by default (`--host`) and Docker publishes `127.0.0.1:PORT:PORT`.
 4. Approvals are Ed25519-signed, bound to the exact call digest, single-use.
 5. Audit store (SQLite): Merkle-chained, signed tree head; tampering is detected with exact index.
-6. Native models (Ollama, mlx-whisper, DF_Arena): outside the trust core; their output may only raise a decision.
+6. Native models (Ollama, mlx-whisper, `Speech-Arena-2025/DF_Arena_1B_V_1`): outside the trust core; their output may only raise a decision.
 7. Public red-team wall: submissions are treated as untrusted document text, rate-limited, moderated
    for display only, evaluated in namespace `redteam`; kill switch available.
 
@@ -36,7 +36,7 @@ I1 excludes ALLOW resting on a valid human approval for the exact call (document
 India suite (`india_v1`): 49 attacks, 34 benign. With TRISHUL: attack success 0.0 (0/49), benign
 utility 0.8529 (29/34). Unprotected (OFF namespace, 36 attacks with an OFF path): 0.9167. Ablation:
 identical across rules_only / rules_classifier / full. Gate decision latency p99 1.754 ms (ML on).
-AgentDojo banking subset (8 user tasks × 4 injections, local qwen3:8b): ASR 0.2188 -> 0.0, utility
+AgentDojo banking subset (8 user tasks × 4 injections, local `Qwen/Qwen3-8B` (Ollama `qwen3:8b`)): ASR 0.2188 -> 0.0, utility
 0.375 -> 0.25.
 
 Earlier drafts reported 2/49 cloned-voice successes (A-VCL-06/07). Those are now blocked because every
@@ -51,6 +51,6 @@ the detector being right.
 - AgentDojo: banking subset only (see `bench/results.json` `suites.agentdojo.subset_note`); only money-moving tools are guarded, so this is not a general prompt-injection claim.
 - Voice EER 0.0 on 134 real vs 90 content-matched TTS clips. That shows TTS is separable, not that
   neural clones are; clones and live callers are unmeasured, and the English real set is one speaker.
-- DF_Arena models are non-commercial research licence.
+- `Speech-Arena-2025/DF_Arena_1B_V_1` and `Speech-Arena-2025/DF_Arena_500M_V_1` models are non-commercial research licence.
 - Approvals/tasks REST require the operator bearer token; the token file is as sensitive as the approval key.
 - Docker-published ports mitigate, not replace, authentication; do not expose the API beyond loopback except the public red-team route via a tunnel.

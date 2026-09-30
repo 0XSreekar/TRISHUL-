@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Document demo server; each document carries a ``trust`` column the gateway uses for labels."""
 
 import sqlite3

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Append-only Merkle audit log on SQLite with signed tree heads (spec section 8)."""
 
 import sqlite3

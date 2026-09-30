@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """FinBot: the deterministic scripted agent used by the demo moments and the red-team wall."""
 
 from trishul.finbot.agent import FinBot, parse_intent
