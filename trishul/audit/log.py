@@ -100,7 +100,7 @@ class AuditLog:
         conn: sqlite3.Connection,
         keys: KeyRing,
         *,
-        key_id: str = "gateway",
+        key_id: str | None = None,  # default: the active tree-head-signer key
         sth_every: int = DEFAULT_STH_EVERY,
         clock: Callable[[], datetime] = _now,
     ) -> None:
@@ -145,12 +145,13 @@ class AuditLog:
     # --- writing ------------------------------------------------------------------------
     def _sign_head(self, size: int, root: bytes) -> SignedTreeHead:
         root_hex, ts = merkle.hexd(root), iso(self.clock())
-        sig = self.keys.sign(self.key_id, {"size": size, "root": root_hex, "ts": ts})
+        kid = self.key_id or self.keys.active_kid("tree-head-signer")
+        sig = self.keys.sign(kid, {"size": size, "root": root_hex, "ts": ts})
         self.conn.execute(
             "INSERT OR REPLACE INTO tree_heads(size, root, ts, sig, key_id) VALUES (?,?,?,?,?)",
-            (size, root_hex, ts, sig, self.key_id),
+            (size, root_hex, ts, sig, kid),
         )
-        return SignedTreeHead(size=size, root=root_hex, ts=ts, sig=sig, key_id=self.key_id)
+        return SignedTreeHead(size=size, root=root_hex, ts=ts, sig=sig, key_id=kid)
 
     def append(self, event: Mapping[str, object]) -> AppendResult:
         """Redact, canonicalise (JCS) and append in one ``BEGIN IMMEDIATE`` transaction."""

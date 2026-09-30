@@ -29,3 +29,13 @@
 - Middleware added to the proxy runs before the upstream call, so a policy gate there sees the exact tool name and arguments and
   can short-circuit by raising `ToolError` (upstream tool never runs).
 - Labels are not part of MCP; the gateway must attach `arg_labels` from its own provenance store (Phase 2, keyed by task/session).
+
+## Gateway -> tool token transport (Phase 4)
+
+Decision: the per-call token travels in the reserved tool argument `__trishul_token`, **not** in MCP `_meta`.
+Verified against fastmcp 4.0.10: `CallToolRequestParams(_meta=...)` set by the gateway middleware is dropped
+on the mount path (child-server middleware sees `message.meta is None`) and on `create_proxy`, while extra
+arguments pass through both unchanged. The tool-side `ToolAuthMiddleware` (`trishul/crypto/toolauth.py`)
+pops the argument before FastMCP validates the tool signature, so tool schemas are untouched. The gateway
+`PolicyMiddleware` refuses any agent-supplied `__trishul_token` and mints the token only inside its forwarding
+callback (after ALLOW). `FastMCP.run_http_async(uvicorn_config={"uds": path})` is used for `unix:` binds.

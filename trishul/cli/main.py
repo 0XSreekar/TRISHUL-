@@ -21,6 +21,14 @@ from pathlib import Path
 from typing import Any
 
 from trishul.contracts.canonical import canonical_json
+from trishul.crypto.keystore import (
+    KeyStoreError,
+    default_home,
+    load_or_create,
+    load_ring,
+    write_public,
+)
+from trishul.crypto.keystore import rotate as rotate_key
 from trishul.policy.compiler import PolicyCompileFailure, compile_files
 from trishul.policy.evaluator import evaluate_raw
 
@@ -116,6 +124,17 @@ def build_parser() -> argparse.ArgumentParser:
     reset = demo.add_parser("reset", help="wipe and reseed deterministic demo state")
     _db_arg(reset)
     reset.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    reset.add_argument(
+        "--rotate-keys",
+        action="store_true",
+        help="also add a new active key for every purpose (old keys stay for verification)",
+    )
+    keys_p = top.add_parser("keys", help="signing key management").add_subparsers(
+        dest="cmd", required=True
+    )
+    rotate = keys_p.add_parser("rotate", help="new active key for one purpose")
+    rotate.add_argument("purpose")
+    keys_p.add_parser("list", help="key ids per purpose (public information only)")
     tamper = demo.add_parser("tamper", help="mutate one stored audit payload (demo tampering)")
     _db_arg(tamper)
     tamper.add_argument("--idx", type=int, required=True, help="audit leaf index to tamper with")
@@ -164,7 +183,7 @@ def _gateway(db: Path, **kw: Any) -> Any:
 
     conn, seed = _open(db)
     ids = IdGen(seed, start=100_000_000 + int(time.time() * 1000) % 100_000_000)
-    return build_gateway(conn, ids, seed=seed, **kw)
+    return build_gateway(conn, ids, seed=seed, keys=load_or_create(), **kw)
 
 
 def _print(obj: object) -> None:
@@ -173,10 +192,14 @@ def _print(obj: object) -> None:
 
 def _verify(db: Path) -> int:
     from trishul.audit.verify import verify
-    from trishul.crypto.keys import KeyRing
 
-    conn, seed = _open(db)
-    result = verify(conn, KeyRing.from_seed(seed))
+    conn, _ = _open(db)
+    try:
+        ring = load_ring().public_ring()
+    except KeyStoreError as exc:
+        print(f"cannot verify: {exc}", file=sys.stderr)
+        return 1
+    result = verify(conn, ring)
     _print(result.model_dump())
     return 0 if result.ok else 1
 
@@ -193,11 +216,15 @@ def _prove(db: Path) -> int:
 
 
 def _report_dpdp(db: Path) -> int:
-    from trishul.crypto.keys import KeyRing
     from trishul.domains.dpdp import dpdp_report
 
-    conn, seed = _open(db)
-    _print(dpdp_report(conn, KeyRing.from_seed(seed)))
+    conn, _ = _open(db)
+    try:
+        ring = load_ring()
+    except KeyStoreError as exc:
+        print(f"cannot build report: {exc}", file=sys.stderr)
+        return 1
+    _print(dpdp_report(conn, ring))
     return 0
 
 
@@ -246,15 +273,45 @@ def _demo_tamper(db: Path, idx: int) -> int:
     return 0
 
 
-def _demo_reset(db: Path, seed: int) -> int:
-    from trishul.crypto.keys import KeyRing
+def _keys_cmd(args: argparse.Namespace) -> int:
+    from trishul.crypto.keys import PURPOSES
+
+    try:
+        if args.cmd == "rotate":
+            kid = rotate_key(None, args.purpose)
+            _refresh_public_keys()
+            _print({"purpose": args.purpose, "kid": kid, "rotated": True})
+            return 0
+        ring = load_or_create()
+    except KeyStoreError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    _print({p: {"active": ring.active_kid(p)} for p in PURPOSES})
+    return 0
+
+
+def _refresh_public_keys() -> None:
+    """Re-export the public keys when a tools container reads them from a separate directory."""
+    target = os.environ.get("TRISHUL_PUBLIC_KEYS_DIR")
+    if target:
+        write_public(load_ring(), Path(target))
+
+
+def _demo_reset(db: Path, seed: int, rotate_keys: bool = False) -> int:
+    from trishul.crypto.keys import PURPOSES
     from trishul.gateway.app import seed_demo_mandate
     from trishul.store.db import DEMO_NOW, connect, iso, reset
     from trishul.store.ids import IdGen
 
+    if rotate_keys:
+        load_or_create()  # make sure a key set exists, then add a new active kid per purpose
+        for purpose in PURPOSES:
+            rotate_key(None, purpose)
+    ring = load_or_create()  # random keys, generated on first use only (the seed is public)
+    _refresh_public_keys()
     conn = connect(db)
     ids = reset(conn, seed=seed)
-    mandate = seed_demo_mandate(conn, KeyRing.from_seed(seed), now=DEMO_NOW)
+    mandate = seed_demo_mandate(conn, ring, now=DEMO_NOW)
     conn.execute(
         "INSERT OR REPLACE INTO meta(key, value) VALUES ('id_counter', ?)", (str(ids.counter),)
     )
@@ -269,6 +326,7 @@ def _demo_reset(db: Path, seed: int) -> int:
             "seed": seed,
             "ids_issued": ids.counter,
             "mandate_id": mandate.mandate_id(),
+            "key_ids": {p: ring.active_kid(p) for p in PURPOSES},
             "next_call_id": preview,
         }
     )
@@ -331,17 +389,21 @@ def _ensure_operator_token(db: Path) -> Path:
 def _start(args: argparse.Namespace) -> int:
     import uvicorn
 
-    from trishul.crypto.keys import KeyRing
     from trishul.gateway.app import build_gateway, build_stdio_gateway, seed_demo_mandate
     from trishul.store.db import DEMO_NOW, connect, reset
 
     db: Path = args.db
+    try:
+        ring = load_or_create()
+    except KeyStoreError as exc:
+        print(f"cannot start: {exc}", file=sys.stderr)
+        return 1
     conn = connect(db)
     row = conn.execute("SELECT value FROM meta WHERE key='seed'").fetchone()
     if args.seed is not None or row is None:
         seed = DEFAULT_SEED if args.seed is None else args.seed
         ids = reset(conn, seed=seed)
-        seed_demo_mandate(conn, KeyRing.from_seed(seed), now=DEMO_NOW)
+        seed_demo_mandate(conn, ring, now=DEMO_NOW)
     else:
         seed = int(row["value"])
         counter = conn.execute("SELECT value FROM meta WHERE key='id_counter'").fetchone()
@@ -350,9 +412,18 @@ def _start(args: argparse.Namespace) -> int:
         ids = IdGen(seed, start=int(counter["value"]) if counter else 0)
     token_path = _ensure_operator_token(db)
     if args.in_process:
-        gw = build_gateway(conn, ids, seed=seed)
+        gw = build_gateway(conn, ids, seed=seed, keys=ring)
     else:
-        gw = build_stdio_gateway(conn, ids, db.resolve(), seed=seed)
+        public = os.environ.get("TRISHUL_PUBLIC_KEYS_DIR")
+        gw = build_stdio_gateway(
+            conn,
+            ids,
+            db.resolve(),
+            keys=ring,
+            public_keys_dir=Path(public) if public else default_home() / "public-keys",
+            tools_url=os.environ.get("TRISHUL_TOOLS_URL") or None,
+            seed=seed,
+        )
     # Warm voice models inside the gateway process (a separate prewarm process cannot compile
     # this process's Metal kernels). Background thread: startup and non-voice calls never wait.
     from trishul.reader.runtime import start_reader
@@ -419,7 +490,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         case "demo":
             if args.cmd == "tamper":
                 return _demo_tamper(args.db, args.idx)
-            return _demo_reset(args.db, args.seed)
+            return _demo_reset(args.db, args.seed, args.rotate_keys)
+        case "keys":
+            return _keys_cmd(args)
         case "redteam":
             return _redteam(args.db, args.cmd == "kill")
         case "approve":

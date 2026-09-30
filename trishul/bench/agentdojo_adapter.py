@@ -181,7 +181,7 @@ class PolicyCore:
             conn = connect(Path(tmp) / "adojo.db")
             try:
                 ids = reset(conn, seed=self.seed)
-                keys = KeyRing.from_seed(self.seed)
+                keys = KeyRing.generate()
                 payees = tuple(
                     MandatePayee(vpa=v, name=v, cap=HUGE_CAP) for v in sorted(authorised)
                 )

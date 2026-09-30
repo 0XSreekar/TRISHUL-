@@ -9,7 +9,7 @@ from fastmcp import Client
 
 from tests.integration.test_gateway_harness import make_env_sync, parse_error
 from trishul.cli.main import main
-from trishul.crypto.keys import KeyRing
+from trishul.crypto.keystore import load_or_create
 from trishul.gateway.app import build_gateway, seed_demo_mandate
 from trishul.store.db import DEMO_NOW, connect, reset
 
@@ -85,7 +85,7 @@ async def test_approve_reject_and_report_via_cli(
     run(capsys, "demo", "reset", "--seed", "42", "--db", str(db))
     conn = connect(db)
     ids = reset(conn, seed=42)
-    keys = KeyRing.from_seed(42)
+    keys = load_or_create()  # the random key store the CLI uses
     seed_demo_mandate(conn, keys, now=DEMO_NOW)
     gw = build_gateway(conn, ids, seed=42, keys=keys)
     args = {"payee_vpa": ACME, "amount_paise": 750_000}

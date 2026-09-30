@@ -17,7 +17,7 @@ async def test_pay_over_stdio_subprocess_servers(tmp_path: Path) -> None:
     db = tmp_path / "stdio.db"
     conn = connect(db)
     ids = reset(conn, seed=42)
-    keys = KeyRing.from_seed(42)
+    keys = KeyRing.generate()
     seed_demo_mandate(conn, keys, now=DEMO_NOW)
     gw = build_stdio_gateway(conn, ids, db, seed=42, keys=keys)
     args = {"payee_vpa": ACME, "amount_paise": 100_000}

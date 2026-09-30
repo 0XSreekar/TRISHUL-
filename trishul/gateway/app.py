@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from fastmcp import FastMCP
 from fastmcp.server import create_proxy
@@ -22,6 +23,8 @@ from trishul.approvals import ApprovalService
 from trishul.audit.log import AuditLog
 from trishul.contracts.calls import ToolCategory
 from trishul.crypto.keys import KeyRing
+from trishul.crypto.keystore import write_public
+from trishul.crypto.toolauth import ToolTokenMinter, ToolTokenVerifier
 from trishul.domains.payshield import MandatePayee, SignedMandate, issue_mandate, store_mandate
 from trishul.domains.voicetrust import VoiceTrust
 from trishul.gateway.backend import Backend
@@ -142,7 +145,7 @@ def build_gateway(
 ) -> Gateway:
     """Assemble the gateway. ``servers`` maps namespace -> FastMCP (defaults to the four demo
     servers on ``conn``); ``base`` is an already-built proxy to use instead of mounting."""
-    keys = keys or KeyRing.from_seed(seed)
+    keys = keys or KeyRing.generate()  # random, in-memory; real runs pass the loaded key store
     policy = compile_files([policy_dir])
     provider, metrics = setup_tracing()
     bus = bus or EventBus()
@@ -164,32 +167,42 @@ def build_gateway(
     )
     if base is None:
         mcp = FastMCP("trishul-gateway")
-        upstream = dict(servers) if servers is not None else _demo_servers(conn, ids, clock)
+        upstream = (
+            dict(servers)
+            if servers is not None
+            else _demo_servers(conn, ids, clock, ToolTokenVerifier(conn, keys.public_ring()))
+        )
         for ns in NAMESPACES:
             if ns in upstream:
                 mcp.mount(upstream[ns], namespace=ns)
     else:
         mcp = base
     register_native_tools(mcp)
-    mcp.add_middleware(PolicyMiddleware(pipeline, NativeExecutor(pipeline.handles)))
+    mcp.add_middleware(
+        PolicyMiddleware(pipeline, NativeExecutor(pipeline.handles), ToolTokenMinter(keys))
+    )
     backend = Backend(pipeline)
     backend.mcp = mcp
     return Gateway(mcp, pipeline, backend, bus, metrics, policy)
 
 
 def _demo_servers(
-    conn: sqlite3.Connection, ids: IdGen, clock: Callable[[], datetime]
+    conn: sqlite3.Connection,
+    ids: IdGen,
+    clock: Callable[[], datetime],
+    verifier: ToolTokenVerifier,
 ) -> dict[str, FastMCP]:
     return {
-        "upi": build_upi_server(conn, ids, clock=clock),
-        "crm": build_crm_server(conn),
-        "mail": build_mail_server(conn, ids, clock=clock),
-        "files": build_files_server(conn),
+        "upi": build_upi_server(conn, ids, clock=clock, verifier=verifier),
+        "crm": build_crm_server(conn, verifier=verifier),
+        "mail": build_mail_server(conn, ids, clock=clock, verifier=verifier),
+        "files": build_files_server(conn, verifier=verifier),
     }
 
 
-def stdio_config(db: Path, id_base: int = 0) -> dict[str, Any]:
-    """MCPConfig for the four servers as stdio subprocesses (``trishul.gateway.server_main``)."""
+def stdio_config(db: Path, public_keys: Path, id_base: int = 0) -> dict[str, Any]:
+    """MCPConfig for the four servers as stdio subprocesses (``trishul.gateway.server_main``).
+    ``public_keys`` is a directory with public keys only (never the private key store)."""
     return {
         "mcpServers": {
             ns: {
@@ -200,6 +213,8 @@ def stdio_config(db: Path, id_base: int = 0) -> dict[str, Any]:
                     ns,
                     "--db",
                     str(db),
+                    "--keys",
+                    str(public_keys),
                     "--id-base",
                     str(id_base + (i + 1) * 1_000_000),
                 ],
@@ -209,15 +224,38 @@ def stdio_config(db: Path, id_base: int = 0) -> dict[str, Any]:
     }
 
 
+def http_config(base_url: str) -> dict[str, Any]:
+    """MCPConfig for tool servers reached over HTTP (Docker): server ``i`` listens on
+    ``base_url`` port + i + 1 (``http://tools:9000`` -> upi 9001, crm 9002, mail 9003, files
+    9004)."""
+    parsed = urlsplit(base_url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.port is None:
+        raise ValueError("tools URL must look like http://host:port")
+    return {
+        "mcpServers": {
+            ns: {"url": f"{parsed.scheme}://{parsed.hostname}:{parsed.port + i + 1}/mcp"}
+            for i, ns in enumerate(NAMESPACES)
+        }
+    }
+
+
 def build_stdio_gateway(
     conn: sqlite3.Connection,
     ids: IdGen,
     db: Path,
+    *,
+    keys: KeyRing,
+    public_keys_dir: Path | None = None,
+    tools_url: str | None = None,
     **kwargs: Any,
 ) -> Gateway:
-    """Gateway over stdio subprocess servers (each opens the same WAL database)."""
-    proxy = create_proxy(stdio_config(db), name="trishul-gateway")
-    return build_gateway(conn, ids, base=proxy, **kwargs)
+    """Gateway over tool-server subprocesses (stdio), or over HTTP when ``tools_url`` is set.
+    The servers only ever see ``public_keys_dir`` (public keys exported from ``keys``)."""
+    public = public_keys_dir if public_keys_dir is not None else db.parent / "public-keys"
+    write_public(keys, public)
+    config = http_config(tools_url) if tools_url else stdio_config(db, public)
+    proxy = create_proxy(config, name="trishul-gateway")
+    return build_gateway(conn, ids, base=proxy, keys=keys, **kwargs)
 
 
 def issue_ts(now: datetime) -> str:

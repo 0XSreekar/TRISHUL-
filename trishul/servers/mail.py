@@ -9,6 +9,7 @@ from typing import Any
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
+from trishul.crypto.toolauth import ToolAuthMiddleware, ToolTokenVerifier
 from trishul.store.db import DEMO_NOW, iso, transaction
 from trishul.store.ids import IdGen
 
@@ -19,9 +20,11 @@ def build_mail_server(
     conn: sqlite3.Connection,
     ids: IdGen,
     *,
+    verifier: ToolTokenVerifier,
     clock: Callable[[], datetime] = lambda: DEMO_NOW,
 ) -> FastMCP:
     server = FastMCP("mail")
+    server.add_middleware(ToolAuthMiddleware(verifier, "mail"))
 
     @server.tool
     async def send_email(to: str, subject: str, body: str) -> dict[str, Any]:

@@ -6,10 +6,12 @@ from collections.abc import Callable
 from typing import Any
 
 import mcp.types as mt
+from fastmcp.exceptions import ToolError
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 from fastmcp.tools import ToolResult
 
-from trishul.gateway.pipeline import CallRequest, Pipeline, State
+from trishul.crypto.toolauth import TOKEN_ARG, ToolTokenMinter
+from trishul.gateway.pipeline import CallRequest, Pipeline, State, split_name
 
 
 def _request_meta(context: MiddlewareContext[mt.CallToolRequestParams]) -> dict[str, Any]:
@@ -41,10 +43,16 @@ def _request_meta(context: MiddlewareContext[mt.CallToolRequestParams]) -> dict[
 
 
 class PolicyMiddleware(Middleware):
-    def __init__(self, pipeline: Pipeline, native: Callable[[State], ToolResult]) -> None:
+    def __init__(
+        self,
+        pipeline: Pipeline,
+        native: Callable[[State], ToolResult],
+        minter: ToolTokenMinter,
+    ) -> None:
         super().__init__()
         self.pipeline = pipeline
         self.native = native
+        self.minter = minter
 
     async def on_call_tool(
         self,
@@ -52,6 +60,9 @@ class PolicyMiddleware(Middleware):
         call_next: CallNext[mt.CallToolRequestParams, ToolResult],
     ) -> ToolResult:
         params = context.message
+        if TOKEN_ARG in (params.arguments or {}):
+            # the token channel belongs to the gateway; an agent must never supply one
+            raise ToolError(f"argument {TOKEN_ARG!r} is reserved")
         request = CallRequest(
             name=params.name,
             arguments=dict(params.arguments or {}),
@@ -59,7 +70,12 @@ class PolicyMiddleware(Middleware):
         )
 
         async def execute(args: dict[str, Any]) -> ToolResult:
-            forwarded = mt.CallToolRequestParams(name=params.name, arguments=args)
+            # minted only here, after ALLOW, for exactly this server, tool and argument set
+            server, tool = split_name(params.name)
+            token = self.minter.mint(server, tool, args)
+            forwarded = mt.CallToolRequestParams(
+                name=params.name, arguments={**args, TOKEN_ARG: token}
+            )
             return await call_next(context.copy(message=forwarded))
 
         return await self.pipeline.run(request, execute, self.native)

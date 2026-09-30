@@ -14,6 +14,7 @@ from fastmcp.exceptions import ToolError
 
 from trishul.audit.verify import verify
 from trishul.crypto.keys import KeyRing
+from trishul.crypto.keystore import load_or_create
 from trishul.gateway.app import Gateway, build_gateway, seed_demo_mandate
 from trishul.store.db import DEMO_NOW, connect, reset
 from trishul.store.ids import IdGen
@@ -74,7 +75,7 @@ def make_env_sync(
 ) -> tuple[Gateway, sqlite3.Connection, IdGen, KeyRing, Clock, list[dict[str, Any]]]:
     conn = connect(tmp_path / "gw.db")
     ids = reset(conn, seed=42)
-    keys = KeyRing.from_seed(42)
+    keys = load_or_create()  # the random per-test key store that the CLI also reads
     clock = Clock()
     payees = kw.pop("payees", None)
     mandate = kw.pop("mandate", True)
