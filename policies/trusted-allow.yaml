@@ -1,0 +1,14 @@
+version: 1
+id: core.trusted_allow
+tools:
+  get_balance:
+    category: READ
+    args:
+      account_id: {type: string, required: true}
+rules:
+  - id: CORE.TAINT.UNTRUSTED_ACCOUNT
+    stage: LABEL
+    then: STEP_UP
+    explain: "Account identifier derived from untrusted content"
+    when:
+      label_at_least: {arg: /account_id, level: UNTRUSTED}

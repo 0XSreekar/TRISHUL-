@@ -39,3 +39,13 @@ out/
 
 # Thumbnails and Caches
 .thumbnail
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+*.egg-info/

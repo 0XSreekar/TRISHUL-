@@ -1,0 +1,20 @@
+version: 1
+id: purposelock.pii_egress
+tools:
+  send_email:
+    category: COMMUNICATION
+    args:
+      to: {type: string, required: true}
+      body: {type: string, required: true}
+      fields: {type: array, required: true}
+rules:
+  - id: PURPOSELOCK.EGRESS.PII_WITHOUT_CONSENT
+    stage: PURPOSE
+    then: DENY
+    explain: "PII sent to a communication sink without a consent covering these fields"
+    when:
+      all:
+        - tool_category: COMMUNICATION
+        - label_has_tag: {arg: /body, tag: PII}
+        - not:
+            consent_covers: {purpose: customer_support, fields_arg: /fields}

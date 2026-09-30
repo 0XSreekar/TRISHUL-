@@ -44,17 +44,17 @@ button{font-family:inherit}
           <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">CALLS TODAY</span><span style="font-size:18px;font-weight:300;font-variant-numeric:tabular-nums">{{ calls }}</span></div>
           <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">BLOCKED</span><span style="font-size:18px;font-weight:300;color:#E5533D;font-variant-numeric:tabular-nums">{{ blocked }}</span></div>
           <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">ATTACKS STOPPED</span><span style="font-size:18px;font-weight:300;color:#E5533D;font-variant-numeric:tabular-nums">{{ attacks }}</span></div>
-          <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">P99 LATENCY</span><span style="font-size:18px;font-weight:300;font-variant-numeric:tabular-nums">{{ p99 }}<span style="font-size:11px;color:#8B98A1"> ms</span></span></div>
+          <div data-trishul="latency" data-state="{{ latState }}" style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">P99 LATENCY</span><span style="font-size:18px;font-weight:300;font-variant-numeric:tabular-nums">{{ p99 }}<span style="font-size:11px;color:#8B98A1">{{ p99u }}</span></span></div>
         </div>
         <span style="flex:1"></span>
-        <div style="display:flex;align-items:center;gap:10px;animation:{{ auditAnim }}">
+        <div data-trishul="audit-root" data-state="{{ auditState }}" style="display:flex;align-items:center;gap:10px;animation:{{ auditAnim }}">
           <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">AUDIT CHAIN</span>
           <span style="font-size:12px;letter-spacing:.14em;color:{{ auditColor }}">{{ auditText }}</span>
           <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ rootColor }}">{{ root }}</span>
         </div>
         <span style="width:1px;height:28px;background:rgba(202,217,226,.12)"></span>
-        <div style="display:flex;gap:6px">
-          <button onClick="{{ openApprovals }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(232,163,61,.45);background:rgba(232,163,61,.08);color:#E8A33D;font-size:10.5px;letter-spacing:.14em;cursor:pointer">APPROVALS · {{ pending }}</button>
+        <div data-trishul="domain-status" data-state="unavailable" style="display:flex;gap:6px">
+          <button data-trishul="approval-state" onClick="{{ openApprovals }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(232,163,61,.45);background:rgba(232,163,61,.08);color:#E8A33D;font-size:10.5px;letter-spacing:.14em;cursor:pointer">APPROVALS · {{ pending }}</button>
           <button onClick="{{ openVoice }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">VOICETRUST</button>
           <button onClick="{{ openPurpose }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">PURPOSELOCK</button>
           <button onClick="{{ openProof }}" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(202,217,226,.14);background:rgba(33,57,71,.35);color:#CAD9E2;font-size:10.5px;letter-spacing:.14em;cursor:pointer" style-hover="border-color:rgba(202,217,226,.35)">PROOF</button>
@@ -67,7 +67,7 @@ button{font-family:inherit}
       </div>
 
       <sc-if value="{{ showStatus }}" hint-placeholder-val="{{ false }}">
-        <div style="position:absolute;left:32px;right:32px;top:78px;height:16px;display:flex;align-items:center;justify-content:center;border-radius:4px;background:{{ statusBg }};border:1px solid {{ statusBorder }};font-size:10px;letter-spacing:.24em;color:{{ statusColor }};animation:{{ statusAnim }}">{{ statusText }}</div>
+        <div data-trishul="connection" data-state="{{ connState }}" style="position:absolute;left:32px;right:32px;top:78px;height:16px;display:flex;align-items:center;justify-content:center;border-radius:4px;background:{{ statusBg }};border:1px solid {{ statusBorder }};font-size:10px;letter-spacing:.24em;color:{{ statusColor }};animation:{{ statusAnim }}">{{ statusText }}</div>
       </sc-if>
 
       <sc-for list="{{ agents }}" as="a" hint-placeholder-count="3">
@@ -109,7 +109,7 @@ button{font-family:inherit}
         </div>
       </sc-for>
 
-      <svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible">
+      <svg data-trishul="lineage-graph" width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible">
         <g style="animation:breathe 5s ease-in-out infinite">
           <sc-for list="{{ paths }}" as="p" hint-placeholder-count="0">
             <path d="{{ p.d }}" data-path="{{ p.key }}" fill="none" stroke="{{ p.stroke }}" stroke-width="{{ p.w }}"></path>
@@ -182,11 +182,11 @@ button{font-family:inherit}
           <button onClick="{{ openLatestDeny }}" aria-label="Open latest DENY" style="width:26px;height:26px;border-radius:7px;border:1px solid rgba(202,217,226,.2);background:transparent;color:#CAD9E2;font-size:13px;cursor:pointer">↗</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:#8B98A1">Block rate</span><span style="font-variant-numeric:tabular-nums">{{ blockRate }}%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:#8B98A1">Block rate</span><span style="font-variant-numeric:tabular-nums">{{ blockRateT }}</span></div>
           <span style="height:2px;background:rgba(202,217,226,.08);position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ blockRate }}%;background:linear-gradient(90deg,#E8A33D,#E5533D);transition:width .8s ease-in-out"></span></span>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:#8B98A1">p95 decision latency</span><span style="font-variant-numeric:tabular-nums">{{ p95 }} ms</span></div>
+        <div data-trishul="latency" data-state="{{ latState }}" style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:#8B98A1">p95 decision latency</span><span style="font-variant-numeric:tabular-nums">{{ p95 }}</span></div>
           <span style="height:2px;background:rgba(202,217,226,.08);position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ p95w }}%;background:#45829B;transition:width .8s ease-in-out"></span></span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px"><span style="color:#8B98A1">Pending approvals</span><button onClick="{{ openApprovals }}" style="min-width:34px;height:22px;padding:0 10px;border-radius:999px;border:1px solid rgba(232,163,61,.6);background:rgba(232,163,61,.14);color:#E8A33D;font-family:'JetBrains Mono',monospace;font-size:11.5px;cursor:pointer">{{ pending }}</button></div>
@@ -194,7 +194,7 @@ button{font-family:inherit}
         <span style="position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,transparent,#E5533D,#E8A33D,transparent);opacity:.85"></span>
       </div>
 
-      <div style="position:absolute;left:1040px;top:424px;width:848px;height:624px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(202,217,226,.1);background:linear-gradient(180deg,rgba(33,57,71,.36),rgba(33,57,71,.1));box-shadow:inset 0 1px 0 rgba(255,255,255,.05)">
+      <div data-trishul="feed" style="position:absolute;left:1040px;top:424px;width:848px;height:624px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(202,217,226,.1);background:linear-gradient(180deg,rgba(33,57,71,.36),rgba(33,57,71,.1));box-shadow:inset 0 1px 0 rgba(255,255,255,.05)">
         <span style="position:absolute;left:20px;top:14px;font-size:12px;letter-spacing:.24em">DECISION TIMELINE</span>
         <div style="position:absolute;right:20px;top:14px;display:flex;gap:16px;font-size:10px;letter-spacing:.16em;color:#8B98A1">
           <span style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#45829B"></span>ALLOW</span>
@@ -214,7 +214,7 @@ button{font-family:inherit}
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8B98A1">{{ w.date }}<span style="color:#4FD1C5">{{ w.time }}</span></span>
           </div>
         </div>
-        <span style="position:absolute;left:1800px;top:{{ w.fy }}px;font-size:10px;letter-spacing:.14em;color:{{ w.col }}">{{ w.feat }}</span>
+        <span data-trishul="decision-badge" data-decision="{{ w.decision }}" style="position:absolute;left:1800px;top:{{ w.fy }}px;font-size:10px;letter-spacing:.14em;color:{{ w.col }}">{{ w.feat }}</span>
         <button onClick="{{ w.open }}" aria-label="Open call detail" style="position:absolute;left:{{ w.dx }}px;top:{{ w.dy }}px;width:24px;height:24px;border-radius:50%;border:0;background:transparent;cursor:pointer"></button>
       </sc-for>
       <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}">
@@ -235,14 +235,14 @@ button{font-family:inherit}
         <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:20px">
             <div style="display:flex;align-items:center;gap:12px">
-              <span style="padding:4px 10px;border-radius:6px;border:1px solid {{ d.col }};color:{{ d.col }};font-size:11px;letter-spacing:.16em">{{ d.decision }}</span>
+              <span data-trishul="decision-badge" data-decision="{{ d.decision }}" style="padding:4px 10px;border-radius:6px;border:1px solid {{ d.col }};color:{{ d.col }};font-size:11px;letter-spacing:.16em">{{ d.decision }}</span>
               <span style="font-family:'JetBrains Mono',monospace;font-size:16px">{{ d.tool }}</span>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;font-size:12.5px">
               <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">AGENT</span><span>{{ d.agent }}</span></div>
               <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">FEATURE</span><span>{{ d.feature }}</span></div>
               <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">TIME</span><span style="font-family:'JetBrains Mono',monospace;color:#4FD1C5">{{ d.ts }}</span></div>
-              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">LATENCY</span><span>{{ d.latency }} ms</span></div>
+              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">LATENCY</span><span>{{ d.latency }}</span></div>
             </div>
             <div style="display:flex;flex-direction:column;gap:8px">
               <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">ARGUMENTS</span>
@@ -290,7 +290,7 @@ button{font-family:inherit}
         </sc-if>
 
         <sc-if value="{{ isApprovals }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex;flex-direction:column;gap:12px">
+          <div data-trishul="approval-state" style="display:flex;flex-direction:column;gap:12px">
             <sc-for list="{{ approvals }}" as="ap" hint-placeholder-count="1">
               <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:12px;border:1px solid {{ ap.border }};background:rgba(33,57,71,.35)">
                 <div style="display:flex;justify-content:space-between;font-size:11px"><span style="font-family:'JetBrains Mono',monospace">{{ ap.tool }} · {{ ap.agent }}</span><span style="font-family:'JetBrains Mono',monospace;color:#4FD1C5">{{ ap.time }}</span></div>
@@ -350,7 +350,7 @@ button{font-family:inherit}
         </sc-if>
 
         <sc-if value="{{ isProof }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex;flex-direction:column;gap:18px">
+          <div data-trishul="proof-status" data-state="{{ proofState }}" style="display:flex;flex-direction:column;gap:18px">
             <p style="margin:0;font-size:13px;line-height:1.55;color:#8B98A1">Asks Z3 whether any path lets an untrusted value reach a money, email or export sink.</p>
             <button onClick="{{ prove }}" style="align-self:flex-start;height:40px;padding:0 26px;border-radius:9px;border:1px solid #45829B;background:rgba(69,130,155,.25);color:#CAD9E2;font-size:12px;letter-spacing:.24em;cursor:pointer">{{ proveLabel }}</button>
             <sc-if value="{{ proofOk }}" hint-placeholder-val="{{ false }}">
@@ -365,6 +365,7 @@ button{font-family:inherit}
                 <pre style="margin:0;font-family:'JetBrains Mono',monospace;font-size:11px;white-space:pre-wrap">{{ proofCex }}</pre>
               </div>
             </sc-if>
+            <sc-if value="{{ proofNoteOn }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;line-height:1.5;color:#8B98A1">{{ proofNote }}</span></sc-if>
             <sc-if value="{{ proofErrOn }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:#E5533D">{{ proofErr }}</span></sc-if>
           </div>
         </sc-if>
@@ -416,12 +417,74 @@ const dotX=e=>(FX[e.feature]||1670)+((hsh(e.id)%37)-18);
 const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;};
 const pctl=(arr,p)=>arr.length?arr[Math.min(arr.length-1,Math.floor(p*arr.length))]:null;
 
+/* ===== TrishulEventSource adapter boundary =====================================
+ * Interface (both sources implement it):
+ *   connect()  begin delivering; report connection via hooks.state(conn)
+ *   poll()     -> array of events received since the last poll (pull model)
+ *   now()      -> ms epoch the UI should treat as "now" (virtual clock in replay)
+ *   close()    stop and release everything
+ * hooks: { state(conn), reset(meta) }   conn: connecting|open|lost|error|idle|noreplay
+ *
+ * Event contract consumed by the UI (one JSON object, or an array of them):
+ *   call event : id, ts (ISO), agent (finbot|supportbot|voicedesk), tool, feature
+ *                (payshield|purposelock|voicetrust), decision (ALLOW|STEP_UP|DENY),
+ *                reason, rules[], scores{}, labels{}, args{}, effect{summary,balance_after},
+ *                latency_ms (omit if not measured), audit_hash (real audit leaf only),
+ *                liveness{phrase}, source ('redteam' for red-team), attack_text, tag
+ *   control    : {type:'ml_state',ml}  {type:'audit_verify',ok,bad_id}
+ *                {type:'resolution',id,decision}
+ * Missing fields render as unavailable ("—"); the UI never fabricates a value.
+ * ============================================================================= */
+class WebSocketSource{
+  constructor(url,h){this.url=url;this.h=h;this.buf=[];this.ws=null;this.closed=false;this.err=false;}
+  now(){return Date.now();}
+  poll(){const b=this.buf;this.buf=[];return b;}
+  connect(){
+    if(this.closed)return;
+    let ws;
+    try{ws=new WebSocket(this.url);}catch(e){this.h.state('error');return this.retry();}
+    this.ws=ws;
+    ws.onopen=()=>{this.err=false;this.h.state('open');};
+    ws.onmessage=m=>{try{const d=JSON.parse(m.data);Array.isArray(d)?this.buf.push(...d):this.buf.push(d);}catch(e){}};
+    ws.onerror=()=>{if(this.ws===ws){this.err=true;this.h.state('error');}};
+    ws.onclose=()=>{if(this.ws!==ws||this.closed)return;this.ws=null;this.h.state(this.err?'error':'lost');this.retry();};
+  }
+  retry(){clearTimeout(this.rt);this.rt=setTimeout(()=>this.connect(),3000);}
+  close(){this.closed=true;clearTimeout(this.rt);if(this.ws){const w=this.ws;this.ws=null;w.onclose=null;w.onerror=null;try{w.close();}catch(e){}}}
+}
+// PHASE-3: remove DevReplaySource (synthetic recorded session; dev only)
+class DevReplaySource{
+  constructor(url,speed,h){this.url=url;this.speed=speed;this.h=h;this.q=null;this.closed=false;this.loopT=null;}
+  async connect(){
+    let log;
+    try{const r=await fetch(this.url);if(!r.ok)throw 0;log=await r.json();}catch(e){if(!this.closed)this.h.state('noreplay');return;}
+    if(this.closed)return;this.log=log;this.begin();
+  }
+  begin(){
+    // Events are tagged origin:'dev-replay'. The demo's audit_hash and log.proof are
+    // synthetic and are deliberately NOT forwarded (UI must not show them as real).
+    const evs=this.log.events.map(e=>{const c={...e,origin:'dev-replay'};delete c.audit_hash;return c;}).sort((a,b)=>Date.parse(a.ts)-Date.parse(b.ts));
+    this.q=evs;this.i=0;this.vStart=Date.parse(evs[0].ts)-1500;this.real=performance.now();
+    this.h.reset({name:this.log.name||'recorded session',consent:(this.log.consent||[]).map(c=>({...c}))});
+  }
+  now(){return this.q?this.vStart+(performance.now()-this.real)*this.speed():Date.now();}
+  poll(){
+    if(!this.q)return [];
+    const now=this.now(),due=[];
+    while(this.i<this.q.length&&Date.parse(this.q[this.i].ts)<=now)due.push(this.q[this.i++]);
+    if(this.i>=this.q.length&&!this.loopT)this.loopT=setTimeout(()=>{this.loopT=null;if(!this.closed)this.begin();},8000);
+    return due;
+  }
+  close(){this.closed=true;this.q=null;clearTimeout(this.loopT);}
+}
+/* ===== end adapter ============================================================ */
+
 class Component extends DCLogic {
-  state={events:[],ml:true,audit:{ok:true,bad:null},resolved:{},panel:null,detail:null,now:0,scale:1,cam:0,mode:'replay',conn:'idle',consent:[],proof:null,proofBusy:false,proofErr:'',logName:'',filter:0};
+  state={events:[],ml:true,audit:{ok:true,bad:null},resolved:{},panel:null,detail:null,now:0,scale:1,cam:0,mode:'replay',conn:'idle',consent:[],proof:null,proofNote:'',proofBusy:false,proofErr:'',logName:'',filter:0};
 
   componentDidMount(){
     this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.anims=[];this.parts=[];this.flashes=[];this.arr={};this.geoC={};this.series=null;this.rseries=null;this.rowGeo=[];this.batch=[];this.threat=null;this.lastAttack=0;
+    this.anims=[];this.parts=[];this.flashes=[];this.arr={};this.geoC={};this.series=null;this.rseries=null;this.rowGeo=[];this.threat=null;this.lastAttack=0;this.src=null;
     this.onResize=()=>this.setState({scale:Math.min(innerWidth/W,innerHeight/H)});
     this.onResize();addEventListener('resize',this.onResize);
     this.startReplay();
@@ -429,45 +492,34 @@ class Component extends DCLogic {
     this.raf=requestAnimationFrame(this.frame);
     setTimeout(()=>this.setState({cam:1}),this.reduced?0:150);
   }
-  componentWillUnmount(){removeEventListener('resize',this.onResize);clearInterval(this.iv);cancelAnimationFrame(this.raf);clearTimeout(this.loopT);this.stopLive();}
+  componentWillUnmount(){removeEventListener('resize',this.onResize);clearInterval(this.iv);cancelAnimationFrame(this.raf);this.detach();}
   base(){return this.props.apiBase||'http://localhost:8787';}
   speed(){return Number(this.props.replaySpeed??8)||8;}
   decOf(e){const r=this.state.resolved[e.id];return e.decision==='STEP_UP'&&r?r:e.decision;}
   pass(e){const f=FILTERS[this.state.filter];return f==='all'||e.feature===f;}
 
-  async startReplay(){
-    this.stopLive();clearTimeout(this.loopT);this.loopT=null;
-    if(!this.log){try{const r=await fetch('replay/demo-session.json');if(!r.ok)throw 0;this.log=await r.json();}catch(e){this.rq=null;this.setState({mode:'replay',conn:'noreplay'});return;}}
-    const evs=this.log.events.map(e=>({...e})).sort((a,b)=>Date.parse(a.ts)-Date.parse(b.ts));
-    this.rq=evs;this.ri=0;this.vStart=Date.parse(evs[0].ts)-1500;this.realStart=performance.now();
-    this.anims=[];this.parts=[];this.flashes=[];this.arr={};
-    this.setState(s=>({mode:'replay',conn:'idle',events:[],resolved:{},ml:true,audit:{ok:true,bad:null},consent:(this.log.consent||[]).map(c=>({...c})),proof:null,proofErr:'',logName:this.log.name||'recorded session',now:this.vStart,detail:null,panel:s.panel==='detail'?null:s.panel}));
+  detach(){if(this.src){const x=this.src;this.src=null;x.close();}}
+  attach(make,mode){
+    this.detach();
+    const hooks={
+      state:c=>{if(this.src!==src)return;this.setState({conn:c});if(c==='open'&&mode==='live')this.loadConsent();},
+      reset:m=>{if(this.src!==src)return;this.anims=[];this.parts=[];this.flashes=[];this.arr={};
+        this.setState(s=>({mode:'replay',conn:'idle',events:[],resolved:{},ml:true,audit:{ok:true,bad:null},consent:m.consent,proof:null,proofNote:'',proofErr:'',logName:m.name,now:src.now(),detail:null,panel:s.panel==='detail'?null:s.panel}));}
+    };
+    const src=make(hooks);this.src=src;src.connect();
   }
+  startReplay(){this.attach(h=>new DevReplaySource('replay/demo-session.json',()=>this.speed(),h),'replay');}
   goLive(){
     if(this.state.mode==='live')return;
-    clearTimeout(this.loopT);this.loopT=null;this.rq=null;this.anims=[];this.arr={};
-    this.setState({mode:'live',conn:'connecting',events:[],resolved:{},audit:{ok:true,bad:null},ml:true,proof:null,proofErr:'',consent:[],detail:null},()=>this.connect());
+    this.detach();this.anims=[];this.arr={};
+    this.setState({mode:'live',conn:'connecting',events:[],resolved:{},audit:{ok:true,bad:null},ml:true,proof:null,proofNote:'',proofErr:'',consent:[],detail:null},()=>this.attach(h=>new WebSocketSource(this.props.wsUrl||'ws://localhost:8787/events',h),'live'));
   }
-  connect(){
-    let ws;
-    try{ws=new WebSocket(this.props.wsUrl||'ws://localhost:8787/events');}catch(e){this.setState({conn:'lost'});return this.retry();}
-    this.ws=ws;
-    ws.onopen=()=>{this.setState({conn:'open'});this.loadConsent();};
-    ws.onmessage=m=>{try{const d=JSON.parse(m.data);Array.isArray(d)?this.batch.push(...d):this.batch.push(d);}catch(e){}};
-    ws.onclose=()=>{if(this.ws!==ws)return;this.ws=null;if(this.state.mode==='live'){this.setState({conn:'lost'});this.retry();}};
-  }
-  retry(){clearTimeout(this.rt);this.rt=setTimeout(()=>{if(this.state.mode==='live')this.connect();},3000);}
-  stopLive(){clearTimeout(this.rt);if(this.ws){const w=this.ws;this.ws=null;w.onclose=null;try{w.close();}catch(e){}}}
   loadConsent(){fetch(this.base()+'/consent').then(r=>r.json()).then(j=>this.setState({consent:Array.isArray(j)?j:(j.consent||[])})).catch(()=>{});}
+  pump(){if(!this.src)return;const b=this.src.poll();if(b.length)this.ingest(b);}
 
   step(){
-    const live=this.state.mode==='live';
-    const now=live||!this.rq?Date.now():this.vStart+(performance.now()-this.realStart)*this.speed();
-    if(!live&&this.rq){
-      const due=[];while(this.ri<this.rq.length&&Date.parse(this.rq[this.ri].ts)<=now)due.push(this.rq[this.ri++]);
-      if(due.length)this.ingest(due);
-      if(this.ri>=this.rq.length&&!this.loopT)this.loopT=setTimeout(()=>{this.loopT=null;this.startReplay();},8000);
-    }
+    const now=this.src?this.src.now():Date.now();
+    this.pump();
     this.computeSeries(now);
     this.setState({now});
   }
@@ -475,7 +527,7 @@ class Component extends DCLogic {
     const calls=[];const patch={};const T=performance.now();
     for(const e of list){
       if(e.type==='ml_state')patch.ml=!!e.ml;
-      else if(e.type==='audit_verify')patch.audit={ok:!!e.ok,bad:e.ok?null:(e.bad_id||null)};
+      else if(e.type==='audit_verify')patch.audit={ok:!!e.ok,bad:e.ok?null:(e.bad_id||null),known:true};
       else if(e.type==='resolution')patch.resolved={...(patch.resolved||this.state.resolved),[e.id]:e.decision};
       else if(e.tool&&e.id)calls.push(e);
     }
@@ -493,7 +545,7 @@ class Component extends DCLogic {
 
   frame=()=>{
     this.raf=requestAnimationFrame(this.frame);
-    if(this.batch.length){const b=this.batch;this.batch=[];this.ingest(b);}
+    if(this.state.mode==='live')this.pump();
     try{this.draw();}catch(e){}
   };
   geo(key){
@@ -591,13 +643,13 @@ class Component extends DCLogic {
     if(this.state.mode==='live')fetch(`${this.base()}/consent/${id}/withdraw`,{method:'POST'}).catch(()=>{});
   }
   prove(){
-    this.setState({proofBusy:true,proof:null,proofErr:''});
-    if(this.state.mode==='replay'){setTimeout(()=>this.setState({proofBusy:false,proof:(this.log&&this.log.proof)||null,proofErr:this.log&&this.log.proof?'':'No recorded proof in this log.'}),700);return;}
+    this.setState({proofBusy:true,proof:null,proofErr:'',proofNote:''});
+    if(this.state.mode==='replay'){setTimeout(()=>{if(this.state.mode==='replay')this.setState({proofBusy:false,proofNote:'UNAVAILABLE · Dev replay carries only a synthetic recorded value, not a solver result. Connect to a live gateway for a real proof.'});},700);return;}
     fetch(this.base()+'/prove',{method:'POST'}).then(r=>r.json()).then(p=>this.setState({proofBusy:false,proof:p})).catch(()=>this.setState({proofBusy:false,proofErr:'Gateway unreachable at '+this.base()+'/prove'}));
   }
   downloadReport(){
     const evs=this.state.events.filter(e=>e.feature==='purposelock');
-    const rep={generated_at:new Date().toISOString(),source:this.state.mode==='replay'?this.state.logName:'live stream',consent:this.state.consent,
+    const rep={generated_at:new Date().toISOString(),source:this.state.mode==='replay'?'DEV REPLAY (synthetic) · '+this.state.logName:'live stream',consent:this.state.consent,
       decisions:evs.map(e=>({id:e.id,ts:e.ts,tool:e.tool,decision:this.decOf(e),rules:e.rules,reason:e.reason,audit_hash:e.audit_hash}))};
     const url=URL.createObjectURL(new Blob([JSON.stringify(rep,null,2)],{type:'application/json'}));
     const a=document.createElement('a');a.href=url;a.download='dpdp-report.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
@@ -667,7 +719,7 @@ class Component extends DCLogic {
       const iso=e.ts||'';
       return {top,hm:iso.slice(11,16),summary:summary(e),caps:(e.reason||'').replace(/\.$/,'').toUpperCase()+((e.rules||[]).length?' · '+e.rules.join(', '):''),
         capsCol:d==='ALLOW'?C.muted:col,date:iso.slice(2,10)+'T ',time:iso.slice(11,19),col,feat:FNAME[e.feature]||'',fy:top+16,
-        dx:x-12,dy:y-12,outline:bad?C.red:'transparent',bg:bad?'rgba(229,83,61,.1)':'transparent',open:()=>this.open(e.id)};
+        dx:x-12,dy:y-12,outline:bad?C.red:'transparent',bg:bad?'rgba(229,83,61,.1)':'transparent',decision:d,open:()=>this.open(e.id)};
     });
     let latestDeny=null;for(let i=ev.length-1;i>=0;i--){if(dec(ev[i])==='DENY'){latestDeny=ev[i];break;}}
     const tg=latestDeny&&this.rowGeo.find(r=>r.id===latestDeny.id);this.threat=tg?{x:tg.x,y:tg.y}:null;
@@ -676,19 +728,19 @@ class Component extends DCLogic {
 
     const live=s.mode==='live';
     let statusText='',statusBg='',statusBorder='',statusColor='',statusAnim='none';
-    if(live&&s.conn!=='open'){const lost=s.conn==='lost';statusText=lost?'STREAM LOST · RECONNECTING':'CONNECTING · '+(this.props.wsUrl||'ws://localhost:8787/events');statusBg='rgba(229,83,61,.14)';statusBorder='rgba(229,83,61,.5)';statusColor=C.red;statusAnim=lost?'blink 1.4s ease-in-out infinite':'none';}
-    else if(!live){statusText=s.conn==='noreplay'?'REPLAY LOG NOT FOUND · replay/demo-session.json':`REPLAY · ${s.logName} · ${this.speed()}× · RECORDED EVENTS, NOT LIVE`;statusBg='rgba(33,57,71,.35)';statusBorder='rgba(202,217,226,.1)';statusColor=C.muted;}
+    if(live&&s.conn!=='open'){const lost=s.conn==='lost',bad=s.conn==='error';statusText=bad?'CONNECTION ERROR · RETRYING · '+(this.props.wsUrl||'ws://localhost:8787/events'):lost?'STREAM LOST · RECONNECTING':'CONNECTING · '+(this.props.wsUrl||'ws://localhost:8787/events');statusBg='rgba(229,83,61,.14)';statusBorder='rgba(229,83,61,.5)';statusColor=C.red;statusAnim=lost||bad?'blink 1.4s ease-in-out infinite':'none';}
+    else if(!live){if(s.conn==='noreplay'){statusText='REPLAY LOG NOT FOUND · replay/demo-session.json';statusBg='rgba(33,57,71,.35)';statusBorder='rgba(202,217,226,.1)';statusColor=C.muted;}else{statusText=`DEV REPLAY · SYNTHETIC DATA · ${s.logName} · ${this.speed()}×`;statusBg='rgba(232,163,61,.14)';statusBorder='rgba(232,163,61,.5)';statusColor=C.amber;}}
 
     const P=s.panel;
     const de=P==='detail'?ev.find(e=>e.id===s.detail):null;
     let d={};
     if(de){const dd=dec(de);const sc=Object.entries(de.scores||{});
-      d={decision:dd,col:DCOL[dd],tool:de.tool,agent:de.agent,feature:FNAME[de.feature]||de.feature,ts:de.ts,latency:de.latency_ms??'—',
+      d={decision:dd,col:DCOL[dd],tool:de.tool,agent:de.agent,feature:FNAME[de.feature]||de.feature,ts:de.ts,latency:de.latency_ms!=null?de.latency_ms+' ms':'—',
         args:Object.entries(de.args||{}).map(([k,v])=>{const l=(de.labels||{})[k];const un=l&&String(l).startsWith('UNTRUSTED');return{key:k,value:typeof v==='object'?JSON.stringify(v):(k==='amount'?inr(v):String(v)),label:l?String(l).replace('UNTRUSTED_EXTERNAL:','UNTRUSTED · '):'USER',lc:un?C.red:l?C.muted:C.user};}),
         rules:(de.rules||[]).map(id=>({id})),noRules:!(de.rules||[]).length,
         scores:sc.map(([k,v])=>({key:k,val:Number(v).toFixed(2),pct:Math.round(v*100),col:v>=.5?C.red:C.blue})),noScores:!sc.length,
         hasEffect:!!de.effect,effect:de.effect?de.effect.summary+(de.effect.balance_after!=null?' · balance after '+inr(de.effect.balance_after):''):'',
-        reason:de.reason||'',hash:de.audit_hash||'—'};}
+        reason:de.reason||'',hash:de.audit_hash||(live?'—':'— (replay)')};}
 
     const approvals=ev.filter(e=>e.decision==='STEP_UP').slice().reverse().map(e=>{const r=s.resolved[e.id];
       return{tool:e.tool,agent:e.agent,time:(e.ts||'').slice(11,19),effect:e.effect?e.effect.summary+(e.effect.balance_after!=null?' · balance after '+inr(e.effect.balance_after):''):summary(e),reason:e.reason,
@@ -712,18 +764,18 @@ class Component extends DCLogic {
 
     return {
       scale:s.scale,plane,cvRef:el=>{this.cv=el;},
-      calls:ev.length.toLocaleString('en-IN'),blocked:den,attacks:att,p99:fmt(p99),
-      auditText:s.audit.ok?'VERIFIED ✓':'TAMPERED ✗',auditColor:s.audit.ok?C.blue:C.red,rootColor:s.audit.ok?C.teal:C.red,
+      calls:ev.length.toLocaleString('en-IN'),blocked:den,attacks:att,p99:fmt(p99),p99u:p99==null?'':' ms',latState:p99==null?'unavailable':'measured',connState:live?(s.conn==='open'?'live':s.conn):(s.conn==='noreplay'?'error':'replay-dev'),
+      auditText:!s.audit.ok?'TAMPERED ✗':live?(s.audit.known?'VERIFIED ✓':'UNAVAILABLE'):'SYNTHETIC',auditColor:!s.audit.ok?C.red:live&&s.audit.known?C.blue:C.muted,rootColor:s.audit.ok?(live?C.teal:C.muted):C.red,auditState:live?(s.audit.known?(s.audit.ok?'verified':'tampered'):'unavailable'):'synthetic',
       auditAnim:s.audit.ok?'none':'flick 1.1s steps(2,end) infinite',
-      root:lastCall&&lastCall.audit_hash?lastCall.audit_hash.slice(0,12)+'…':'—',
+      root:lastCall&&lastCall.audit_hash?lastCall.audit_hash.slice(0,12)+'…':(live?'—':'— (replay)'),
       pending:pend,
       replayBg:live?'transparent':'rgba(69,130,155,.35)',liveBg:live?'rgba(69,130,155,.35)':'transparent',
-      goReplay:()=>{if(this.state.mode!=='replay'||!this.rq)this.startReplay();},goLive:()=>this.goLive(),
+      goReplay:()=>{if(this.state.mode!=='replay'||this.state.conn==='noreplay'||!this.src)this.startReplay();},goLive:()=>this.goLive(),
       showStatus:!!statusText,statusText,statusBg,statusBorder,statusColor,statusAnim,
       agents,tools,paths,tags,
       mlOff:!s.ml,filterLabel:FILTERS[s.filter].toUpperCase(),cycleFilter:()=>this.setState(x=>({filter:(x.filter+1)%FILTERS.length}),()=>this.computeSeries(this.state.now||Date.now())),
       apmPath,apmDots,apmMax:String(ymax),apmMid:String(Math.round(ymax/2)),
-      blockRate:ev.length?(den/ev.length*100).toFixed(1):'0.0',p95:fmt(p95),p95w:p95==null?0:Math.min(100,p95),active,
+      blockRate:ev.length?(den/ev.length*100).toFixed(1):'0.0',blockRateT:ev.length?(den/ev.length*100).toFixed(1)+'%':'—',p95:p95==null?'—':p95+' ms',p95w:p95==null?0:Math.min(100,p95),active,
       openLatestDeny:()=>{if(latestDeny)this.open(latestDeny.id);},
       rows,noRows:!rows.length,emptyText:s.conn==='noreplay'?'NO EVENTS · REPLAY LOG MISSING':live?'WAITING FOR GATEWAY EVENTS':'REPLAY STARTING',
       drawerOpen:!!P&&(P!=='detail'||!!de),panelTitle:titles[P]||'',closePanel:()=>this.setState({panel:null}),
@@ -732,7 +784,7 @@ class Component extends DCLogic {
       isVoice:P==='voice',v,
       isPurpose:P==='purpose',consent,noConsent:!consent.length,downloadReport:()=>this.downloadReport(),
       isProof:P==='proof',prove:()=>this.prove(),proveLabel:s.proofBusy?'PROVING…':'PROVE',
-      proofOk:pr==='UNSAT',proofBad:!!pf&&pr!=='UNSAT',proofProp:pf?(pf.property||''):'',proofCex:pf?JSON.stringify(pf.counterexample||pf,null,2):'',proofErrOn:!!s.proofErr,proofErr:s.proofErr,
+      proofOk:pr==='UNSAT',proofBad:!!pf&&pr!=='UNSAT',proofProp:pf?(pf.property||''):'',proofCex:pf?JSON.stringify(pf.counterexample||pf,null,2):'',proofErrOn:!!s.proofErr,proofErr:s.proofErr,proofNoteOn:!!s.proofNote,proofNote:s.proofNote,proofState:s.proofBusy?'busy':s.proofNote?'unavailable':s.proofErr?'error':pf?(pr==='UNSAT'?'unsat':'counterexample'):'idle',
       isRed:P==='red',rtAtt:rt.length,rtSucc,rtCol:rtSucc?C.red:C.blue,noRed:!rt.length,
       rtCards:rt.slice().reverse().slice(0,20).map(e=>({text:e.attack_text||summary(e),decision:dec(e),col:DCOL[dec(e)],meta:e.tool+' · '+(e.rules||[]).join(', '),open:()=>this.open(e.id)})),
       openApprovals:()=>this.setState({panel:'approvals'}),openVoice:()=>this.setState({panel:'voice'}),openPurpose:()=>this.setState({panel:'purpose'}),openProof:()=>this.setState({panel:'proof'}),openRed:()=>this.setState({panel:'red'})

@@ -16,6 +16,10 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 │   ├── Trishul-Console.dc.html          # Console/Dashboard component
 │   ├── support.js                       # Shared utilities and support functions
 │   └── replay/                          # Replay/history files
+├── trishul/                             # Python package (contracts, provenance, policy, observability, cli)
+├── policies/                            # Example YAML policies
+├── tests/                               # unit / property / integration
+├── docs/                                # phase-1-plan.md, fastmcp-notes.md
 ├── CLAUDE.md                            # This file - PROJECT INSTRUCTIONS
 └── .git/                                # Git repository
 ```
@@ -50,9 +54,9 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-09-30 | Create CLAUDE.md with task tracking system | ✅ Complete | Added task log table, update-after-every-task rule, git workflow guidelines, and commit templates |
 | 2026-09-30 | Add Claude AI watermarks to GitHub | ✅ Complete | ✅ VERIFIED - Claude Code & Anthropic badges visible on GitHub; badges display in README with Project Status section |
 | 2026-09-30 | Remove Claude watermarks (badges, README.md) | ✅ Complete | Deleted README.md, removed badges from CLAUDE.md; no Co-Authored-By trailer on new commits |
-| TBD | Review landing page implementation | ⏳ Pending | |
-| TBD | Review dashboard implementation | ⏳ Pending | |
-| TBD | Analyze support.js utilities | ⏳ Pending | |
+| 2026-09-30 | Phase 1 foundation: contracts, label lattice, policy YAML→AST→pure evaluator, redaction, CLI | ✅ Complete | See docs/phase-1-plan.md; 111 tests pass, mypy strict + ruff clean |
+| 2026-09-30 | Console UI integration seams + dev-replay honesty fixes | ✅ Complete | data-trishul-* hooks, TrishulEventSource adapter; replay proof/audit root shown as synthetic |
+| TBD | Phase 2 (audit log, FastMCP gateway, domains) | ⏳ Awaiting go-ahead | Order in docs/phase-1-plan.md §10 |
 
 ---
 
@@ -162,5 +166,5 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
 
 ---
 
-**Last Updated**: 2026-09-30 (Watermarks removed)
+**Last Updated**: 2026-09-30 (Phase 1 foundation)
 **Update Frequency**: After every task (MANDATORY)
