@@ -21,8 +21,23 @@
 - **Voice Calls**: Executed under gateway lock
 - **I1 Refinement**: ALLOW resting on valid human approval for exact call excluded from I1 (documented trade-off)
 
-## Integration Scenarios (10 rows, all passing)
-`uv run pytest -q tests/integration/test_scenarios.py` — all scenarios pass; coverage: add_payee, export_records, send_email, issue_refund under benign, malicious, and step-up approval flows.
+## Integration Scenarios
+All run through `fastmcp.Client → TRISHUL gateway → tool servers` in `tests/integration/test_scenarios.py` (`uv run pytest -q tests/integration/test_scenarios.py`).
+
+| # | Scenario | Expected | Result |
+|---|---|---|---|
+| 1 | White-on-white invoice injection changes payee | DENY, lineage document → extract → pay_upi sink | ✅ |
+| 2 | Normal trusted invoice | ALLOW, preview effect, ledger changes only after execution | ✅ |
+| 3 | Over-cap payment | STEP_UP; approve; exact retry succeeds | ✅ |
+| 4 | Amount changed after approval | DENY (approval binding) | ✅ |
+| 5 | CRM PII to disallowed email sink | DENY `PURPOSELOCK.EGRESS.PII_WITHOUT_CONSENT` | ✅ |
+| 6 | Withdrawn consent | immediate DENY | ✅ |
+| 7 | Replayed voice recording | DENY (nonce mismatch) | ✅ |
+| 8 | Low-quality / uncertain voice | STEP_UP, never ALLOW | ✅ |
+| 9 | Tampered mandate signature | DENY | ✅ |
+| 10 | Tampered Merkle leaf byte | verify fails with exact leaf index | ✅ |
+
+Voice scenarios 7–8 use a scripted ASR test double (no speech model installed).
 
 ## Known Limitations
 - ASR/anti-spoof model weights not installed (1.7 GB/4.6 GB awaiting user approval; DF_Arena non-commercial)
