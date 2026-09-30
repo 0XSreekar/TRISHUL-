@@ -208,8 +208,14 @@ with locally cached mlx-whisper and DF_Arena). `ruff check`, `ruff format --chec
 AT-07/AT-08 real-model variants: PASS (`tests/integration/test_voice_real.py`).
 
 ### Still not run / still risky
-- Browser clicks of operator-token actions (approve, prove, red-team kill, demo buttons) were verified
-  through the same REST endpoints, not by clicking; the auditor was not given the token.
+- (Done 2026-10-01) Live Chrome run with the operator token: demo moments 1-6 clicked in the console by the
+  project owner, all steps `done`; decisions verified from the event stream (M3 DENY / ALLOW / STEP_UP /
+  ALLOW / DENY binding mismatch; M4 20 attacks 0 succeeded with STEP k/4 progress; M5 ML off still DENY,
+  live proof UNSAT, unsafe fixture SAT; M6 spoof and replay DENY); audit verify ok (150 leaves). Kill switch
+  verified over REST (503 while killed). XSS payload rendered as literal text in Chrome, 0 injected
+  elements. Found and fixed in this run: moment 4 progress display, `[object Object]` for redacted args,
+  empty audit-range label. The standalone PROOF drawer buttons were not clicked (the same endpoint ran
+  inside moment 5).
 - Neural voice clones and real VoIP codecs; AgentDojo workspace/slack suites and the remaining banking tasks.
 - Spoof threshold 0.5 is miscalibrated for real phone audio (see measured FRR). Next step: calibrate on
   in-domain bonafide calls and pass the user's language to ASR.
