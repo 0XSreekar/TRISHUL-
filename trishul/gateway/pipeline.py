@@ -158,6 +158,7 @@ class State:
     now: datetime
     agent: str
     t0: float
+    t_decided: float | None = None  # perf_counter when decision+audit completed (pre-execution)
     task: Task | None = None
     args: dict[str, Any] = field(default_factory=dict)
     leaf_labels: dict[str, Label] = field(default_factory=dict)
@@ -580,7 +581,9 @@ class Pipeline:
                 "rules": [],
                 "reason": "TRISHUL is OFF: executed unguarded in the isolated demo_off namespace",
                 "scores": {},
-                "latency_ms": round((time.perf_counter() - st.t0) * 1000, 3),
+                # OFF: no decision is made; this times unguarded execution only.
+                "latency_ms": None,
+                "total_ms": round((time.perf_counter() - st.t0) * 1000, 3),
                 "stage_ms": {},
                 "lineage": {"nodes": [], "edges": []},
                 "audit_hash": audit_hash,
@@ -1002,6 +1005,7 @@ class Pipeline:
                     verdict = self._verdict(st)
                     st.audit = None
             st.stage_ms["audit"] = round(t.duration_ms, 3)
+            st.t_decided = time.perf_counter()
         except Exception as exc:
             log.exception("decision stage failed")
             self._publish_safely(st, None, error=type(exc).__name__)
@@ -1382,7 +1386,10 @@ class Pipeline:
             "rules": [r.rule_id for r in reasons],
             "reason": reasons[0].explanation if reasons else "",
             "scores": scores,
-            "latency_ms": round((time.perf_counter() - st.t0) * 1000, 3),
+            # latency_ms = gate decision latency (up to the audited decision, before the tool
+            # runs); total_ms additionally includes upstream tool execution.
+            "latency_ms": round(((st.t_decided or time.perf_counter()) - st.t0) * 1000, 3),
+            "total_ms": round((time.perf_counter() - st.t0) * 1000, 3),
             "stage_ms": dict(st.stage_ms),
             "lineage": st.lineage.model_dump(mode="json"),
             "audit_hash": first_audit.leaf_hash if first_audit else None,

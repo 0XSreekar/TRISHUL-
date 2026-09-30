@@ -612,7 +612,7 @@ class WebSocketSource{
     try{ws=new WebSocket(this.url);}catch(e){this.h.state('error');return this.retry();}
     this.ws=ws;
     ws.onopen=()=>{this.err=false;this.tries=0;this.lastMsg=Date.now();
-      if(this.lastSeq>0){try{ws.send(JSON.stringify({resume_from:this.lastSeq}));}catch(e){}}
+      try{ws.send(JSON.stringify({resume_from:this.lastSeq}));}catch(e){}  /* 0 on first load: replay the ring so a page refresh keeps the feed */
       this.h.state('open');this.watch();};
     ws.onmessage=m=>{this.lastMsg=Date.now();try{const d=JSON.parse(m.data);const l=Array.isArray(d)?d:[d];
       for(const x of l){if(typeof x.seq==='number')this.lastSeq=x.seq;if(x.type==='heartbeat')continue;this.buf.push(x);}}catch(e){}};
@@ -1031,7 +1031,7 @@ class Component extends DCLogic {
     const R=k=>s.rs[k]||null;
     const evById={};ev.forEach(e=>{evById[e.id]=e;});
     let den=0,att=0,pendEv=0;const lat=[];
-    for(const e of ev){const d=dec(e);if(d==='DENY'){den++;if(isAttack(e))att++;}if(e.decision==='STEP_UP'&&!s.resolved[e.id])pendEv++;if(e.latency_ms!=null)lat.push(e.latency_ms);}
+    for(const e of ev){const d=dec(e);if(d==='DENY'){den++;if(isAttack(e))att++;}if(e.decision==='STEP_UP'&&!s.resolved[e.id])pendEv++;if(e.latency_ms!=null&&e.mode!=='off')lat.push(e.latency_ms);}  /* OFF events time unguarded tool execution, not a decision */
     lat.sort((a,b)=>a-b);
     const p99=pctl(lat,.99),p95=pctl(lat,.95);
     const lastCall=ev[ev.length-1];

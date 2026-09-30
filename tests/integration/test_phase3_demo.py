@@ -226,6 +226,16 @@ async def test_moment_1_off_pays_hidden_vpa_into_demo_off_only(env: Env) -> None
     assert env.conn.execute("SELECT COUNT(*) FROM ns_ledger").fetchone()[0] == 1
 
 
+async def test_moment_3_after_moment_1_forces_on_and_never_runs_unguarded(env: Env) -> None:
+    await env.gw.backend.demo_moment(1)  # leaves the gateway OFF; presenter skips moment 2
+    out = await env.gw.backend.demo_moment(3)
+    assert out["mode_forced_on"]["mode"] == "on"
+    by = {s["name"]: s for s in out["steps"]}
+    assert all(s.get("decision") != "UNGUARDED" for s in out["steps"])
+    assert by["injected_invoice"]["decision"] == "DENY"
+    assert by["approve_then_change_amount"]["decision"] == "DENY"
+
+
 async def test_moment_3_scripted_flow(env: Env) -> None:
     out = await env.gw.backend.demo_moment(3)
     by = {s["name"]: s for s in out["steps"]}
@@ -314,3 +324,23 @@ def test_unreadable_mode_state_fails_closed_to_on(env: Env) -> None:
     env.conn.execute("ALTER TABLE meta RENAME TO meta_gone")
     assert env.gw.pipeline.mode() == "on"
     env.conn.execute("ALTER TABLE meta_gone RENAME TO meta")
+
+
+async def test_latency_ms_is_decision_latency_and_off_has_none(env: Env) -> None:
+    await env.gw.backend.demo_moment(1)
+    await env.gw.backend.demo_moment(3)
+    calls = [e for e in env.gw.bus.snapshot() if e.get("type") == "call"]
+    off = [e for e in calls if e.get("mode") == "off"]
+    on = [e for e in calls if e.get("mode") != "off"]
+    assert off and all(e["latency_ms"] is None for e in off)  # OFF makes no decision
+    assert on
+    for e in on:
+        lat, total = e["latency_ms"], e["total_ms"]
+        assert isinstance(lat, float) and isinstance(total, float)
+        assert 0 <= lat <= total  # decision time excludes upstream tool execution
+
+
+def test_console_static_is_revalidated_every_load(env: Env) -> None:
+    with TestClient(env.gw.api(allowed_origins=["null"])) as c:
+        r = c.get("/console/Trishul-Console.dc.html")
+        assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"

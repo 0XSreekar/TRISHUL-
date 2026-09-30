@@ -249,6 +249,12 @@ async def run_moment(backend: Any, bot: FinBot, n: int, step: int | None) -> dic
     ):
         raise ValueError(f"step must be 1..{len(steps)}")
     chosen = list(enumerate(steps, 1)) if step is None else [(step, steps[step - 1])]
+    # Moments 3-6 demonstrate the guarded path. If the presenter skipped moment 2 the gateway
+    # would still be OFF and these steps would run UNGUARDED, so switch ON explicitly (the
+    # set_mode call publishes the usual `mode` event, so the change is visible, not hidden).
+    forced_on = None
+    if n >= 3 and backend.mode()["mode"] != "on":
+        forced_on = backend.set_mode("on")
     results: list[dict[str, Any]] = []
     for idx, (name, fn) in chosen:
         backend.p.bus.publish(
@@ -266,4 +272,7 @@ async def run_moment(backend: Any, bot: FinBot, n: int, step: int | None) -> dic
         )
         results.append({"step": idx, "name": name, **out})
     event_ids = [e for r in results for e in r.get("event_ids", [])]
-    return {"moment": n, "steps": results, "event_ids": event_ids}
+    out_doc: dict[str, Any] = {"moment": n, "steps": results, "event_ids": event_ids}
+    if forced_on is not None:
+        out_doc["mode_forced_on"] = forced_on
+    return out_doc

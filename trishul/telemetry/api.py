@@ -77,6 +77,16 @@ def _public() -> bool:
     return os.environ.get("TRISHUL_REDTEAM_PUBLIC") == "1"
 
 
+class _NoCacheStatic(StaticFiles):
+    """Console files are revalidated on every load so a rehearsal fix is never hidden behind a
+    stale browser cache (ETag keeps revalidation cheap)."""
+
+    def file_response(self, *args: Any, **kwargs: Any) -> Response:
+        resp = super().file_response(*args, **kwargs)
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+
 def _err(status: int, code: str) -> JSONResponse:
     return JSONResponse({"error": code}, status_code=status)
 
@@ -457,7 +467,7 @@ def build_api(
         Route("/metrics", metrics_route, methods=["GET"]),
     ]
     if CONSOLE_DIR.is_dir():  # read-only static console, same-origin with the API
-        routes.append(Mount("/console", StaticFiles(directory=CONSOLE_DIR), name="console"))
+        routes.append(Mount("/console", _NoCacheStatic(directory=CONSOLE_DIR), name="console"))
     middleware = [
         Middleware(
             CORSMiddleware,

@@ -361,6 +361,13 @@ def _start(args: argparse.Namespace) -> int:
         )
         mode = "in-process" if args.in_process else "stdio subprocesses"
         print(f"operator token file: {token_path} (send as 'Authorization: Bearer <token>')")
+        # The console reads the token from the #op= fragment (stripped on load). Print a shell
+        # command that expands it from the file, never the token itself.
+        print(
+            "console (operator): open "
+            f'"http://localhost:{args.port}/console/Trishul-Console.dc.html#op=$(cat '
+            f"'{token_path}')\""
+        )
         print("readiness:", json.dumps(gw.backend.readyz(), sort_keys=True), flush=True)
         print(
             f"TRISHUL gateway: MCP http://127.0.0.1:{args.mcp_port}/mcp  API :{args.port}"
