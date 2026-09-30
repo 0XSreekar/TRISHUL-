@@ -215,7 +215,14 @@ class _Parser:
             "mandate_covers": self._mandate_covers,
             "approval_present": self._approval,
             "amount_exceeds": self._amount,
+            "fact": self._fact,
         }
+
+    def _fact(self, body: object, path: Path_) -> ast.Predicate | None:
+        if isinstance(body, str) and re.fullmatch(ast.FACT_NAME_PATTERN, body):
+            return ast.Fact(name=body)
+        self.fail(path, "fact must be a snake_case name such as mandate_sig_valid")
+        return None
 
     def _const(self, body: object, path: Path_) -> ast.Predicate | None:
         if isinstance(body, bool):
@@ -391,7 +398,10 @@ def _compile_file(name: str, text: str) -> tuple[_FileResult | None, _Doc]:
         tname: (
             ast.ToolSpec(
                 category=ToolCategory(t.category),
-                args={a: ast.ArgSpec(type=s.type, required=s.required) for a, s in t.args.items()},
+                args={
+                    a: ast.ArgSpec(type=s.type, required=s.required, sink=s.sink)
+                    for a, s in t.args.items()
+                },
             ),
             ("tools", tname),
         )

@@ -139,6 +139,16 @@ class AmountExceeds(_Node):
     _p = field_validator("path")(_check_pointer)
 
 
+FACT_NAME_PATTERN = r"^[a-z][a-z0-9_]*$"
+
+
+class Fact(_Node):
+    """Boolean fact computed by a trusted domain guard; missing or None is UNKNOWN."""
+
+    kind: Literal["fact"] = "fact"
+    name: str = Field(pattern=FACT_NAME_PATTERN)
+
+
 type Predicate = Annotated[
     Const
     | All
@@ -156,7 +166,8 @@ type Predicate = Annotated[
     | MandatePresent
     | MandateCovers
     | ApprovalPresent
-    | AmountExceeds,
+    | AmountExceeds
+    | Fact,
     Field(discriminator="kind"),
 ]
 
@@ -182,6 +193,7 @@ class Rule(_Node):
 class ArgSpec(_Node):
     type: Literal["string", "integer", "boolean", "array", "object"]
     required: bool = False
+    sink: bool = False
 
 
 class ToolSpec(_Node):

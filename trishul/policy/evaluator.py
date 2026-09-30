@@ -39,6 +39,10 @@ class EvalContext(BaseModel):
     consents: tuple[Consent, ...] = ()
     mandates: tuple[Mandate, ...] = ()
     approvals: tuple[ApprovalToken, ...] = ()
+    facts: dict[str, bool | None] = Field(
+        default_factory=dict,
+        description="Guard-computed booleans; a missing or None fact evaluates to UNKNOWN.",
+    )
     ml_decision: DecisionName | None = Field(
         default=None, description="Combined with the rule result via max: ML can only tighten."
     )
@@ -274,6 +278,9 @@ def eval_predicate(env: _Env, node: ast.Predicate) -> Tri:
             return _approval_present(env, node)
         case ast.AmountExceeds():
             return _amount_exceeds(env, node)
+        case ast.Fact():
+            value = env.ctx.facts.get(node.name)
+            return Tri.UNKNOWN if value is None else _tri(value)
     raise TypeError(f"unhandled predicate node {type(node).__name__}")  # pragma: no cover
 
 

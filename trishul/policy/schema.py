@@ -13,6 +13,7 @@ class _Src(BaseModel):
 class ArgSource(_Src):
     type: Literal["string", "integer", "boolean", "array", "object"]
     required: bool = False
+    sink: bool = False
 
 
 class ToolSource(_Src):
