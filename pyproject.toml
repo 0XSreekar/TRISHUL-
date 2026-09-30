@@ -74,4 +74,6 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
     "voice_models: needs real voice models in the local HF cache; auto-skipped when absent",
+    "ollama: needs a local Ollama server with the pinned model; auto-skipped when absent",
+    "acceptance(n): proves acceptance criterion n of the canonical 1-17 list",
 ]

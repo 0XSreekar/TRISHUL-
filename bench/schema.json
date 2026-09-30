@@ -91,6 +91,36 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "llm": {
+          "type": "object",
+          "required": [
+            "hf_id",
+            "ollama_tag",
+            "digest",
+            "selected_by"
+          ],
+          "properties": {
+            "hf_id": {
+              "type": "string"
+            },
+            "ollama_tag": {
+              "type": "string"
+            },
+            "digest": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "selected_by": {
+              "type": "string"
+            },
+            "reader": {
+              "enum": [
+                "llm",
+                "deterministic-fallback"
+              ]
+            }
+          }
         }
       }
     },

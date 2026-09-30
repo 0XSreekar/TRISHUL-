@@ -18,7 +18,8 @@ from trishul.provenance.handles import HandleStore, OpaqueHandle
 from trishul.provenance.labeled import Labeled, derive
 from trishul.provenance.lattice import join_all
 
-HANDLE_RE = re.compile(r"^\$(?:DOC|VAR)_[1-9][0-9]*$")
+HANDLE_RE = re.compile(r"^\$(?:DOC|EMAIL|VOICE|VAR)_[1-9][0-9]*$")
+SOURCE_HANDLE_RE = re.compile(r"^\$(?:DOC|EMAIL|VOICE)_[1-9][0-9]*$")
 MIN_SUBSTRING = 6
 
 # Result trust table (spec section 3). Keys are (server namespace, tool).
@@ -169,6 +170,7 @@ class HandleMeta:
     hidden_text: bool = False
     parent: str | None = None
     source_kind: str = "document"
+    reader: str | None = None  # "llm" | "deterministic-fallback" for reader-derived vars
 
 
 class SessionHandles:
@@ -182,14 +184,15 @@ class SessionHandles:
         self._registry = registry
 
     def put_doc(self, value: object, label: Label, meta: HandleMeta) -> str:
-        handle = self._docs.put(Labeled.source(value, label))
+        prefix = {"email": "EMAIL", "voice": "VOICE"}.get(meta.source_kind, "DOC")
+        handle = self._docs.put(Labeled.source(value, label), prefix)
         self._meta[handle.id] = meta
         return handle.id
 
     def get(self, handle_id: str) -> Labeled[object] | None:
         if handle_id in self._vars:
             return self._vars[handle_id]
-        if handle_id.startswith("$DOC_"):
+        if SOURCE_HANDLE_RE.fullmatch(handle_id):
             try:
                 return self._docs.reader().extract(OpaqueHandle(handle_id), lambda v: v)
             except (KeyError, ValueError):
@@ -202,15 +205,28 @@ class SessionHandles:
     def extract(
         self, handle_id: str, name: str, extractor: Callable[[object], object]
     ) -> tuple[str, Labeled[object]]:
-        """Quarantined read: only this method dereferences a ``$DOC`` handle."""
-        if not handle_id.startswith("$DOC_"):
+        """Deterministic quarantined read: only this method and ``read`` dereference a source
+        handle (``$DOC``/``$EMAIL``/``$VOICE``)."""
+        if not SOURCE_HANDLE_RE.fullmatch(handle_id):
             raise KeyError(handle_id)
         parent = self._docs.reader().extract(OpaqueHandle(handle_id), extractor)
         if parent.value is None:
             raise LookupError(f"field {name!r} not found")
+        return self.store_var(handle_id, name, parent, reader="deterministic-fallback")
+
+    def raw(self, handle_id: str) -> Labeled[object]:
+        """Reader-only access to a source handle's raw content (never reaches the planner)."""
+        if not SOURCE_HANDLE_RE.fullmatch(handle_id):
+            raise KeyError(handle_id)
+        return self._docs.reader().extract(OpaqueHandle(handle_id), lambda v: v)
+
+    def store_var(
+        self, handle_id: str, name: str, derived: Labeled[object], *, reader: str
+    ) -> tuple[str, Labeled[object]]:
+        """Register a value derived from ``handle_id`` (its label must already be inherited)."""
         self._var_counter += 1
         var_id = f"$VAR_{self._var_counter}"
-        self._vars[var_id] = parent
+        self._vars[var_id] = derived
         pmeta = self._meta.get(handle_id)
         self._meta[var_id] = HandleMeta(
             kind="var",
@@ -220,11 +236,12 @@ class SessionHandles:
             hidden_text=pmeta.hidden_text if pmeta else False,
             parent=handle_id,
             source_kind=pmeta.source_kind if pmeta else "document",
+            reader=reader,
         )
-        value = parent.value
+        value = derived.value
         if isinstance(value, str | int) and not isinstance(value, bool):
-            self._registry.register_value(value, parent.label)
-        return var_id, parent
+            self._registry.register_value(value, derived.label)
+        return var_id, derived
 
     def put_var(self, value: object, label: Label, meta: HandleMeta) -> str:
         self._var_counter += 1

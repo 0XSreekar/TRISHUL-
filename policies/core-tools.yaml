@@ -6,6 +6,11 @@ tools:
     args:
       handle: {type: string, required: true}
       field: {type: string, required: true}
+  read_handle:
+    category: READ
+    args:
+      handle: {type: string, required: true}
+      schema: {type: string, required: true}
   read_document:
     category: READ
     args:

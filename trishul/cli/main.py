@@ -354,6 +354,9 @@ def _start(args: argparse.Namespace) -> int:
         gw = build_stdio_gateway(conn, ids, db.resolve(), seed=seed)
     # Warm voice models inside the gateway process (a separate prewarm process cannot compile
     # this process's Metal kernels). Background thread: startup and non-voice calls never wait.
+    from trishul.reader.runtime import start_reader
+
+    start_reader(gw)  # log the pinned local LLM, audit system_start, attach wall reader
     threading.Thread(target=gw.pipeline.voice.warmup, name="voice-warmup", daemon=True).start()
 
     async def serve() -> None:

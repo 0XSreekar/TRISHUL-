@@ -73,6 +73,7 @@ from trishul.observability.redaction import redact_args
 from trishul.policy.ast import CompiledPolicy
 from trishul.policy.evaluator import EvalContext, evaluate
 from trishul.provenance.lattice import join_all
+from trishul.reader.errors import READER_INVALID_RULE, ExtractionError
 from trishul.servers.upi import preview_pay_upi
 from trishul.store.db import DEMO_BALANCE_PAISE, iso, transaction
 from trishul.store.ids import IdGen
@@ -83,9 +84,11 @@ log = logging.getLogger("trishul.gateway")
 NAMESPACES = ("upi", "crm", "mail", "files")
 DEMO_OFF = "demo_off"  # isolated ledger namespace used while TRISHUL is switched OFF
 MODE_OFF_DISABLED = ("taint", "policy", "mandate", "approval", "ml")
-NATIVE_TOOLS = frozenset({"extract_field", "voice_command"})
+NATIVE_TOOLS = frozenset({"extract_field", "read_handle", "voice_command"})
+# quarantined-reader tools: their own source handle is not an injection signal at sink time
+READER_TOOLS = frozenset({"extract_field", "read_handle"})
 # native tool argument that carries a handle the *tool itself* dereferences (quarantined reader)
-HANDLE_PASSTHROUGH = frozenset({("extract_field", "handle")})
+HANDLE_PASSTHROUGH = frozenset({("extract_field", "handle"), ("read_handle", "handle")})
 PURPOSELOCK_TOOLS = frozenset({"read_customer_data", "export_records", "send_email"})
 DOMAIN_OF_TOOL: dict[str, Domain] = {
     "pay_upi": "payshield",
@@ -183,6 +186,7 @@ class State:
     policy_digest: str = ""
     audit: AppendResult | None = None  # the decision record (its leaf hash is the UI audit_hash)
     tree: dict[str, Any] | None = None  # latest tree head after any append for this call
+    reader: str | None = None  # "llm" | "deterministic-fallback" once a reader tool ran
 
     @property
     def domain(self) -> Domain:
@@ -913,7 +917,7 @@ class Pipeline:
                     signals["anomaly_z"] = min(z, 1000.0)
                     if anomaly_decision(history, amount) is not None:
                         decision = Decision.combine(decision, Decision.STEP_UP)
-        injection = 0.0 if st.tool == "extract_field" else self._injection_score(st)
+        injection = 0.0 if st.tool in READER_TOOLS else self._injection_score(st)
         if injection > 0:
             signals["injection"] = injection
             if injection >= INJECTION_STEP_UP:
@@ -1079,7 +1083,10 @@ class Pipeline:
             if st.server == "gateway":
                 if native is None:
                     raise ToolError("native tool unavailable")
-                raw = native(st)
+                if st.tool in READER_TOOLS:  # may call the local LLM: keep the loop responsive
+                    raw = await asyncio.to_thread(native, st)
+                else:
+                    raw = native(st)
             else:
                 raw = await execute(dict(call.args))
             result = self._postprocess(st, raw)
@@ -1087,6 +1094,18 @@ class Pipeline:
             status, error = "error", type(exc).__name__
             self._audit_execution(st, before, status, error)
             self._publish_safely(st, verdict, error=error)
+            if isinstance(exc, ExtractionError):  # invalid reader output is a DENY
+                raise ToolError(
+                    json.dumps(
+                        {
+                            "decision": "DENY",
+                            "rules": [READER_INVALID_RULE],
+                            "reason": "Reader output failed schema validation",
+                            "call_id": st.call_id,
+                        },
+                        sort_keys=True,
+                    )
+                ) from exc
             if isinstance(exc, ToolError):
                 raise
             raise ToolError("tool execution failed") from exc
@@ -1112,6 +1131,8 @@ class Pipeline:
         }
         if error:
             event["error_type"] = error
+        if st.reader:
+            event["reader"] = st.reader
         if before is not None:
             after = self._ledger(call.principal)
             event["ledger"] = {
@@ -1411,4 +1432,6 @@ class Pipeline:
         }
         if error:
             event["error"] = error
+        if st.reader:
+            event["reader"] = st.reader
         return event
