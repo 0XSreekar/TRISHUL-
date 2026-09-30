@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from tests.conftest import POLICY_DIR, TRUSTED, UNTRUSTED, make_call, make_ctx
+from tests.unit.test_evaluator import GOOD_MANDATE_FACTS
 from trishul.cli.main import main
 
 
@@ -41,7 +42,10 @@ def test_eval_prints_verdict(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     full = tmp_path / "full.json"
     full.write_text(
         json.dumps(
-            {"call": call.model_dump(mode="json"), "context": make_ctx().model_dump(mode="json")}
+            {
+                "call": call.model_dump(mode="json"),
+                "context": make_ctx(facts=GOOD_MANDATE_FACTS).model_dump(mode="json"),
+            }
         )
     )
     assert main(["policy", "eval", str(POLICY_DIR), str(full)]) == 0

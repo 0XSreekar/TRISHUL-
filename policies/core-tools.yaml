@@ -1,0 +1,13 @@
+version: 1
+id: core.native_and_document_tools
+tools:
+  extract_field:
+    category: READ
+    args:
+      handle: {type: string, required: true}
+      field: {type: string, required: true}
+  read_document:
+    category: READ
+    args:
+      doc_id: {type: string, required: true}
+rules: []

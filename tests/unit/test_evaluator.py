@@ -12,6 +12,19 @@ from trishul.policy.ast import CompiledPolicy
 from trishul.policy.compiler import compile_sources
 from trishul.policy.evaluator import evaluate, evaluate_raw
 
+GOOD_MANDATE_FACTS: dict[str, bool | None] = {
+    "mandate_sig_valid": True,
+    "mandate_time_valid": True,
+    "mandate_nonce_fresh": True,
+    "payee_in_mandate": True,
+    "category_matches": True,
+    "amount_within_payee_cap": True,
+    "amount_within_per_txn_cap": True,
+    "amount_within_daily_cap": True,
+    "approval_valid": False,
+    "approval_binding_mismatch": False,
+}
+
 
 def ids(v: Verdict) -> list[str]:
     return [r.rule_id for r in v.reasons]
@@ -26,7 +39,7 @@ def test_untrusted_payee_is_denied(policy: CompiledPolicy) -> None:
         {"payee_vpa": "x@upi", "amount_paise": 100},
         {"/payee_vpa": UNTRUSTED, "/amount_paise": TRUSTED},
     )
-    v = evaluate(policy, call, make_ctx())
+    v = evaluate(policy, call, make_ctx(facts=GOOD_MANDATE_FACTS))
     assert v.decision == Decision.DENY
     assert ids(v) == ["PAYSHIELD.TAINT.UNTRUSTED_PAYEE"]
     assert v.policy_digest == policy.digest
@@ -34,7 +47,9 @@ def test_untrusted_payee_is_denied(policy: CompiledPolicy) -> None:
 
 def test_trusted_payment_is_allowed(policy: CompiledPolicy) -> None:
     v = evaluate(
-        policy, make_call("pay_upi", {"payee_vpa": "x@upi", "amount_paise": 100}), make_ctx()
+        policy,
+        make_call("pay_upi", {"payee_vpa": "x@upi", "amount_paise": 100}),
+        make_ctx(facts=GOOD_MANDATE_FACTS),
     )
     assert v.decision == Decision.ALLOW and v.reasons == ()
 
@@ -154,7 +169,7 @@ def test_declared_category_mismatch_denied(policy: CompiledPolicy) -> None:
 
 def test_missing_label_is_untrusted_with_reason(policy: CompiledPolicy) -> None:
     call = make_call("pay_upi", {"payee_vpa": "a@b", "amount_paise": 1}, {"/amount_paise": TRUSTED})
-    v = evaluate(policy, call, make_ctx())
+    v = evaluate(policy, call, make_ctx(facts=GOOD_MANDATE_FACTS))
     assert v.decision == Decision.DENY
     assert set(ids(v)) == {"PAYSHIELD.TAINT.UNTRUSTED_PAYEE", "CORE.LABEL.MISSING"}
     missing = next(r for r in v.reasons if r.rule_id == "CORE.LABEL.MISSING")
