@@ -1,8 +1,5 @@
 # TRISHUL Project - Claude Instructions
 
-[![Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-blue?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
-[![Claude AI](https://img.shields.io/badge/Powered_by-Claude_AI-blueviolet?style=flat-square)](https://www.anthropic.com/)
-
 ## 📋 Core Rule
 **After EVERY single task (even small ones), update this file with progress.** No exceptions.
 
@@ -164,13 +161,5 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
 
 ---
 
-**Last Updated**: 2026-09-30 (Claude AI watermarks added)
+**Last Updated**: 2026-09-30 (Watermarks removed)
 **Update Frequency**: After every task (MANDATORY)
-
----
-
-## 🤖 Claude AI Badges & Watermarks
-This project is proudly built with Claude AI. Badges added to:
-- ✅ CLAUDE.md - Development guidelines file
-- ✅ README.md - Main project documentation
-- Visible across GitHub repository
