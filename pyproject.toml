@@ -27,6 +27,13 @@ dev = [
 ]
 mcp = ["fastmcp>=2.9"]
 bench = ["agentdojo==0.1.35"]
+ml = [
+    "torch",
+    "transformers",
+    "huggingface_hub",
+    "onnxruntime",
+    "numpy",
+]
 voice = [
     "mlx-whisper>=0.4",
 ]
@@ -66,7 +73,7 @@ python_version = "3.12"
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["agentdojo", "agentdojo.*"]
+module = ["agentdojo", "agentdojo.*", "onnxruntime", "onnxruntime.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -74,4 +81,6 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
     "voice_models: needs real voice models in the local HF cache; auto-skipped when absent",
+    "ml_models: needs the pinned injection classifier in the local HF cache; auto-skipped when absent",
+    "acceptance(n): acceptance test number n (see docs/phase-4-plan.md section 7)",
 ]

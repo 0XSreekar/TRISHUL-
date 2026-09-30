@@ -21,6 +21,7 @@ from trishul.bench.india import (
     run_suite,
     summarize,
 )
+from trishul.ml.injection import get_default_classifier
 
 SCHEMA_VERSION = 1
 RESULTS = ROOT / "bench" / "results.json"
@@ -65,11 +66,21 @@ def environment() -> dict[str, Any]:
             pkgs[name] = importlib.metadata.version(name)
         except importlib.metadata.PackageNotFoundError:
             continue
+    from trishul.ml.models import CLASSIFIER_PINS
+
+    clf = get_default_classifier()
+    pin = CLASSIFIER_PINS["injection"]
     return {
         "os": platform.platform(),
         "cpu": _cpu(),
         "python": platform.python_version(),
         "packages": pkgs,
+        "injection_classifier": {
+            "hf_id": pin["hf_id"],
+            "revision": pin["revision"],
+            "backend": clf.backend_used or "unavailable",
+            "threshold": clf.threshold,
+        },
     }
 
 
@@ -204,12 +215,32 @@ def _by_category(
 async def _measure(seed: int) -> dict[str, Any]:
     ds = load_dataset()
     sc = ds["scenarios"]
+    clf = get_default_classifier()
+    clf_ready = clf.warmup()  # load outside any per-call timeout; False => model unavailable
     on, _ = await run_suite(seed, sc, mode="on")
     off, _ = await run_suite(seed, sc, mode="off")
     with_s, without_s = summarize(sc, on), summarize(sc, off)
     ablation = []
     for name, cfg in ML_CONFIGS.items():
-        outs, _ = await run_suite(seed, sc, mode="on", ml=cfg["ml"], spoof_on=cfg["spoof"])
+        if "classifier" in cfg["components"] and not clf_ready:
+            ablation.append(
+                {
+                    "config": name,
+                    "asr": None,
+                    "utility": None,
+                    "status": "NOT RUN: model unavailable",
+                    "components": list(cfg["components"]),
+                }
+            )
+            continue
+        outs, _ = await run_suite(
+            seed,
+            sc,
+            mode="on",
+            ml=cfg["ml"],
+            spoof_on=cfg["spoof"],
+            components=tuple(cfg["components"]),
+        )
         s = summarize(sc, outs)
         ablation.append(
             {
@@ -217,7 +248,11 @@ async def _measure(seed: int) -> dict[str, Any]:
                 "asr": s["asr"],
                 "utility": s["utility"],
                 "attacks_succeeded": s["attacks_succeeded"],
+                "attacks_measured": s["attacks_measured"],
                 "benign_completed": s["benign_completed"],
+                "benign_measured": s["benign_measured"],
+                "status": "ok",
+                "components": list(cfg["components"]),
             }
         )
     lat: dict[str, list[dict[str, Any]]] = {"on": [], "off": []}

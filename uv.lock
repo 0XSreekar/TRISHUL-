@@ -2479,6 +2479,13 @@ dev = [
 mcp = [
     { name = "fastmcp" },
 ]
+ml = [
+    { name = "huggingface-hub" },
+    { name = "numpy" },
+    { name = "onnxruntime" },
+    { name = "torch" },
+    { name = "transformers" },
+]
 voice = [
     { name = "mlx-whisper" },
 ]
@@ -2499,11 +2506,14 @@ requires-dist = [
     { name = "faster-whisper", marker = "extra == 'voice-ml'" },
     { name = "fastmcp", specifier = ">=4.0.10,<5" },
     { name = "fastmcp", marker = "extra == 'mcp'", specifier = ">=2.9" },
+    { name = "huggingface-hub", marker = "extra == 'ml'" },
     { name = "huggingface-hub", marker = "extra == 'voice-ml'" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100" },
     { name = "mlx-whisper", marker = "extra == 'voice'", specifier = ">=0.4" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "numpy", specifier = ">=2" },
+    { name = "numpy", marker = "extra == 'ml'" },
+    { name = "onnxruntime", marker = "extra == 'ml'" },
     { name = "opentelemetry-sdk", specifier = ">=1.45" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
@@ -2512,14 +2522,16 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
     { name = "soundfile", marker = "extra == 'voice-ml'" },
     { name = "starlette", specifier = ">=0.40" },
+    { name = "torch", marker = "extra == 'ml'" },
     { name = "torch", marker = "extra == 'voice-ml'" },
+    { name = "transformers", marker = "extra == 'ml'" },
     { name = "transformers", marker = "extra == 'voice-ml'" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
     { name = "uvicorn", specifier = ">=0.30" },
     { name = "websockets", specifier = ">=13" },
     { name = "z3-solver", specifier = ">=4.13" },
 ]
-provides-extras = ["dev", "mcp", "bench", "voice", "voice-ml"]
+provides-extras = ["dev", "mcp", "bench", "ml", "voice", "voice-ml"]
 
 [[package]]
 name = "triton"

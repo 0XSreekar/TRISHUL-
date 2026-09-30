@@ -1,5 +1,6 @@
 """Shared fixtures and builders."""
 
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,6 +17,17 @@ NOW = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
 
 TRUSTED = Label.make(Level.TRUSTED_USER, sources=[SourceRef(kind="user", id="u1")])
 UNTRUSTED = Label.make(Level.UNTRUSTED, sources=[SourceRef(kind="email", id="m1")])
+
+
+@pytest.fixture(autouse=True)
+def _fake_injection_classifier() -> Iterator[None]:
+    """Unit/integration tests use a deterministic fake; the real model has its own marked test."""
+    from tests.fake_classifier import FakeClassifier
+    from trishul.ml.injection import set_default_classifier
+
+    set_default_classifier(FakeClassifier())
+    yield
+    set_default_classifier(None)
 
 
 @pytest.fixture(scope="session")
