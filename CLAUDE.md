@@ -1,5 +1,8 @@
 # TRISHUL Project - Claude Instructions
 
+[![Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-blue?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
+[![Claude AI](https://img.shields.io/badge/Powered_by-Claude_AI-blueviolet?style=flat-square)](https://www.anthropic.com/)
+
 ## 📋 Core Rule
 **After EVERY single task (even small ones), update this file with progress.** No exceptions.
 
@@ -48,6 +51,7 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 |------|------|--------|-------|
 | 2026-09-30 | Initial git setup & repository sync | ✅ Complete | Created initial commit, pushed to GitHub master branch |
 | 2026-09-30 | Create CLAUDE.md with task tracking system | ✅ Complete | Added task log table, update-after-every-task rule, git workflow guidelines, and commit templates |
+| 2026-09-30 | Add Claude AI watermarks to GitHub | ✅ Complete | Added Claude Code & Anthropic badges to CLAUDE.md and README.md; comprehensive project documentation |
 | TBD | Review landing page implementation | ⏳ Pending | |
 | TBD | Review dashboard implementation | ⏳ Pending | |
 | TBD | Analyze support.js utilities | ⏳ Pending | |
@@ -160,5 +164,13 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
 
 ---
 
-**Last Updated**: 2026-09-30 (CLAUDE.md task tracking system created)
+**Last Updated**: 2026-09-30 (Claude AI watermarks added)
 **Update Frequency**: After every task (MANDATORY)
+
+---
+
+## 🤖 Claude AI Badges & Watermarks
+This project is proudly built with Claude AI. Badges added to:
+- ✅ CLAUDE.md - Development guidelines file
+- ✅ README.md - Main project documentation
+- Visible across GitHub repository
