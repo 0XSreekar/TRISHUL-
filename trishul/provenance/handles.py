@@ -8,7 +8,8 @@ from typing import Protocol
 
 from trishul.provenance.labeled import Labeled, derive
 
-_HANDLE_RE = re.compile(r"^\$DOC_[1-9][0-9]*$")
+HANDLE_PREFIXES = ("DOC", "EMAIL", "VOICE")
+_HANDLE_RE = re.compile(r"^\$(?:DOC|EMAIL|VOICE)_[1-9][0-9]*$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,7 +20,7 @@ class OpaqueHandle:
 
     def __post_init__(self) -> None:
         if not _HANDLE_RE.fullmatch(self.id):
-            raise ValueError("handle id must look like $DOC_<n>")
+            raise ValueError("handle id must look like $DOC_<n>, $EMAIL_<n> or $VOICE_<n>")
 
     def __str__(self) -> str:
         return self.id
@@ -36,11 +37,13 @@ class HandleStore:
 
     def __init__(self) -> None:
         self._items: dict[str, Labeled[object]] = {}
-        self._counter = 0
+        self._counters = dict.fromkeys(HANDLE_PREFIXES, 0)
 
-    def put(self, item: Labeled[object]) -> OpaqueHandle:
-        self._counter += 1
-        handle = OpaqueHandle(f"$DOC_{self._counter}")
+    def put(self, item: Labeled[object], prefix: str = "DOC") -> OpaqueHandle:
+        if prefix not in self._counters:
+            raise ValueError(f"unknown handle prefix {prefix!r}")
+        self._counters[prefix] += 1
+        handle = OpaqueHandle(f"${prefix}_{self._counters[prefix]}")
         self._items[handle.id] = item
         return handle
 

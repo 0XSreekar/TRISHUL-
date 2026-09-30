@@ -15,7 +15,11 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
+from trishul.contracts.labels import Label, Level, SourceRef
 from trishul.gateway.pipeline import Pipeline
+from trishul.provenance.labeled import Labeled
+from trishul.reader.errors import READER_INVALID_RULE, ExtractionError
+from trishul.reader.reader import FALLBACK_LABEL, LLM_LABEL, QuarantinedReader
 from trishul.redteam.errors import RedTeamError
 from trishul.redteam.moderation import display_text, normalise
 from trishul.store.db import iso
@@ -69,8 +73,12 @@ class RedTeam:
         *,
         clock: Callable[[], float] = time.monotonic,
         queue_path: Path = QUEUE_PATH,
+        reader: QuarantinedReader | None = None,
     ) -> None:
         self.p = pipeline
+        # live quarantined reader over public audience text (set when the local LLM is up);
+        # None or a replay reader: the deterministic fallback path, labelled as such
+        self.reader = reader
         self.attack = attack
         self.clock = clock
         self.queue = load_queue(queue_path)
@@ -180,6 +188,19 @@ class RedTeam:
         self._cursor = (first + total) % n
         return out
 
+    async def _read(self, text: str, doc_id: str) -> tuple[str, str]:
+        """Run the live reader over the audience text. Values inherit the UNTRUSTED document
+        label; output that fails validation is ``invalid`` (the attempt is then DENY)."""
+        assert self.reader is not None  # noqa: S101
+        source: Labeled[object] = Labeled.source(
+            text, Label.make(Level.UNTRUSTED, sources=[SourceRef(kind="document", id=doc_id)])
+        )
+        try:
+            res = await asyncio.to_thread(self.reader.read_labeled, source, "invoice")
+        except ExtractionError:
+            return LLM_LABEL, "invalid"
+        return res.reader, "valid"
+
     def _protected_rows(self) -> int:
         return int(
             self.p.conn.execute(
@@ -195,6 +216,8 @@ class RedTeam:
             doc_id = f"rtdoc_{rid}"
             result: dict[str, Any]
             before = 0
+            reader_label = FALLBACK_LABEL
+            reader_outcome: str | None = None
             try:
                 self.p.conn.execute(
                     "INSERT INTO documents(doc_id, name, trust, mime, content) VALUES (?,?,?,?,?)",
@@ -203,7 +226,16 @@ class RedTeam:
                 if self.p.mode() != "on":
                     raise _ModeOff
                 before = self._protected_rows()
-                result = await self.attack(text, doc_id, moderated)
+                if (
+                    source == "public"
+                    and self.reader is not None
+                    and self.reader.effective() == LLM_LABEL
+                ):
+                    reader_label, reader_outcome = await self._read(text, doc_id)
+                if reader_outcome == "invalid":
+                    result = {"decision": "DENY", "rules": [READER_INVALID_RULE], "ok": False}
+                else:
+                    result = await self.attack(text, doc_id, moderated)
                 if self.p.mode() != "on":  # toggled OFF mid-attack: the outcome is not evidence
                     raise _ModeOff
             except _ModeOff:
@@ -236,6 +268,8 @@ class RedTeam:
                     "rules": rules,
                     "tool": tool,
                     "succeeded": succeeded,
+                    "reader": reader_label,
+                    "reader_outcome": reader_outcome,
                     "ts": iso(self.p.clock()),
                 }
             )
@@ -249,6 +283,7 @@ class RedTeam:
                 "rules": rules,
                 "succeeded": succeeded,
                 "namespace": "redteam",
+                "reader": reader_label,
             }
             if ref:
                 event["ref"] = ref

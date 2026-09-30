@@ -71,7 +71,13 @@ class ShowcaseMixin:
                 checks["voice_models"] = "unavailable"
             checks["ollama"] = _ollama()
             ready = all(checks[k] == "ok" for k in ("db", "policy", "audit"))
-            return {"ready": ready, "checks": checks}
+            from trishul.reader.runtime import live_reader_info
+
+            reader = live_reader_info()
+            started = getattr(self, "reader_info", None)
+            if isinstance(started, dict):
+                reader = {**started, "llm_state": reader["llm_state"]}
+            return {"ready": ready, "checks": checks, "reader": reader}
 
         return self._run(go)  # type: ignore[no-any-return]
 

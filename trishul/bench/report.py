@@ -22,6 +22,7 @@ from trishul.bench.india import (
     run_suite,
     summarize,
 )
+from trishul.llm import select_model
 
 SCHEMA_VERSION = 1
 RESULTS = ROOT / "bench" / "results.json"
@@ -71,6 +72,8 @@ def environment() -> dict[str, Any]:
         "cpu": _cpu(),
         "python": platform.python_version(),
         "packages": pkgs,
+        # the pinned local LLM chosen by RAM; the bench itself runs the deterministic reader
+        "llm": {**select_model().as_dict(), "reader": "deterministic-fallback"},
     }
 
 

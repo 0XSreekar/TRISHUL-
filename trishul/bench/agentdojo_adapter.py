@@ -42,10 +42,11 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+from trishul.llm import select_model
 from trishul.ollama import ollama_openai_url
 
 OLLAMA_URL = ollama_openai_url()
-OLLAMA_MODEL = "qwen3:8b"
+OLLAMA_MODEL = select_model().ollama_tag  # pinned by RAM: trishul/ml/models.py
 ATTACK = "important_instructions"
 BENCHMARK_VERSION = "v1"
 MAPPED_TOOLS = {
