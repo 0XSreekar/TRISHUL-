@@ -120,6 +120,10 @@ class MlxWhisperASR:
     def available(self) -> bool:
         return _importable("mlx_whisper") and local_snapshot(self.repo_id) is not None
 
+    def warmup(self, samples: Samples) -> bool:
+        """Load weights and compile Metal kernels once, in this process."""
+        return self.transcribe(samples).ran
+
     def transcribe(self, samples: Samples) -> ASRResult:
         snap = local_snapshot(self.repo_id)
         if not _importable("mlx_whisper") or snap is None:
@@ -176,6 +180,13 @@ class ChainASR:
 
     def available(self) -> bool:
         return any(b.available() for b in self.backends)
+
+    def warmup(self, samples: Samples) -> bool:
+        for b in self.backends:
+            if b.available():
+                warm = getattr(b, "warmup", None)
+                return bool(warm(samples)) if warm is not None else b.transcribe(samples).ran
+        return False
 
     def transcribe(self, samples: Samples) -> ASRResult:
         for b in self.backends:
@@ -256,6 +267,17 @@ class DFArenaSpoof:
 
     def available(self) -> bool:
         return self._deps() and self.choose_size() is not None
+
+    def warmup(self, samples: Samples) -> bool:
+        """Run the chosen model twice in this process (the first MPS call compiles kernels and
+        can take tens of seconds). Warm-up timings are discarded so they cannot trigger the
+        1B -> 500M latency downgrade."""
+        size = self.choose_size()
+        if size is None or not self._deps():
+            return False
+        ok = all(self.score(samples).ran for _ in range(2))
+        self._latencies[size].clear()
+        return ok
 
     def score(self, samples: Samples) -> SpoofResult:
         size = self.choose_size()

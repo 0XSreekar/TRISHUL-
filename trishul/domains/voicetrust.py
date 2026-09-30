@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import secrets
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -275,6 +276,30 @@ class VoiceTrust:
         self.nonces = nonces or NonceService()
         self.asr: ASR = asr or ChainASR()
         self.spoof: SpoofAdapter = spoof or default_spoof_adapter()
+        # Serialises model use: warm-up and a live assessment never run a pipeline concurrently.
+        self._model_lock = threading.Lock()
+        self.warm_state: Literal["cold", "warming", "warm", "unavailable", "failed"] = "cold"
+
+    def warmup(self) -> str:
+        """Warm ASR and anti-spoof models in-process on 1 s of low noise. Never raises; decisions
+        do not depend on it (a cold or failed model still fails closed via the decision table)."""
+        import numpy as np
+
+        asr_warm = getattr(self.asr, "warmup", None)
+        spoof_warm = getattr(self.spoof, "warmup", None)
+        if asr_warm is None and spoof_warm is None:
+            self.warm_state = "unavailable"
+            return self.warm_state
+        self.warm_state = "warming"
+        rng = np.random.default_rng(0)
+        clip = (rng.standard_normal(16000) * 1e-3).astype(np.float32)
+        try:
+            with self._model_lock:
+                ok = [f(clip) for f in (asr_warm, spoof_warm) if f is not None]
+            self.warm_state = "warm" if ok and all(ok) else "unavailable"
+        except Exception:
+            self.warm_state = "failed"
+        return self.warm_state
 
     def assess(
         self,
@@ -291,8 +316,9 @@ class VoiceTrust:
             spoof = SpoofResult(None, False, "none", None, None, "audio rejected")
         else:
             trimmed = vad_trim(load.samples)
-            asr = self.asr.transcribe(trimmed)
-            spoof = self.spoof.score(trimmed)
+            with self._model_lock:
+                asr = self.asr.transcribe(trimmed)
+                spoof = self.spoof.score(trimmed)
         text = asr.text if asr.ran else None
         liveness = self.nonces.verify(session, nonce_id, text)
         score = spoof.score if spoof.ran else None

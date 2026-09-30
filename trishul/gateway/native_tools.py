@@ -79,7 +79,12 @@ class NativeExecutor:
                 "handle": handle,
                 "summary": {
                     "clip_id": assessment.clip_id,
-                    "liveness": assessment.liveness,
+                    # an approved retry re-checks an already-consumed nonce (raw: mismatch);
+                    # it only executes because that same nonce matched for this exact call
+                    "liveness": "match"
+                    if getattr(st, "voice_resumed", False)
+                    else assessment.liveness,
+                    "resumed_after_approval": bool(getattr(st, "voice_resumed", False)),
                     "quality": assessment.quality.quality,
                     "asr_ran": assessment.asr.ran,
                     "chars": 0 if transcript is None else len(transcript.value),

@@ -277,3 +277,57 @@ def test_policy_consumes_facts() -> None:
             # does not
             assert verdict.decision == voice_decision(*inputs)[0]  # type: ignore[arg-type]
             assert {r.rule_id for r in verdict.reasons} == set(voice_decision(*inputs)[1])
+
+
+def test_warmup_discards_timings_and_reports_state() -> None:
+    from trishul.domains.voicetrust import VoiceTrust
+
+    class Warm:
+        calls = 0
+
+        def available(self) -> bool:
+            return True
+
+        def warmup(self, samples: object) -> bool:
+            Warm.calls += 1
+            return True
+
+        def transcribe(self, samples: object) -> object:  # pragma: no cover - not used
+            raise AssertionError
+
+        def score(self, samples: object) -> object:  # pragma: no cover - not used
+            raise AssertionError
+
+    vt = VoiceTrust(asr=Warm(), spoof=Warm())  # type: ignore[arg-type]
+    assert vt.warm_state == "cold"
+    assert vt.warmup() == "warm" and Warm.calls == 2
+
+
+def test_warmup_failure_is_contained() -> None:
+    from trishul.domains.voicetrust import VoiceTrust
+
+    class Boom:
+        def available(self) -> bool:
+            return True
+
+        def warmup(self, samples: object) -> bool:
+            raise RuntimeError("mps")
+
+    vt = VoiceTrust(asr=Boom(), spoof=Boom())  # type: ignore[arg-type]
+    assert vt.warmup() == "failed"
+
+
+def test_dfarena_warmup_does_not_record_latency(monkeypatch: object) -> None:
+    from trishul.domains import voice_adapters as va
+
+    df = va.DFArenaSpoof()
+    monkeypatch.setattr(df, "choose_size", lambda: "1B")  # type: ignore[attr-defined]
+    monkeypatch.setattr(df, "_deps", lambda: True)  # type: ignore[attr-defined]
+
+    def fake_score(samples: object) -> va.SpoofResult:
+        df._latencies["1B"].append(90_000.0)  # a cold first call
+        return va.SpoofResult(0.1, True, "df-arena-1B", "mps", 90_000.0)
+
+    monkeypatch.setattr(df, "score", fake_score)  # type: ignore[attr-defined]
+    assert df.warmup(None) is True  # type: ignore[arg-type]
+    assert df._latencies["1B"] == []

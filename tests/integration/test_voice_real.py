@@ -7,6 +7,7 @@ anti-spoof model is *expected* to flag them (that is asserted, not hidden).
 from __future__ import annotations
 
 import base64
+import json
 import shutil
 import subprocess
 from collections.abc import AsyncIterator
@@ -121,8 +122,14 @@ async def test_d_live_voice_never_allows_high_risk_sink(
         try:
             out = await env.call("voice_command", args)
             break
-        except ToolError:  # ASR mishear -> fail-closed DENY; retry with a fresh challenge
-            continue
+        except ToolError as exc:
+            body = json.loads(str(exc))
+            if body["decision"] != "STEP_UP" or not body.get("approval_id"):
+                continue  # ASR mishear -> fail-closed DENY; retry with a fresh challenge
+        # Phase 3: every voice command needs out-of-band approval of the exact call.
+        env.gw.backend.resolve_approval(body["approval_id"], "approve", "console")
+        out = await env.call("voice_command", args)
+        break
     assert out is not None and out["summary"]["liveness"] == "match"
     # the voice-derived (UNTRUSTED) handle can never reach a payment sink
     env.gw.bind_task(purpose="payment_processing", category="PAYMENT", text="pay")

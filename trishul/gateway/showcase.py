@@ -61,7 +61,11 @@ class ShowcaseMixin:
             try:
                 spoof = self.p.voice.spoof.available()
                 asr = self.p.voice.asr.available()
-                checks["voice_models"] = "available" if spoof and asr else "unavailable"
+                state = getattr(self.p.voice, "warm_state", "cold")
+                if not (spoof and asr):
+                    checks["voice_models"] = "unavailable"
+                else:
+                    checks["voice_models"] = "warming" if state == "warming" else "available"
             except Exception:
                 checks["voice_models"] = "unavailable"
             checks["ollama"] = _ollama()

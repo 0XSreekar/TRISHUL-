@@ -464,6 +464,8 @@ def build_api(
         Route("/voice/nonce", guarded(voice_nonce), methods=["POST"]),
         Route("/audit/verify", audit_verify, methods=["GET"]),
         Route("/bench/results.json", bench_results, methods=["GET"]),
+        # relative link from the landing page served under /console
+        Route("/console/bench/results.json", bench_results, methods=["GET"]),
         Route("/metrics", metrics_route, methods=["GET"]),
     ]
     if CONSOLE_DIR.is_dir():  # read-only static console, same-origin with the API

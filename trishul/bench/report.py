@@ -25,6 +25,7 @@ from trishul.bench.india import (
 SCHEMA_VERSION = 1
 RESULTS = ROOT / "bench" / "results.json"
 VOICE = ROOT / "bench" / "voice.json"
+VOICE_EER = ROOT / "bench" / "voice_eer.json"
 LATENCY_REPEATS = 5
 PACKAGES = ("fastmcp", "pydantic", "z3-solver", "numpy", "cryptography", "starlette")
 
@@ -93,6 +94,54 @@ def _latency_block(events: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
     }
 
 
+def _voice_eer() -> dict[str, Any] | None:
+    """Summarise bench/voice_eer.json (scripts/bench_voice_eer.py) when it has measured results."""
+    if not VOICE_EER.exists():
+        return None
+    raw = json.loads(VOICE_EER.read_text(encoding="utf-8"))
+    det = raw.get("detector", {}).get("1B", {})
+    if det.get("status") != "measured":
+        return None
+    clean = det["conditions"]["clean"]
+    phone = det["conditions"]["phone_mulaw_8k"]
+    small = raw.get("detector", {}).get("500M", {})
+    return {
+        "status": "measured",
+        "source": "bench/voice.json+bench/voice_eer.json",
+        "detector": "DF_Arena_1B",
+        "eer": clean["eer"],
+        "accuracy": clean["accuracy"],
+        "bonafide_clips": clean["n_bonafide"],
+        "spoof_clips": clean["n_spoof"],
+        "at_threshold_0_5": {
+            k: clean[k] for k in ("frr_real_flagged", "far_spoof_accepted", "accuracy")
+        },
+        "phone_codec": {
+            k: phone[k] for k in ("eer", "frr_real_flagged", "far_spoof_accepted", "accuracy")
+        },
+        "by_lang_clean": clean["by_lang"],
+        "by_lang_phone": phone["by_lang"],
+        "owner_clips": {"clean": clean["owner_clips"], "phone": phone["owner_clips"]},
+        "df_arena_500m": {
+            c: {
+                "eer": small["conditions"][c]["eer"],
+                "accuracy": small["conditions"][c]["accuracy"],
+            }
+            for c in ("clean", "phone_mulaw_8k")
+        }
+        if small.get("status") == "measured"
+        else None,
+        "asr_hi_te": raw.get("asr"),
+        "generated_at": raw.get("generated_at"),
+        "git_commit": raw.get("git_commit"),
+        "note": (
+            "Bonafide: 73 LibriSpeech clips (ONE speaker), 30 FLEURS Hindi, 30 FLEURS Telugu, "
+            "project owner's clips. Spoof: content-matched macOS TTS (not a neural voice clone). "
+            "Phone = synthetic 8 kHz mu-law band-pass channel. Small sample; see voice_eer.json."
+        ),
+    }
+
+
 def _voice() -> dict[str, Any]:
     raw = json.loads(VOICE.read_text(encoding="utf-8"))
     corpus = str(raw.get("corpus", ""))
@@ -108,6 +157,12 @@ def _voice() -> dict[str, Any]:
     asr_pool: dict[str, Any] = first_asr.get("samples", {})
     wers = [s["wer"] for s in asr_pool.values() if isinstance(s.get("wer"), int | float)]
     detected = sum(1 for s in scores if s >= 0.5)
+    eer_doc = _voice_eer()
+    if eer_doc is not None:
+        return {
+            **eer_doc,
+            "asr_mean_wer_tts_en_hi_te": round(statistics.mean(wers), 4) if wers else None,
+        }
     return {
         "status": "partial" if bonafide == 0 else "measured",
         "source": "bench/voice.json",

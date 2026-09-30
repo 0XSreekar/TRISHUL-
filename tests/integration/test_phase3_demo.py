@@ -344,3 +344,9 @@ def test_console_static_is_revalidated_every_load(env: Env) -> None:
     with TestClient(env.gw.api(allowed_origins=["null"])) as c:
         r = c.get("/console/Trishul-Console.dc.html")
         assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"
+
+
+def test_bench_results_reachable_from_console_relative_link(env: Env) -> None:
+    with TestClient(env.gw.api(allowed_origins=["null"])) as c:
+        a, b = c.get("/bench/results.json"), c.get("/console/bench/results.json")
+        assert a.status_code == b.status_code and a.content == b.content

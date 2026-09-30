@@ -12,6 +12,7 @@ import importlib
 import json
 import os
 import sys
+import threading
 import time
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -351,6 +352,9 @@ def _start(args: argparse.Namespace) -> int:
         gw = build_gateway(conn, ids, seed=seed)
     else:
         gw = build_stdio_gateway(conn, ids, db.resolve(), seed=seed)
+    # Warm voice models inside the gateway process (a separate prewarm process cannot compile
+    # this process's Metal kernels). Background thread: startup and non-voice calls never wait.
+    threading.Thread(target=gw.pipeline.voice.warmup, name="voice-warmup", daemon=True).start()
 
     async def serve() -> None:
         gw.backend.loop = asyncio.get_running_loop()

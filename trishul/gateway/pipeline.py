@@ -158,7 +158,9 @@ class State:
     now: datetime
     agent: str
     t0: float
-    t_decided: float | None = None  # perf_counter when decision+audit completed (pre-execution)
+    t_decided: float | None = None
+    # approved retry: liveness was verified on the attempt that raised the approval
+    voice_resumed: bool = False  # perf_counter when decision+audit completed (pre-execution)
     task: Task | None = None
     args: dict[str, Any] = field(default_factory=dict)
     leaf_labels: dict[str, Label] = field(default_factory=dict)
@@ -870,6 +872,7 @@ class Pipeline:
         ):
             st.facts["voice_liveness_match"] = True
             st.facts["voice_liveness_mismatch"] = False
+            st.voice_resumed = True
 
     # ------------------------------------------------------------------ stage 4: policy
 
@@ -1398,7 +1401,12 @@ class Pipeline:
             "mandate": self._mandate_state(st),
             "redaction": {"fields": list(st.redaction), "count": len(st.redaction)},
             "effect": st.effect,
-            "liveness": None if st.voice is None else {"state": st.voice.liveness},
+            "liveness": None
+            if st.voice is None
+            else {
+                "state": "match" if st.voice_resumed else st.voice.liveness,
+                "resumed_after_approval": st.voice_resumed,
+            },
             "ml": st.ml.get("state", "off"),
         }
         if error:
