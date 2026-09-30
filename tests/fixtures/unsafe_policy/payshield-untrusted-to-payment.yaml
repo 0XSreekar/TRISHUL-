@@ -1,0 +1,18 @@
+version: 1
+id: payshield.untrusted_to_payment
+tools:
+  pay_upi:
+    category: PAYMENT
+    args:
+      payee_vpa: {type: string, required: true, sink: true}
+      amount_paise: {type: integer, required: true, sink: true}
+      note: {type: string}
+rules:
+  - id: PAYSHIELD.TAINT.UNTRUSTED_AMOUNT
+    stage: LABEL
+    then: DENY
+    explain: "Payment amount derived from untrusted content"
+    when:
+      all:
+        - tool_category: PAYMENT
+        - label_at_least: {arg: /amount_paise, level: UNTRUSTED}

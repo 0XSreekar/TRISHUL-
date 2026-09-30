@@ -1,0 +1,32 @@
+version: 1
+id: core.highrisk_approval
+tools:
+  close_account:
+    category: IDENTITY
+    args:
+      account_id: {type: string, required: true}
+  issue_refund:
+    category: PAYMENT
+    args:
+      order_id: {type: string, required: true}
+      amount_paise: {type: integer, required: true}
+rules:
+  - id: CORE.APPROVAL.CLOSE_ACCOUNT
+    stage: APPROVAL
+    then: STEP_UP
+    explain: "Closing an account requires a bound human approval"
+    when:
+      all:
+        - tool: close_account
+        - not:
+            approval_present: close_account
+  - id: CORE.CAP.LARGE_REFUND
+    stage: CAP
+    then: STEP_UP
+    explain: "Refund above 5,000.00 INR requires a bound human approval"
+    when:
+      all:
+        - tool: issue_refund
+        - amount_exceeds: {arg: /amount_paise, cap_paise: 500000}
+        - not:
+            approval_present: large_refund
