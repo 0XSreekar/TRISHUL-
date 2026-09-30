@@ -35,6 +35,7 @@ from trishul.policy.evaluator import evaluate_raw
 DEFAULT_SEED = 42
 DEFAULT_PORT = 8787
 DEFAULT_MCP_PORT = 8788
+DEFAULT_REDTEAM_PORT = 8789
 
 
 def _compile(paths: Sequence[Path]) -> int:
@@ -106,6 +107,12 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--port", type=int, default=DEFAULT_PORT, help="REST/WS API port")
     start.add_argument("--mcp-port", type=int, default=DEFAULT_MCP_PORT, help="MCP HTTP port")
     start.add_argument(
+        "--redteam-port",
+        type=int,
+        default=DEFAULT_REDTEAM_PORT,
+        help="audience Red-Team app port (GET / and POST /submit only)",
+    )
+    start.add_argument(
         "--in-process",
         action="store_true",
         help="mount the demo servers in-process instead of stdio subprocesses",
@@ -147,7 +154,7 @@ def build_parser() -> argparse.ArgumentParser:
         ap = top.add_parser(name, help=f"{name} a pending step-up approval")
         _db_arg(ap)
         ap.add_argument("approval_id")
-        ap.add_argument("--approver", default="cli")
+        ap.add_argument("--user", default="approver", help="approver account username")
     task = top.add_parser("task", help="task binding").add_subparsers(dest="cmd", required=True)
     bind = task.add_parser("bind", help="bind the active task (trusted channel)")
     _db_arg(bind)
@@ -230,6 +237,7 @@ def _report_dpdp(db: Path) -> int:
 
 def _ml(db: Path, state: str) -> int:
     gw = _gateway(db)
+    gw.backend.record_operator_action("ml", "cli", {"enabled": state == "on"})
     gw.backend.set_ml_cli(state == "on")  # applies + audits, then a control row for the gateway
     _print({"ml": state})
     return 0
@@ -237,6 +245,7 @@ def _ml(db: Path, state: str) -> int:
 
 def _redteam(db: Path, on: bool) -> int:
     gw = _gateway(db)
+    gw.backend.record_operator_action("redteam_kill", "cli", {"on": on})
     stats = gw.backend.redteam_kill_cli(on)
     _print({"redteam_killed": on, **stats})
     return 0
@@ -319,10 +328,16 @@ def _demo_reset(db: Path, seed: int, rotate_keys: bool = False) -> int:
         "INSERT INTO control(key, value, origin, ts) VALUES ('reset', ?, 'cli', ?)",
         (str(seed), iso(DEMO_NOW)),
     )
+    gw = _gateway(db)
+    accounts = gw.backend.auth.provision_demo_accounts()
+    gw.backend.record_operator_action("demo_reset", "cli", {"data_seed": seed})  # first leaf
+    for name, status in accounts.items():
+        print(f"account {name}: {status}", file=sys.stderr)
     preview = IdGen(seed, start=ids.counter).new("call")
     _print(
         {
             "reset": True,
+            "accounts": accounts,
             "seed": seed,
             "ids_issued": ids.counter,
             "mandate_id": mandate.mandate_id(),
@@ -333,10 +348,18 @@ def _demo_reset(db: Path, seed: int, rotate_keys: bool = False) -> int:
     return 0
 
 
-def _resolve(db: Path, approval_id: str, decision: str, approver: str) -> int:
+def _resolve(db: Path, approval_id: str, decision: str, user: str) -> int:
+    """Approve/reject as an authenticated approver (same service as the REST route)."""
+    import getpass
+
     gw = _gateway(db)
+    password = os.environ.get("TRISHUL_APPROVER_PASSWORD") or getpass.getpass("approver password: ")
+    account = gw.backend.auth.authenticate(user, password, role="approver")
+    if account is None:
+        print("authentication failed", file=sys.stderr)
+        return 1
     try:
-        out = gw.backend.resolve_approval(approval_id, decision, approver)
+        out = gw.backend.resolve_approval(approval_id, decision, account.user_id)
     except KeyError:
         print(f"unknown approval {approval_id}", file=sys.stderr)
         return 1
@@ -410,6 +433,7 @@ def _start(args: argparse.Namespace) -> int:
         from trishul.store.ids import IdGen
 
         ids = IdGen(seed, start=int(counter["value"]) if counter else 0)
+    did_reset = args.seed is not None or row is None
     token_path = _ensure_operator_token(db)
     if args.in_process:
         gw = build_gateway(conn, ids, seed=seed, keys=ring)
@@ -424,6 +448,11 @@ def _start(args: argparse.Namespace) -> int:
             tools_url=os.environ.get("TRISHUL_TOOLS_URL") or None,
             seed=seed,
         )
+    accounts = gw.backend.auth.provision_demo_accounts()
+    if did_reset:
+        gw.backend.record_operator_action("demo_reset", "cli", {"data_seed": seed})  # first leaf
+    for name, status in accounts.items():
+        print(f"account {name}: {status}", flush=True)
     # Warm voice models inside the gateway process (a separate prewarm process cannot compile
     # this process's Metal kernels). Background thread: startup and non-voice calls never wait.
     from trishul.reader.runtime import start_reader
@@ -453,9 +482,21 @@ def _start(args: argparse.Namespace) -> int:
             f"  servers={mode}  seed={seed}",
             flush=True,
         )
+        from trishul.redteam.app import build_redteam_app
+
+        audience = uvicorn.Server(
+            uvicorn.Config(
+                build_redteam_app(gw.backend.redteam_submit),
+                host=args.host,
+                port=args.redteam_port,
+                log_level="warning",
+            )
+        )
+        print(f"audience red-team app: http://localhost:{args.redteam_port}/", flush=True)
         await asyncio.gather(
             gw.backend.run_control_poller(),
             server.serve(),
+            audience.serve(),
             gw.mcp.run_http_async(
                 transport="http", host=args.host, port=args.mcp_port, show_banner=False
             ),
@@ -496,9 +537,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         case "redteam":
             return _redteam(args.db, args.cmd == "kill")
         case "approve":
-            return _resolve(args.db, args.approval_id, "approve", args.approver)
+            return _resolve(args.db, args.approval_id, "approve", args.user)
         case "reject":
-            return _resolve(args.db, args.approval_id, "reject", args.approver)
+            return _resolve(args.db, args.approval_id, "reject", args.user)
         case "task":
             return _task_bind(args)
         case "bench":

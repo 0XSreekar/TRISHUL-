@@ -23,6 +23,8 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from trishul.auth import AuthError, AuthService, RateLimitedError, Session
+from trishul.auth.service import ABSOLUTE_SECONDS
 from trishul.redteam.errors import RedTeamError
 from trishul.telemetry.events import EventBus
 from trishul.telemetry.otel import StageMetrics
@@ -33,6 +35,7 @@ CONSOLE_DIR = Path(__file__).resolve().parents[2] / "Landing page and dashboard 
 BENCH_RESULTS = Path(__file__).resolve().parents[2] / "bench" / "results.json"
 _ID = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 _MAX_BODY = 256 * 1024
+SESSION_COOKIE = "trishul_session"
 
 
 class GatewayBackend(Protocol):
@@ -60,22 +63,16 @@ class GatewayBackend(Protocol):
     def audit_consistency(self, old: int) -> dict[str, Any]: ...
     def redteam_stats(self) -> dict[str, Any]: ...
     def redteam_kill(self, on: bool) -> dict[str, Any]: ...
-    def demo_reset(self, seed: int) -> dict[str, Any]: ...
+    def demo_reset(self, seed: int, actor: str = "operator") -> dict[str, Any]: ...
+    def record_operator_action(self, action: str, actor: str, params: dict[str, Any]) -> None: ...
     async def redteam_submit(self, text: object, client_ip: str) -> dict[str, Any]: ...
     async def redteam_fallback(self, count: int | None = None) -> list[dict[str, Any]]: ...
     async def demo_moment(self, n: int, step: int | None = None) -> dict[str, Any]: ...
     def dpdp(self) -> dict[str, Any]: ...
 
 
-LOOPBACK = frozenset({"127.0.0.1", "::1", "localhost", "testclient"})
-
-
 def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
-
-
-def _public() -> bool:
-    return os.environ.get("TRISHUL_REDTEAM_PUBLIC") == "1"
 
 
 class _NoCacheStatic(StaticFiles):
@@ -115,8 +112,19 @@ def build_api(
     *,
     allowed_origins: list[str] | None = None,
     heartbeat_s: float = 15.0,
+    auth: AuthService | None = None,
 ) -> Starlette:
     origins = list(allowed_origins) if allowed_origins is not None else list(DEFAULT_ORIGINS)
+    accounts: AuthService | None = auth if auth is not None else getattr(backend, "auth", None)
+
+    def _session(request: Request) -> Session | None:
+        if accounts is None:
+            return None
+        return accounts.session(request.cookies.get(SESSION_COOKIE))
+
+    def _csrf_ok(request: Request, session: Session) -> bool:
+        presented = request.headers.get("x-csrf-token", "")
+        return bool(presented) and hmac.compare_digest(presented.encode(), session.csrf.encode())
 
     def guarded(
         handler: Callable[[Request], Awaitable[Response]],
@@ -136,25 +144,67 @@ def build_api(
 
         return wrapper
 
-    def operator(
+    def approver_only(
         handler: Callable[[Request], Awaitable[Response]],
     ) -> Callable[[Request], Awaitable[Response]]:
-        """Operator-only routes: always require ``Authorization: Bearer <TRISHUL_OPERATOR_TOKEN>``
-        (constant-time compare), regardless of client address. No token configured = fail closed."""
+        """Approval routes: an approver-role session plus a matching ``X-CSRF-Token``. The operator
+        bearer token is not an approver credential. No session -> 401; wrong role, missing or
+        wrong CSRF token -> 403."""
 
         async def wrapper(request: Request) -> Response:
-            expected = os.environ.get("TRISHUL_OPERATOR_TOKEN", "")
-            auth = request.headers.get("authorization", "")
-            scheme, _, presented = auth.partition(" ")
-            if not expected:
-                return _err(401, "operator_token_required")
-            if scheme.lower() != "bearer" or not hmac.compare_digest(
-                presented.strip().encode(), expected.encode()
-            ):
-                return _err(401, "operator_token_required")
+            session = _session(request)
+            if session is None:
+                return _err(401, "approver_login_required")
+            if session.role != "approver":
+                return _err(403, "forbidden_role")
+            if not _csrf_ok(request, session):
+                return _err(403, "csrf_required")
+            request.state.actor = session.user_id
             return await handler(request)
 
         return wrapper
+
+    def operator(
+        handler: Callable[[Request], Awaitable[Response]],
+    ) -> Callable[[Request], Awaitable[Response]]:
+        """Operator-only routes: ``Authorization: Bearer <TRISHUL_OPERATOR_TOKEN>`` (constant-time
+        compare, regardless of client address; no token configured = fail closed) or an
+        operator-role session plus ``X-CSRF-Token``. An approver session is refused (403)."""
+
+        async def wrapper(request: Request) -> Response:
+            expected = os.environ.get("TRISHUL_OPERATOR_TOKEN", "")
+            auth_header = request.headers.get("authorization", "")
+            scheme, _, presented = auth_header.partition(" ")
+            if (
+                expected
+                and scheme.lower() == "bearer"
+                and hmac.compare_digest(presented.strip().encode(), expected.encode())
+            ):
+                request.state.actor = "operator-token"
+                return await handler(request)
+            session = _session(request)
+            if session is None:
+                return _err(401, "operator_token_required")
+            if session.role != "operator":
+                return _err(403, "forbidden_role")
+            if not _csrf_ok(request, session):
+                return _err(403, "csrf_required")
+            request.state.actor = session.user_id
+            return await handler(request)
+
+        return wrapper
+
+    def _actor(request: Request) -> str:
+        return str(getattr(request.state, "actor", "operator"))
+
+    async def audited(request: Request, action: str, params: dict[str, Any]) -> Response | None:
+        """Append the operator action to the audit log BEFORE acting; a failure refuses it."""
+        try:
+            await run_in_threadpool(backend.record_operator_action, action, _actor(request), params)
+        except Exception:
+            log.exception("operator action audit failed")
+            return _err(500, "audit_unavailable")
+        return None
 
     async def call(fn: Callable[..., Any], *args: Any) -> Response:
         try:
@@ -197,8 +247,7 @@ def build_api(
         body = await _json_body(request)
         if body is None or body.get("decision") not in ("approve", "reject"):
             return _err(400, "invalid_decision")
-        # approver is fixed: approvals are out-of-band console actions only
-        return await call(backend.resolve_approval, aid, body["decision"], "console")
+        return await call(backend.resolve_approval, aid, body["decision"], _actor(request))
 
     async def prove(request: Request) -> Response:
         body = await _json_body(request)
@@ -207,6 +256,10 @@ def build_api(
         policy = body.get("policy", "live")
         if policy not in ("live", "unsafe_fixture"):
             return _err(400, "invalid_policy")
+        if policy == "unsafe_fixture" and (
+            bad := await audited(request, "prove", {"policy": policy})
+        ):
+            return bad
         return await call(backend.prove, policy)
 
     async def healthz(request: Request) -> Response:
@@ -227,6 +280,8 @@ def build_api(
         body = await _json_body(request)
         if body is None or body.get("mode") not in ("on", "off"):
             return _err(400, "invalid_mode")
+        if bad := await audited(request, "mode", {"mode": body["mode"]}):
+            return bad
         return await call(backend.set_mode, body["mode"])
 
     async def ml_post(request: Request) -> Response:
@@ -234,6 +289,8 @@ def build_api(
         enabled = None if body is None else body.get("enabled")
         if not isinstance(enabled, bool):
             return _err(400, "invalid_enabled")
+        if bad := await audited(request, "ml", {"enabled": enabled}):
+            return bad
         result = await call(backend.set_ml, enabled)
         return result if result.status_code != 200 else JSONResponse({"ml": enabled})
 
@@ -288,25 +345,20 @@ def build_api(
         return JSONResponse(result)
 
     async def redteam_submit(request: Request) -> Response:
-        ip = _client_ip(request)
-        if not (_public() or ip in LOOPBACK):
-            return _err(403, "redteam_not_public")
+        """Operator-only test submission. The public audience route lives in its own app
+        (``trishul.redteam.app``) on its own port."""
         body = await _json_body(request)
         if body is None or not isinstance(body.get("text"), str):
             return _err(400, "invalid_text")
-        # rate-limit key only (never used for auth): behind the tunnel the peer is the proxy
-        key = ip
-        if os.environ.get("TRISHUL_TRUSTED_PROXY") == "1":
-            fwd = request.headers.get("cf-connecting-ip", "").strip()
-            if 0 < len(fwd) <= 64:
-                key = fwd
-        return await acall(backend.redteam_submit, body["text"], key)
+        return await acall(backend.redteam_submit, body["text"], _client_ip(request))
 
     async def redteam_kill(request: Request) -> Response:
         body = await _json_body(request)
         on = None if body is None else body.get("on")
         if not isinstance(on, bool):
             return _err(400, "invalid_on")
+        if bad := await audited(request, "redteam_kill", {"on": on}):
+            return bad
         return await call(backend.redteam_kill, on)
 
     async def redteam_stats(request: Request) -> Response:
@@ -319,6 +371,9 @@ def build_api(
             count is not None and (not isinstance(count, int) or isinstance(count, bool))
         ):
             return _err(400, "invalid_count")
+
+        if bad := await audited(request, "redteam_fallback", {"count": count}):
+            return bad
 
         async def run() -> dict[str, Any]:
             return {"results": await backend.redteam_fallback(count)}
@@ -333,6 +388,8 @@ def build_api(
         step = body.get("step")
         if step is not None and (not isinstance(step, int) or isinstance(step, bool)):
             return _err(400, "invalid_step")
+        if bad := await audited(request, "demo_moment", {"n": int(n), "step": step}):
+            return bad
         return await acall(backend.demo_moment, int(n), step)
 
     async def demo_reset(request: Request) -> Response:
@@ -340,7 +397,61 @@ def build_api(
         seed = 42 if body is None else body.get("seed", 42)
         if body is None or not isinstance(seed, int) or isinstance(seed, bool):
             return _err(400, "invalid_seed")
-        return await call(backend.demo_reset, seed)
+        return await call(backend.demo_reset, seed, _actor(request))
+
+    async def auth_login(request: Request) -> Response:
+        if accounts is None:
+            return _err(503, "auth_unavailable")
+        body = await _json_body(request)
+        username = None if body is None else body.get("username")
+        password = None if body is None else body.get("password")
+        if not isinstance(username, str) or not isinstance(password, str):
+            return _err(400, "invalid_credentials_format")
+        try:
+            sid, session = accounts.login(username, password, _client_ip(request))
+        except RateLimitedError:
+            return _err(429, "rate_limited")
+        except AuthError:
+            return _err(401, "invalid_credentials")
+        old = request.cookies.get(SESSION_COOKIE)
+        if old:
+            accounts.logout(old)
+        resp = JSONResponse(
+            {"user_id": session.user_id, "role": session.role, "csrf": session.csrf}
+        )
+        resp.set_cookie(
+            SESSION_COOKIE,
+            sid,
+            max_age=ABSOLUTE_SECONDS,
+            path="/",
+            httponly=True,
+            samesite="strict",
+            secure=os.environ.get("TRISHUL_COOKIE_SECURE") == "1",
+        )
+        return resp
+
+    async def auth_me(request: Request) -> Response:
+        session = _session(request)
+        if session is None:
+            return _err(401, "not_logged_in")
+        return JSONResponse(
+            {
+                "user_id": session.user_id,
+                "username": session.username,
+                "role": session.role,
+                "csrf": session.csrf,
+            }
+        )
+
+    async def auth_logout(request: Request) -> Response:
+        session = _session(request)
+        if session is not None and not _csrf_ok(request, session):
+            return _err(403, "csrf_required")
+        if accounts is not None:
+            accounts.logout(request.cookies.get(SESSION_COOKIE))
+        resp = JSONResponse({"ok": True})
+        resp.delete_cookie(SESSION_COOKIE, path="/", httponly=True, samesite="strict")
+        return resp
 
     async def report_dpdp(request: Request) -> Response:
         try:
@@ -442,7 +553,10 @@ def build_api(
         Route("/consent", consent, methods=["GET"]),
         Route("/consent/{id}/withdraw", guarded(operator(withdraw)), methods=["POST"]),
         Route("/approvals", approvals, methods=["GET"]),
-        Route("/approvals/{id}", guarded(operator(resolve)), methods=["POST"]),
+        Route("/approvals/{id}", guarded(approver_only(resolve)), methods=["POST"]),
+        Route("/auth/login", guarded(auth_login), methods=["POST"]),
+        Route("/auth/me", auth_me, methods=["GET"]),
+        Route("/auth/logout", guarded(auth_logout), methods=["POST"]),
         Route("/prove", guarded(operator(prove)), methods=["POST"]),
         Route("/healthz", healthz, methods=["GET"]),
         Route("/readyz", readyz, methods=["GET"]),
@@ -454,7 +568,7 @@ def build_api(
         Route("/audit/leaves", audit_leaves, methods=["GET"]),
         Route("/audit/proof/inclusion", audit_inclusion, methods=["GET"]),
         Route("/audit/proof/consistency", audit_consistency, methods=["GET"]),
-        Route("/redteam/submit", guarded(redteam_submit), methods=["POST"]),
+        Route("/redteam/submit", guarded(operator(redteam_submit)), methods=["POST"]),
         Route("/redteam/kill", guarded(operator(redteam_kill)), methods=["POST"]),
         Route("/redteam/fallback", guarded(operator(redteam_fallback)), methods=["POST"]),
         Route("/redteam/stats", redteam_stats, methods=["GET"]),
@@ -476,7 +590,7 @@ def build_api(
             CORSMiddleware,
             allow_origins=origins,
             allow_methods=["GET", "POST"],
-            allow_headers=["Content-Type", "Authorization"],
+            allow_headers=["Content-Type", "Authorization", "X-CSRF-Token"],
         )
     ]
     return Starlette(routes=routes, middleware=middleware)

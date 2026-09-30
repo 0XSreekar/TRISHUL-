@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "TRISHUL Phase 1 foundation: contracts, provenance, policy compiler and evaluator"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "argon2-cffi>=23.1",
     "cryptography>=43",
     "fastmcp>=4.0.10,<5",
     "numpy>=2",

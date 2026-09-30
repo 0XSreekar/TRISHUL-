@@ -17,6 +17,8 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
     # gateway->tool call token: b64url(claims) "." b64url(Ed25519 signature)
     ("tool_token", re.compile(_B + r"[A-Za-z0-9_-]{60,}\.[A-Za-z0-9_-]{80,}" + _E)),
+    ("password_hash", re.compile(r"\$argon2(?:id|i|d)\$[A-Za-z0-9$=+/,.-]{16,}")),
+    ("session", re.compile(r"(?i)\btrishul_session\s*=\s*[^\s;,\"']+")),
     ("email", re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")),
     ("aadhaar", re.compile(_B + r"\d{4}[ -]?\d{4}[ -]?\d{4}" + _E)),
     ("pan", re.compile(_B + r"[A-Z]{5}[0-9]{4}[A-Z]" + _E)),
