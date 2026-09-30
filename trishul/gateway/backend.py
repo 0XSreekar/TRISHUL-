@@ -204,9 +204,13 @@ class Backend(ShowcaseMixin):
                 if decision == "approve":
                     token = self.p.approvals.approve(aid, approver)
                     token_id: str | None = token.token_id
+                    kid = token.key_id
                 else:
                     self.p.approvals.reject(aid, approver)
                     token_id = None
+                    kid = self.p.approvals.key_id or self.p.approvals.keys.active_kid(
+                        "approval-signer"
+                    )
             except ApprovalError as exc:
                 raise ValueError(str(exc)) from exc
             self.p.audit.append(
@@ -217,7 +221,7 @@ class Backend(ShowcaseMixin):
                     "decision": "approved" if decision == "approve" else "rejected",
                     "approver": approver,
                     "approver_id": approver,
-                    "kid": self.p.approvals.key_id,
+                    "kid": kid,
                     "tool": row["tool"],
                     "task_id": row["task_id"],
                     "call_digest": row["call_digest"],
