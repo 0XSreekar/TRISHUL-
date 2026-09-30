@@ -3,7 +3,7 @@ from datetime import timedelta
 import pytest
 
 from tests.conftest import NOW, TRUSTED, UNTRUSTED, make_call, make_ctx
-from trishul.contracts.authz import ApprovalToken, Consent
+from trishul.contracts.authz import ApprovalToken
 from trishul.contracts.calls import ToolCategory
 from trishul.contracts.decisions import Decision, Verdict
 from trishul.contracts.labels import Label, Level, Tag
@@ -42,8 +42,8 @@ def test_trusted_payment_is_allowed(policy: CompiledPolicy) -> None:
 def _email(body_label: Label) -> object:
     return make_call(
         "send_email",
-        {"to": "a@b.example", "body": "hello", "fields": ["email"]},
-        {"/to": TRUSTED, "/body": body_label, "/fields": TRUSTED},
+        {"to": "a@b.example", "subject": "hi", "body": "hello"},
+        {"/to": TRUSTED, "/subject": TRUSTED, "/body": body_label},
     )
 
 
@@ -54,29 +54,19 @@ def test_pii_to_communication_sink_denied_without_consent(policy: CompiledPolicy
     assert ids(v) == ["PURPOSELOCK.EGRESS.PII_WITHOUT_CONSENT"]
 
 
-def test_pii_allowed_with_covering_consent_and_not_otherwise(policy: CompiledPolicy) -> None:
+def test_pii_allowed_only_with_both_purposelock_facts(policy: CompiledPolicy) -> None:
     pii = Label.make(Level.TRUSTED_USER, tags=[Tag.PII_EMAIL])
-
-    def consent(**kw: object) -> Consent:
-        base: dict[str, object] = {
-            "consent_id": "c", "principal": "alice", "purpose": "customer_support",
-            "fields": frozenset({"email", "phone"}), "granted_at": NOW - timedelta(days=1),
-            "status": "active",
-        }  # fmt: skip
-        return Consent(**{**base, **kw})  # type: ignore[arg-type]
-
     call = _email(pii)
-    ok = make_ctx(consents=(consent(),))
-    assert evaluate(policy, call, ok).decision == Decision.ALLOW  # type: ignore[arg-type]
+    both = {"consent_active": True, "sink_allowed_for_purpose": True}
+    assert evaluate(policy, call, make_ctx(facts=both)).decision == Decision.ALLOW  # type: ignore[arg-type]
     for bad in (
-        consent(status="withdrawn"),
-        consent(purpose="marketing"),
-        consent(fields=frozenset({"phone"})),
-        consent(principal="mallory"),
-        consent(withdrawn_at=NOW - timedelta(hours=1)),
+        {"consent_active": False, "sink_allowed_for_purpose": True},
+        {"consent_active": True, "sink_allowed_for_purpose": False},
+        {"consent_active": True, "sink_allowed_for_purpose": None},
+        {"consent_active": None},
+        {},
     ):
-        v = evaluate(policy, call, make_ctx(consents=(bad,)))  # type: ignore[arg-type]
-        assert v.decision == Decision.DENY, bad
+        assert evaluate(policy, call, make_ctx(facts=bad)).decision == Decision.DENY, bad  # type: ignore[arg-type]
 
 
 def test_non_pii_email_allowed(policy: CompiledPolicy) -> None:
