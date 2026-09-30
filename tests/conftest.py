@@ -45,8 +45,16 @@ def make_call(
     )
 
 
+# the gateway supplies these for every non-voice tool; without them the rules fail closed
+APPROVAL_FACTS: dict[str, bool | None] = {
+    "approval_valid": False,
+    "approval_binding_mismatch": False,
+}
+
+
 def make_ctx(**kw: object) -> EvalContext:
-    return EvalContext(now=NOW, **kw)  # type: ignore[arg-type]
+    facts = {**APPROVAL_FACTS, **(kw.pop("facts", None) or {})}  # type: ignore[call-overload]
+    return EvalContext(now=NOW, facts=facts, **kw)  # type: ignore[arg-type]
 
 
 __all__ = ["NOW", "TRUSTED", "UNTRUSTED", "Tag", "make_call", "make_ctx"]

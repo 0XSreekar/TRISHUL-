@@ -10,7 +10,7 @@ from trishul.contracts.labels import Label, Level, Tag
 from trishul.policy import evaluator
 from trishul.policy.ast import CompiledPolicy
 from trishul.policy.compiler import compile_sources
-from trishul.policy.evaluator import evaluate, evaluate_raw
+from trishul.policy.evaluator import EvalContext, evaluate, evaluate_raw
 
 GOOD_MANDATE_FACTS: dict[str, bool | None] = {
     "mandate_sig_valid": True,
@@ -103,27 +103,28 @@ def test_high_risk_without_approval_steps_up_then_allows_with_bound_approval(
     call = make_call("close_account", {"account_id": "A1"})
     v = evaluate(policy, call, make_ctx())
     assert v.decision == Decision.STEP_UP and ids(v) == ["CORE.APPROVAL.CLOSE_ACCOUNT"]
-    assert evaluate(policy, call, make_ctx(approvals=(_approval(call),))).decision == Decision.ALLOW
+    approved = make_ctx(facts={"approval_valid": True})  # gateway: exact-call approval verified
+    assert evaluate(policy, call, approved).decision == Decision.ALLOW
 
 
-def test_approval_must_be_bound_scoped_and_unexpired(policy: CompiledPolicy) -> None:
+def test_approval_binding_mismatch_denies_every_non_voice_tool(policy: CompiledPolicy) -> None:
     call = make_call("close_account", {"account_id": "A1"})
-    other = make_call("close_account", {"account_id": "A2"})
-    bad = [
-        _approval(other),
-        _approval(call, scope="other"),
-        _approval(call, expires_at=NOW, issued_at=NOW - timedelta(minutes=1)),
-        _approval(call, issued_at=NOW + timedelta(minutes=1), expires_at=NOW + timedelta(hours=1)),
-    ]
-    for token in bad:
-        assert evaluate(policy, call, make_ctx(approvals=(token,))).decision == Decision.STEP_UP
+    ctx = make_ctx(facts={"approval_binding_mismatch": True})
+    v = evaluate(policy, call, ctx)
+    assert v.decision == Decision.DENY and "PAYSHIELD.APPROVAL.BINDING_MISMATCH" in ids(v)
+    # missing approval facts fail closed
+    bare = EvalContext(now=NOW)
+    assert evaluate(policy, call, bare).decision == Decision.DENY
 
 
 def test_refund_cap(policy: CompiledPolicy) -> None:
     small = make_call("issue_refund", {"order_id": "o", "amount_paise": 500000})
     big = make_call("issue_refund", {"order_id": "o", "amount_paise": 500001})
-    assert evaluate(policy, small, make_ctx()).decision == Decision.ALLOW
-    assert evaluate(policy, big, make_ctx()).decision == Decision.STEP_UP
+    good = make_ctx(facts=GOOD_MANDATE_FACTS)
+    assert evaluate(policy, small, good).decision == Decision.ALLOW
+    assert evaluate(policy, big, good).decision == Decision.STEP_UP
+    # PAYMENT tools are mandate-gated too: no mandate facts (e.g. no payee) => DENY
+    assert evaluate(policy, small, make_ctx()).decision == Decision.DENY
 
 
 def test_trusted_operation_allows_and_untrusted_steps_up(policy: CompiledPolicy) -> None:

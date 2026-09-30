@@ -283,7 +283,9 @@ def _start(args: argparse.Namespace) -> int:
     async def serve() -> None:
         gw.backend.loop = asyncio.get_running_loop()
         server = uvicorn.Server(
-            uvicorn.Config(gw.api(), host="127.0.0.1", port=args.port, log_level="warning")
+            uvicorn.Config(
+                gw.api(port=args.port), host="127.0.0.1", port=args.port, log_level="warning"
+            )
         )
         mode = "in-process" if args.in_process else "stdio subprocesses"
         print(

@@ -1,7 +1,7 @@
 import pytest
 from starlette.testclient import TestClient
 
-from trishul.telemetry.api import build_api
+from trishul.telemetry.api import DEFAULT_ORIGINS, build_api
 from trishul.telemetry.events import EventBus
 from trishul.telemetry.otel import setup_tracing, stage_span
 
@@ -53,13 +53,28 @@ def env():
 def test_rest_routes(env):
     c, _, _, be, _ = env
     assert c.get("/consent").json() == {"consent": [{"id": "k1", "status": "active"}]}
-    assert c.post("/consent/k1/withdraw").json()["status"] == "withdrawn"
-    assert c.post("/consent/missing/withdraw").status_code == 404
-    assert c.post("/consent/bad id!/withdraw").status_code == 400
+    assert (
+        c.post("/consent/k1/withdraw", headers={"Content-Type": "application/json"}).json()[
+            "status"
+        ]
+        == "withdrawn"
+    )
+    assert (
+        c.post(
+            "/consent/missing/withdraw", headers={"Content-Type": "application/json"}
+        ).status_code
+        == 404
+    )
+    assert (
+        c.post(
+            "/consent/bad id!/withdraw", headers={"Content-Type": "application/json"}
+        ).status_code
+        == 400
+    )
     assert c.get("/approvals").json() == {"approvals": [{"id": "a1"}]}
     assert c.post("/approvals/a1", json={"decision": "approve"}).json()["decision"] == "approve"
     assert be.calls == [("a1", "approve", "console")]
-    assert c.post("/prove").json() == {"proved": True}
+    assert c.post("/prove", headers={"Content-Type": "application/json"}).json() == {"proved": True}
     assert c.post("/tasks", json={"goal": "x"}).json() == {"task": {"goal": "x"}}
     assert c.post("/voice/nonce", json={"session": "s1"}).json() == {"nonce": "n-s1"}
     assert c.get("/audit/verify").json() == {"ok": True}
@@ -69,9 +84,17 @@ def test_rest_400s_and_no_leak(env):
     c = env[0]
     assert c.post("/approvals/a1", json={"decision": "maybe"}).status_code == 400
     assert c.post("/approvals/a1", json={"decision": "approve", "approver": "x"}).status_code == 200
-    assert c.post("/approvals/a1", content=b"not json").status_code == 400
+    assert (
+        c.post(
+            "/approvals/a1", content=b"not json", headers={"Content-Type": "application/json"}
+        ).status_code
+        == 400
+    )
     assert c.post("/approvals/a1", json=["x"]).status_code == 400
-    assert c.post("/tasks", content=b"[1]").status_code == 400
+    assert (
+        c.post("/tasks", content=b"[1]", headers={"Content-Type": "application/json"}).status_code
+        == 400
+    )
     assert c.post("/voice/nonce", json={}).status_code == 400
     assert c.post("/voice/nonce", json={"session": 5}).status_code == 400
     r = c.post("/approvals/boom", json={"decision": "reject"})
@@ -128,3 +151,73 @@ def test_ws_rejects_bad_origin(env):
         c.websocket_connect("/events", headers={"origin": "http://evil.example"}),
     ):
         pass
+
+
+# --- CSRF: origin allowlist + JSON content-type on every POST ---------------------------
+
+
+@pytest.fixture
+def csrf():
+    _, metrics = setup_tracing()
+    be = FakeBackend()
+    with TestClient(
+        build_api(
+            EventBus(), metrics, be, allowed_origins=[*DEFAULT_ORIGINS, "http://localhost:8787"]
+        )
+    ) as c:
+        yield c, be
+
+
+def test_cross_origin_text_plain_approve_rejected(csrf) -> None:
+    c, be = csrf
+    r = c.post(
+        "/approvals/a1",
+        content=b'{"decision":"approve"}',
+        headers={"Origin": "https://evil.example", "Content-Type": "text/plain"},
+    )
+    assert r.status_code == 403 and be.calls == []  # approval still pending
+
+
+def test_cross_origin_json_rejected(csrf) -> None:
+    c, be = csrf
+    r = c.post(
+        "/approvals/a1",
+        json={"decision": "approve"},
+        headers={"Origin": "https://evil.example"},
+    )
+    assert r.status_code == 403 and be.calls == []
+
+
+def test_null_origin_rejected(csrf) -> None:
+    c, be = csrf
+    r = c.post("/approvals/a1", json={"decision": "approve"}, headers={"Origin": "null"})
+    assert r.status_code == 403 and be.calls == []
+
+
+def test_text_plain_without_origin_is_415(csrf) -> None:
+    c, be = csrf
+    for path in ("/approvals/a1", "/tasks", "/prove", "/voice/nonce", "/consent/k1/withdraw"):
+        r = c.post(path, content=b'{"decision":"approve"}', headers={"Content-Type": "text/plain"})
+        assert r.status_code == 415, path
+    assert c.post("/approvals/a1", content=b"{}").status_code == 415
+    assert be.calls == []
+
+
+def test_same_origin_and_no_origin_json_accepted(csrf) -> None:
+    c, be = csrf
+    ok = c.post(
+        "/approvals/a1",
+        json={"decision": "approve"},
+        headers={"Origin": "http://localhost:8787"},
+    )
+    assert ok.status_code == 200
+    ok = c.post("/approvals/a2", json={"decision": "reject"})
+    assert ok.status_code == 200
+    assert [x[0] for x in be.calls] == ["a1", "a2"]
+
+
+def test_console_served_read_only(csrf) -> None:
+    c, _ = csrf
+    assert c.get("/console/Trishul-Console.dc.html").status_code == 200
+    assert c.post("/console/Trishul-Console.dc.html", json={}).status_code in (403, 405)
+    assert c.get("/console/../CLAUDE.md").status_code == 404

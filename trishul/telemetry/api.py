@@ -6,7 +6,8 @@ import json
 import logging
 import re
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import Any, Literal, Protocol
 
 from starlette.applications import Starlette
@@ -15,14 +16,16 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-from starlette.routing import Route, WebSocketRoute
+from starlette.routing import Mount, Route, WebSocketRoute
+from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from trishul.telemetry.events import EventBus
 from trishul.telemetry.otel import StageMetrics
 
 log = logging.getLogger("trishul.telemetry.api")
-DEFAULT_ORIGINS = ["http://localhost", "http://127.0.0.1", "null"]
+DEFAULT_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+CONSOLE_DIR = Path(__file__).resolve().parents[2] / "Landing page and dashboard implementation"
 _ID = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 _MAX_BODY = 256 * 1024
 
@@ -56,16 +59,8 @@ async def _json_body(request: Request) -> dict[str, Any] | None:
 
 
 def _origin_ok(origin: str | None, allowed: list[str]) -> bool:
-    if origin is None:
-        return True
-    if origin in allowed:
-        return True
-    # allow any port on an allowed localhost origin
-    return any(
-        origin.startswith(a + ":") and origin[len(a) + 1 :].isdigit()
-        for a in allowed
-        if a.startswith("http")
-    )
+    """Exact-match allowlist (scheme+host+port). A missing Origin is a non-browser client."""
+    return origin is None or origin in allowed
 
 
 def build_api(
@@ -77,6 +72,22 @@ def build_api(
     heartbeat_s: float = 15.0,
 ) -> Starlette:
     origins = list(allowed_origins) if allowed_origins is not None else list(DEFAULT_ORIGINS)
+
+    def guarded(
+        handler: Callable[[Request], Awaitable[Response]],
+    ) -> Callable[[Request], Awaitable[Response]]:
+        """CSRF defence for state-changing routes: a present Origin must be allowlisted and the
+        body must be declared JSON (forces a CORS preflight from browsers). No Origin = CLI."""
+
+        async def wrapper(request: Request) -> Response:
+            if not _origin_ok(request.headers.get("origin"), origins):
+                return _err(403, "forbidden_origin")
+            ctype = request.headers.get("content-type", "").split(";")[0].strip().lower()
+            if ctype != "application/json":
+                return _err(415, "unsupported_media_type")
+            return await handler(request)
+
+        return wrapper
 
     async def call(fn: Callable[..., Any], *args: Any) -> Response:
         try:
@@ -202,18 +213,20 @@ def build_api(
             with contextlib.suppress(BaseException):
                 await rtask
 
-    routes = [
+    routes: list[Any] = [
         WebSocketRoute("/events", events_ws),
         Route("/consent", consent, methods=["GET"]),
-        Route("/consent/{id}/withdraw", withdraw, methods=["POST"]),
+        Route("/consent/{id}/withdraw", guarded(withdraw), methods=["POST"]),
         Route("/approvals", approvals, methods=["GET"]),
-        Route("/approvals/{id}", resolve, methods=["POST"]),
-        Route("/prove", prove, methods=["POST"]),
-        Route("/tasks", tasks, methods=["POST"]),
-        Route("/voice/nonce", voice_nonce, methods=["POST"]),
+        Route("/approvals/{id}", guarded(resolve), methods=["POST"]),
+        Route("/prove", guarded(prove), methods=["POST"]),
+        Route("/tasks", guarded(tasks), methods=["POST"]),
+        Route("/voice/nonce", guarded(voice_nonce), methods=["POST"]),
         Route("/audit/verify", audit_verify, methods=["GET"]),
         Route("/metrics", metrics_route, methods=["GET"]),
     ]
+    if CONSOLE_DIR.is_dir():  # read-only static console, same-origin with the API
+        routes.append(Mount("/console", StaticFiles(directory=CONSOLE_DIR), name="console"))
     middleware = [
         Middleware(
             CORSMiddleware,

@@ -90,6 +90,14 @@ DOMAIN_OF_TOOL: dict[str, Domain] = {
     "send_email": "purposelock",
     "voice_command": "voicetrust",
 }
+# (payee arg, amount arg) per PAYMENT-category tool; None = tool has no such argument, so the
+# corresponding mandate facts stay UNKNOWN and the mandate rules DENY (fail-closed). Any other
+# PAYMENT tool defaults to pay_upi's argument names.
+PAYMENT_ARGS: dict[str, tuple[str | None, str | None]] = {
+    "pay_upi": ("payee_vpa", "amount_paise"),
+    "issue_refund": (None, "amount_paise"),
+}
+DEFAULT_PAYMENT_ARGS: tuple[str | None, str | None] = ("payee_vpa", "amount_paise")
 AGENT_OF_DOMAIN = {
     "payshield": "finbot",
     "purposelock": "supportbot",
@@ -359,8 +367,6 @@ class Pipeline:
     async def run(
         self, req: CallRequest, execute: Executor, native: Callable[[State], ToolResult] | None
     ) -> ToolResult:
-        if split_name(req.name)[1] == "voice_command":  # no side effects; ASR may be slow
-            return await self._run(req, execute, native)
         async with self._lock:
             return await self._run(req, execute, native)
 
@@ -545,9 +551,20 @@ class Pipeline:
         call = st.call
         task = st.task
         assert call is not None and task is not None  # noqa: S101
-        if st.tool == "pay_upi":
+        spec = self.policy.tools.get(st.tool)
+        if spec is not None and spec.category == ToolCategory.PAYMENT:
+            payee_arg, amount_arg = PAYMENT_ARGS.get(st.tool, DEFAULT_PAYMENT_ARGS)
             st.facts = dict(
-                payshield_facts(call, task.category, self.conn, self.keys, self.approvals, st.now)
+                payshield_facts(
+                    call,
+                    task.category,
+                    self.conn,
+                    self.keys,
+                    self.approvals,
+                    st.now,
+                    payee_arg=payee_arg,
+                    amount_arg=amount_arg,
+                )
             )
             row = self.conn.execute(
                 "SELECT mandate_id FROM mandates WHERE principal_id=? ORDER BY rowid DESC LIMIT 1",
@@ -560,7 +577,10 @@ class Pipeline:
             await self._voice_guard(st, call)
         if st.tool != "voice_command":
             # a valid, exact-call approval token (single use); voice can never carry one
-            st.token = self.approvals.check(call, st.now).token
+            check = self.approvals.check(call, st.now)
+            st.token = check.token
+            st.facts["approval_valid"] = check.valid
+            st.facts["approval_binding_mismatch"] = check.binding_mismatch
 
     async def _voice_guard(self, st: State, call: ToolCall) -> None:
         clip_id = call.args.get("clip_id")
@@ -569,14 +589,20 @@ class Pipeline:
             wav = base64.b64decode(st.voice_b64 or "", validate=True)
         except (binascii.Error, ValueError):
             wav = b""
-        assessment = await asyncio.to_thread(
-            self.voice.assess,
-            self.session,
-            clip_id if isinstance(clip_id, str) else "unknown",
-            wav,
-            nonce_id if isinstance(nonce_id, str) else "",
-            "low",
-        )
+        # every stage holds the gateway lock except the (possibly slow) ASR/anti-spoof thread,
+        # which touches no shared gateway state
+        self._lock.release()
+        try:
+            assessment = await asyncio.to_thread(
+                self.voice.assess,
+                self.session,
+                clip_id if isinstance(clip_id, str) else "unknown",
+                wav,
+                nonce_id if isinstance(nonce_id, str) else "",
+                "low",
+            )
+        finally:
+            await self._lock.acquire()
         st.voice = assessment
         score = assessment.spoof.score if assessment.spoof.ran else None
         st.facts = dict(

@@ -22,7 +22,7 @@ rules:
     explain: "Mandate signature missing or invalid"
     when:
       all:
-        - tool: pay_upi
+        - tool_category: PAYMENT
         - not: {fact: mandate_sig_valid}
   - id: PAYSHIELD.MANDATE.TIME
     stage: MANDATE
@@ -30,7 +30,7 @@ rules:
     explain: "Mandate is expired or not yet valid"
     when:
       all:
-        - tool: pay_upi
+        - tool_category: PAYMENT
         - not: {fact: mandate_time_valid}
   - id: PAYSHIELD.MANDATE.REPLAY
     stage: MANDATE
@@ -38,7 +38,7 @@ rules:
     explain: "Mandate nonce was already used by a different mandate (replay)"
     when:
       all:
-        - tool: pay_upi
+        - tool_category: PAYMENT
         - not: {fact: mandate_nonce_fresh}
   - id: PAYSHIELD.MANDATE.PAYEE
     stage: MANDATE
@@ -46,7 +46,7 @@ rules:
     explain: "Payee is not covered by the mandate"
     when:
       all:
-        - tool: pay_upi
+        - tool_category: PAYMENT
         - not: {fact: payee_in_mandate}
   - id: PAYSHIELD.MANDATE.CATEGORY
     stage: MANDATE
@@ -54,7 +54,7 @@ rules:
     explain: "Task category is not covered by the mandate"
     when:
       all:
-        - tool: pay_upi
+        - tool_category: PAYMENT
         - not: {fact: category_matches}
   - id: PAYSHIELD.CAP.PAYEE
     stage: CAP
@@ -62,7 +62,7 @@ rules:
     explain: "Amount exceeds the payee cap; human approval required"
     when:
       all:
-        - tool: pay_upi
+        - tool_category: PAYMENT
         - not: {fact: amount_within_payee_cap}
         - not: {fact: approval_valid}
   - id: PAYSHIELD.CAP.PER_TXN
@@ -71,7 +71,7 @@ rules:
     explain: "Amount exceeds the per-transaction cap; human approval required"
     when:
       all:
-        - tool: pay_upi
+        - tool_category: PAYMENT
         - not: {fact: amount_within_per_txn_cap}
         - not: {fact: approval_valid}
   - id: PAYSHIELD.CAP.DAILY
@@ -80,7 +80,7 @@ rules:
     explain: "Amount exceeds the daily cap; human approval required"
     when:
       all:
-        - tool: pay_upi
+        - tool_category: PAYMENT
         - not: {fact: amount_within_daily_cap}
         - not: {fact: approval_valid}
   - id: PAYSHIELD.APPROVAL.BINDING_MISMATCH
@@ -89,5 +89,13 @@ rules:
     explain: "An approval exists but is bound to different arguments"
     when:
       all:
-        - tool: pay_upi
+        - not: {tool_category: VOICE}
         - fact: approval_binding_mismatch
+  - id: PAYSHIELD.TAINT.UNTRUSTED_NEW_PAYEE
+    stage: LABEL
+    then: DENY
+    explain: "New payee VPA derived from untrusted content"
+    when:
+      all:
+        - tool: add_payee
+        - label_at_least: {arg: /vpa, level: UNTRUSTED}

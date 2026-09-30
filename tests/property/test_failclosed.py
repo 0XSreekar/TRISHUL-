@@ -83,7 +83,8 @@ def test_fault_in_any_stage_never_allows_or_executes(
     assert body["decision"] in {"DENY", "STEP_UP"}
     assert rows == 0 and balance == 5_000_000, "side effect ran despite a stage fault"
     first = next(s for s in ORDER if s in stages)
-    assert body["rules"] == [f"CORE.FAILSAFE.{first.upper()}"]
+    # (policy rules that already fired before a later-stage fault, e.g. CAP.PER_TXN, may co-occur)
+    assert f"CORE.FAILSAFE.{first.upper()}" in body["rules"]
     assert body["decision"] == FAILSAFE_DECISION[first].name
 
 

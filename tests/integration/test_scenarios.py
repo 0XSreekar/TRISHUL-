@@ -156,10 +156,12 @@ async def test_5_crm_pii_to_disallowed_email_sink_denied(env: Env) -> None:
     assert body["decision"] == "DENY" and "PURPOSELOCK.EGRESS.PII_WITHOUT_CONSENT" in body["rules"]
     assert env.conn.execute("SELECT COUNT(*) FROM outbox").fetchone()[0] == 0
     # the data subject's own address is a permitted sink for order_support
-    ok = await env.call(
-        "mail_send_email",
-        {"to": record["email"], "subject": "Order", "body": "Your order is completed"},
-    )
+    # (planner-authored subject/body is untrusted, so a human approval is required first)
+    reply = {"to": record["email"], "subject": "Order", "body": "Your order is completed"}
+    pending = await env.denied("mail_send_email", reply)
+    assert pending["decision"] == "STEP_UP"
+    env.gw.backend.resolve_approval(pending["approval_id"], "approve", "sreekar")
+    ok = await env.call("mail_send_email", reply)
     assert ok["status"] == "queued"
     dpdp = env.gw.backend.dpdp()
     assert dpdp["entries"] and all(e["event"]["domain"] == "purposelock" for e in dpdp["entries"])
@@ -348,3 +350,58 @@ async def test_error_body_has_no_raw_untrusted_content(env: Env) -> None:
     body = await env.denied("upi_pay_upi", {"payee_vpa": "refund.desk@ybl", "amount_paise": 1})
     assert "refund.desk" not in json.dumps(body)
     assert parse_error  # helper re-exported for other modules
+
+
+# universal approval binding (non-payment tool) ---------------------------------------------
+async def test_send_email_untrusted_body_step_up_approve_exact_retry_only(env: Env) -> None:
+    env.gw.bind_task(purpose="order_support", category="COMMUNICATION", text="Help customer C-1042")
+    record = await env.call("crm_read_customer_data", {"customer_id": "C-1042", "fields": ["name"]})
+    args = {"to": record["email"], "subject": "Order", "body": "Your order is completed"}
+    body = await env.denied("mail_send_email", args)
+    assert body["decision"] == "STEP_UP"
+    assert "PURPOSELOCK.TAINT.UNTRUSTED_EMAIL_CONTENT" in body["rules"]
+    env.gw.backend.resolve_approval(body["approval_id"], "approve", "sreekar")
+    changed = await env.denied("mail_send_email", {**args, "body": "Different text entirely"})
+    assert changed["decision"] == "DENY"
+    assert "PAYSHIELD.APPROVAL.BINDING_MISMATCH" in changed["rules"]
+    assert env.conn.execute("SELECT COUNT(*) FROM outbox").fetchone()[0] == 0
+    ok = await env.call("mail_send_email", args)
+    assert ok["status"] == "queued"
+    replay = await env.denied("mail_send_email", args)  # single use
+    assert replay["decision"] == "STEP_UP"
+
+
+async def test_untrusted_recipient_denied_even_with_pending_approval(env: Env) -> None:
+    env.gw.bind_task(purpose="order_support", category="COMMUNICATION", text="Help customer")
+    body = await env.denied(
+        "mail_send_email", {"to": "x@evil.example", "subject": "s", "body": "b"}
+    )
+    assert body["decision"] == "DENY"
+    assert "PURPOSELOCK.TAINT.UNTRUSTED_RECIPIENT" in body["rules"]
+
+
+# voice holds the gateway lock for every stage except the offloaded assessment ---------------
+async def test_voice_command_holds_lock_except_during_assess(tmp_path: Path) -> None:
+    env, asr, client = await voice_env(tmp_path)
+    lock = env.gw.pipeline._lock
+    seen: dict[str, bool] = {}
+    orig_transcribe = asr.transcribe
+
+    def spy_transcribe(samples: Any) -> Any:
+        seen["during_assess"] = lock.locked()
+        return orig_transcribe(samples)
+
+    asr.transcribe = spy_transcribe  # type: ignore[method-assign]
+    orig_finish = env.gw.pipeline._finish
+
+    async def spy_finish(*a: Any, **kw: Any) -> Any:
+        seen["at_finish"] = lock.locked()
+        return await orig_finish(*a, **kw)
+
+    env.gw.pipeline._finish = spy_finish  # type: ignore[method-assign]
+    try:
+        await env.call("voice_command", voice_args(env, asr))
+        assert seen == {"during_assess": False, "at_finish": True}
+        assert not lock.locked()
+    finally:
+        await client.__aexit__(None, None, None)

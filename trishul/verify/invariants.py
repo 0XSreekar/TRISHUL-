@@ -51,7 +51,10 @@ def _i1(policy: ast.CompiledPolicy, m: ToolModel) -> z3.BoolRef | None:
         present = m.present[path]
         term = m.labels[path] == 2
         terms.append(term if present is None else z3.And(term, present == 1))
-    return z3.And(z3.Or(*terms), m.final == int(Decision.ALLOW))
+    # An ALLOW that rests on a valid exact-call human approval (STEP_UP rules waive on
+    # ``approval_valid``) is a human-authorised flow, not an untrusted one; DENY rules never
+    # look at approvals, so those sinks stay unreachable.
+    return z3.And(z3.Or(*terms), m.final == int(Decision.ALLOW), m.fact("approval_valid") != 2)
 
 
 def _i2(_: ast.CompiledPolicy, m: ToolModel) -> z3.BoolRef:

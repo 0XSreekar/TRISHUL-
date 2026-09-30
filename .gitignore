@@ -49,3 +49,6 @@ __pycache__/
 .ruff_cache/
 .hypothesis/
 *.egg-info/
+*.db
+*.db-wal
+*.db-shm

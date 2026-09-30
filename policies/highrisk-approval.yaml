@@ -18,8 +18,7 @@ rules:
     when:
       all:
         - tool: close_account
-        - not:
-            approval_present: close_account
+        - not: {fact: approval_valid}
   - id: CORE.CAP.LARGE_REFUND
     stage: CAP
     then: STEP_UP
@@ -28,5 +27,4 @@ rules:
       all:
         - tool: issue_refund
         - amount_exceeds: {arg: /amount_paise, cap_paise: 500000}
-        - not:
-            approval_present: large_refund
+        - not: {fact: approval_valid}

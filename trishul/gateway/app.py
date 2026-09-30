@@ -39,7 +39,7 @@ from trishul.servers import (
 from trishul.store.db import DEMO_NOW, DEMO_PRINCIPAL, iso
 from trishul.store.ids import IdGen
 from trishul.telemetry import EventBus, StageMetrics, setup_tracing
-from trishul.telemetry.api import build_api
+from trishul.telemetry.api import DEFAULT_ORIGINS, build_api
 
 POLICY_DIR = Path(__file__).resolve().parents[2] / "policies"
 
@@ -57,8 +57,11 @@ class Gateway:
     metrics: StageMetrics
     policy: CompiledPolicy
 
-    def api(self, allowed_origins: list[str] | None = None) -> Starlette:
-        return build_api(self.bus, self.metrics, self.backend, allowed_origins=allowed_origins)
+    def api(self, allowed_origins: list[str] | None = None, port: int | None = None) -> Starlette:
+        origins = list(DEFAULT_ORIGINS if allowed_origins is None else allowed_origins)
+        if port is not None:  # the gateway's own origin (console served at /console)
+            origins += [f"http://localhost:{port}", f"http://127.0.0.1:{port}"]
+        return build_api(self.bus, self.metrics, self.backend, allowed_origins=origins)
 
     def bind_task(
         self,

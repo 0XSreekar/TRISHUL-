@@ -53,3 +53,30 @@ rules:
         - any:
             - not: {fact: consent_active}
             - not: {fact: sink_allowed_for_purpose}
+  - id: PURPOSELOCK.TAINT.UNTRUSTED_RECIPIENT
+    stage: LABEL
+    then: DENY
+    explain: "Email recipient derived from untrusted content"
+    when:
+      all:
+        - tool: send_email
+        - label_at_least: {arg: /to, level: UNTRUSTED}
+  - id: PURPOSELOCK.TAINT.UNTRUSTED_EXPORT_DESTINATION
+    stage: LABEL
+    then: DENY
+    explain: "Export destination derived from untrusted content"
+    when:
+      all:
+        - tool: export_records
+        - label_at_least: {arg: /destination, level: UNTRUSTED}
+  - id: PURPOSELOCK.TAINT.UNTRUSTED_EMAIL_CONTENT
+    stage: LABEL
+    then: STEP_UP
+    explain: "Email subject or body derived from untrusted content; human approval required"
+    when:
+      all:
+        - tool: send_email
+        - any:
+            - label_at_least: {arg: /body, level: UNTRUSTED}
+            - label_at_least: {arg: /subject, level: UNTRUSTED}
+        - not: {fact: approval_valid}

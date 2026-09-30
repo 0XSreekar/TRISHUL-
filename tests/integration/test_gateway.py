@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from pathlib import Path
 from typing import Any
 
 from tests.integration.test_gateway_harness import Env
@@ -195,3 +196,18 @@ async def test_concurrent_payments_cannot_jointly_exceed_daily_cap(env: Env) -> 
     )
     assert sum(1 for r in results if not r.is_error) == 10  # daily cap 10,000 / 1,000 each
     assert env.ledger_rows() == 10 and env.balance() == 4_000_000
+
+
+def test_gateway_api_allows_own_origin_only(tmp_path: Path) -> None:
+    from starlette.testclient import TestClient
+
+    from tests.integration.test_gateway_harness import make_env_sync
+
+    gw = make_env_sync(tmp_path)[0]
+    with TestClient(gw.api(port=8787)) as c:
+        hdr = {"Content-Type": "application/json"}
+        own = c.post("/prove", headers={**hdr, "Origin": "http://localhost:8787"})
+        assert own.status_code == 200
+        foreign = c.post("/prove", headers={**hdr, "Origin": "http://localhost:9999"})
+        assert foreign.status_code == 403
+        assert c.post("/prove", headers={**hdr, "Origin": "null"}).status_code == 403

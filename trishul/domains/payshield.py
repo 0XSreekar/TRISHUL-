@@ -160,9 +160,14 @@ def payshield_facts(
     keys: KeyRing,
     approvals: ApprovalService,
     now: datetime,
+    *,
+    payee_arg: str | None = "payee_vpa",
+    amount_arg: str | None = "amount_paise",
 ) -> dict[str, bool | None]:
-    """Compute the section 4 facts for a payment call. Never raises on malformed data: anything
-    undeterminable is ``None`` (UNKNOWN => the policy rule fires)."""
+    """Compute the section 4 facts for a payment call. ``payee_arg``/``amount_arg`` name the
+    tool's argument paths (``None`` = the tool has none, so the fact stays UNKNOWN => DENY).
+    Never raises on malformed data: anything undeterminable is ``None`` (UNKNOWN => the policy
+    rule fires)."""
     facts: dict[str, bool | None] = dict.fromkeys(FACT_NAMES)
     check = approvals.check(call, now)
     facts["approval_valid"] = check.valid
@@ -194,8 +199,8 @@ def payshield_facts(
         call.declared_category is None or call.declared_category == ToolCategory.PAYMENT
     )
 
-    vpa = call.args.get("payee_vpa")
-    amount = _int_arg(call.args.get("amount_paise"))
+    vpa = None if payee_arg is None else call.args.get(payee_arg)
+    amount = None if amount_arg is None else _int_arg(call.args.get(amount_arg))
     payee = (
         next((p for p in mandate.payees if p.vpa == vpa), None) if isinstance(vpa, str) else None
     )

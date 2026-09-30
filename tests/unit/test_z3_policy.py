@@ -21,24 +21,23 @@ from trishul.verify.z3_policy import path_var_name
 
 UNSAFE_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "unsafe_policy"
 
-# FINDINGS (real policies): no rule constrains these, so the solver finds an ALLOW.
-# Recorded, not fixed here (policies are out of T6's scope). Update deliberately.
-KNOWN_SAT = {
-    ("I1", "add_payee"),  # untrusted vpa can reach add_payee (no taint rule)
-    ("I1", "export_records"),  # untrusted destination allowed when consent + sink allowed
-    ("I1", "send_email"),  # untrusted recipient allowed when no PII tag
-    ("I4", "issue_refund"),  # PAYMENT tool without any mandate rule
-}
-
 
 def test_real_policies_proofs(policy: ast.CompiledPolicy) -> None:
     out = prove_all(policy)
     assert out["solver"] == "z3" and out["property"]
     sat = {(r["id"], r["tool"]) for r in out["per_invariant"] if r["result"] == "SAT"}
-    assert sat == KNOWN_SAT
-    assert out["result"] == "SAT"
+    assert sat == set()
+    assert out["result"] == "UNSAT"
     unsat = {(r["id"], r["tool"]) for r in out["per_invariant"] if r["result"] == "UNSAT"}
-    assert {("I1", "pay_upi"), ("I4", "pay_upi"), ("I5", "read_customer_data")} <= unsat
+    assert {
+        ("I1", "pay_upi"),
+        ("I1", "add_payee"),
+        ("I1", "export_records"),
+        ("I1", "send_email"),
+        ("I4", "pay_upi"),
+        ("I4", "issue_refund"),
+        ("I5", "read_customer_data"),
+    } <= unsat
     assert all(r["counterexample"] is None for r in out["per_invariant"] if r["result"] != "SAT")
     assert all(r["result"] == "UNSAT" for r in out["per_invariant"] if r["id"] == "I2")
 
@@ -51,9 +50,13 @@ def test_unsafe_fixture_gives_pay_upi_counterexample() -> None:
     assert out["result"] == "SAT"
 
 
-def test_timeout_is_unknown_never_unsat(policy: ast.CompiledPolicy) -> None:
-    out = prove_all(policy, timeout_ms=0)
-    assert out["result"] != "UNSAT"
+def test_timeout_is_unknown_never_unsat(
+    policy: ast.CompiledPolicy, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(z3.Solver, "check", lambda self, *a: z3.unknown)  # solver gave up
+    out = prove_all(policy)
+    assert out["result"] == "UNKNOWN"
+    assert all(r["result"] == "UNKNOWN" for r in out["per_invariant"])
 
 
 def test_unknown_node_kind_raises(policy: ast.CompiledPolicy) -> None:
