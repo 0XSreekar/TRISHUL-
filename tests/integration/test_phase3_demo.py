@@ -207,7 +207,8 @@ async def test_demo_reset_via_rest_restores_clean_state(env: Env) -> None:
         assert c.post("/demo/reset", json={"seed": 7}).status_code == 400  # seed is fixed
         out = c.post("/demo/reset", json={"seed": 42}).json()
     assert out["reset"] is True and out["mode"] == "on"
-    assert env.gw.pipeline.audit.size() == 0 and env.gw.pipeline.ml_enabled() is True
+    assert env.gw.pipeline.audit.size() == 1  # only the reset operator_action record
+    assert env.gw.pipeline.ml_enabled() is True
     assert any(e["type"] == "demo" and e["step"] == "reset" for e in env.events)
     # the reseeded ids restart deterministically
     env.gw.bind_task(purpose="payment_processing", category="READ", text="balance")

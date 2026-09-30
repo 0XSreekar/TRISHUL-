@@ -322,6 +322,25 @@ button{font-family:inherit}
 
         <sc-if value="{{ isApprovals }}" hint-placeholder-val="{{ false }}">
           <div data-trishul="approval-state" data-state="{{ apState }}" style="display:flex;flex-direction:column;gap:12px">
+            <sc-if value="{{ apLive }}" hint-placeholder-val="{{ false }}">
+              <div data-trishul="approver-login" style="display:flex;flex-direction:column;gap:8px">
+                <sc-if value="{{ apSignedOut }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:10px;letter-spacing:.18em;color:#8B98A1">APPROVER SIGN-IN</span>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <input ref="{{ apUserRef }}" type="text" autocomplete="username" placeholder="username" style="box-sizing:border-box;height:32px;padding:0 10px;border-radius:8px;border:1px solid rgba(202,217,226,.2);background:rgba(6,9,12,.5);color:#CAD9E2;font-family:'JetBrains Mono',monospace;font-size:12px">
+                    <input ref="{{ apPassRef }}" type="password" autocomplete="current-password" placeholder="password" style="box-sizing:border-box;height:32px;padding:0 10px;border-radius:8px;border:1px solid rgba(202,217,226,.2);background:rgba(6,9,12,.5);color:#CAD9E2;font-family:'JetBrains Mono',monospace;font-size:12px">
+                    <button onClick="{{ apSignIn }}" style="height:32px;padding:0 16px;border-radius:8px;border:1px solid #45829B;background:rgba(69,130,155,.25);color:#CAD9E2;font-size:11px;letter-spacing:.16em;cursor:pointer">SIGN IN</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ apSignedIn }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">
+                    <span style="color:#8B98A1">{{ apWho }}</span>
+                    <button onClick="{{ apSignOut }}" style="height:32px;padding:0 16px;border-radius:8px;border:1px solid #45829B;background:rgba(69,130,155,.25);color:#CAD9E2;font-size:11px;letter-spacing:.16em;cursor:pointer">SIGN OUT</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ apHasAuthErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#E5533D">{{ apAuthErr }}</span></sc-if>
+              </div>
+            </sc-if>
             <sc-if value="{{ apOn }}" hint-placeholder-val="{{ false }}"><span data-trishul="state" data-state="{{ apState }}" style="font-size:12.5px;line-height:1.5;color:{{ apCol }}">{{ apMsg }}</span></sc-if>
             <sc-for list="{{ approvals }}" as="ap" hint-placeholder-count="1">
               <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:12px;border:1px solid {{ ap.border }};background:rgba(33,57,71,.35)">
@@ -553,7 +572,8 @@ const DEF_API='http://localhost:8787', DEF_WS='ws://localhost:8787/events';
 const OP_HINT='Operator token required (open console via URL printed by `trishul start`)';
 let OP_TOKEN='';  /* in-memory only: read once from #op=..., stripped from the URL, never stored/logged/rendered */
 try{const m=/(?:^#|&)op=([^&]*)/.exec(location.hash||'');if(m){OP_TOKEN=decodeURIComponent(m[1]);history.replaceState(null,'',location.pathname+location.search);}}catch(e){}
-const OP_PATH=/^\/(mode|ml|prove|redteam\/(kill|fallback)|demo\/|approvals\/|consent\/)/;
+const OP_PATH=/^\/(mode|ml|prove|redteam\/(submit|kill|fallback)|demo\/|consent\/)/;
+const AP_PATH=/^\/approvals\//;  /* approver session cookie + X-CSRF-Token, never the operator token */
 const BENCH_URLS=['/bench/results.json','bench/results.json'];
 const MOMENTS=[
   {n:1,label:'Unguarded: TRISHUL OFF, the injected invoice pays the hidden payee'},
@@ -654,7 +674,7 @@ class DevReplaySource{
 class Component extends DCLogic {
   state={events:[],ml:true,audit:{ok:true,bad:null,known:false},resolved:{},panel:null,detail:null,now:0,scale:1,cam:0,mode:'live',conn:'idle',consent:[],logName:'',filter:0,
     rs:{},tmode:null,tdisabled:[],tns:'',proofs:{},proofBusy:null,proofErr:'',digests:[],rt:[],rtStats:null,rtMsg:'',rtErr:'',demoEv:{},demoRes:{},demoBusy:null,demoErr:'',
-    nonce:null,nonceErr:'',apErr:'',cErr:'',repErr:'',au:{from:null,ver:null,con:null,inc:null,err:''},bench:{s:'idle'},gap:0,modeErr:'',linStep:0};
+    nonce:null,nonceErr:'',apErr:'',me:null,csrf:'',authErr:'',cErr:'',repErr:'',au:{from:null,ver:null,con:null,inc:null,err:''},bench:{s:'idle'},gap:0,modeErr:'',linStep:0};
 
   componentDidMount(){
     this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -699,7 +719,8 @@ class Component extends DCLogic {
   async api(path,opts){
     const isPost=opts&&opts.method==='POST';
     if(isPost&&OP_PATH.test(path)&&!OP_TOKEN){const x=new Error(OP_HINT);x.status=401;throw x;}
-    if(isPost&&OP_TOKEN)opts={...opts,headers:{...(opts.headers||{}),Authorization:'Bearer '+OP_TOKEN}};
+    if(isPost&&OP_TOKEN&&!AP_PATH.test(path))opts={...opts,headers:{...(opts.headers||{}),Authorization:'Bearer '+OP_TOKEN}};
+    if(isPost&&AP_PATH.test(path)&&this.state.csrf)opts={...opts,headers:{...(opts.headers||{}),'X-CSRF-Token':this.state.csrf}};
     let r;try{r=await fetch(this.base()+path,opts);}catch(e){const x=new Error('gateway unreachable');x.status=0;throw x;}
     let j=null;try{j=await r.json();}catch(e){}
     if(!r.ok){const x=new Error((j&&j.error)||('http_'+r.status));x.status=r.status;throw x;}
@@ -896,15 +917,32 @@ class Component extends DCLogic {
   openPanel(p){
     this.setState({panel:p});
     if(!this.isLive())return;
-    if(p==='approvals')this.load('approvals','/approvals');
+    if(p==='approvals'){this.load('approvals','/approvals');this.restoreMe();}
     else if(p==='purpose')this.load('consent','/consent');
     else if(p==='pay')this.load('mandates','/mandates');
     else if(p==='audit'){this.load('head','/audit/head');this.loadLeaves(null);this.verify(false);}
     else if(p==='bench')this.loadBench();
     else if(p==='red')this.load('rtStats','/redteam/stats').then(j=>{if(j)this.setState({rtStats:j});});
   }
+  async restoreMe(){
+    try{const j=await this.api('/auth/me');this.setState({me:{username:j.username,role:j.role},csrf:j.csrf,authErr:''});}
+    catch(e){this.setState({me:null,csrf:''});}
+  }
+  async signIn(){
+    const u=this.apUser?this.apUser.value:'',pw=this.apPass?this.apPass.value:'';
+    if(!u||!pw){this.setState({authErr:'Enter username and password.'});return;}
+    this.setState({authErr:''});
+    try{const j=await this.post('/auth/login',{username:u,password:pw});if(this.apPass)this.apPass.value='';
+      this.setState({me:{username:u,role:j.role},csrf:j.csrf,authErr:''});}
+    catch(e){this.setState({authErr:'Sign-in failed · '+this.errText(e)});}
+  }
+  async signOut(){
+    try{await this.post('/auth/logout',{});}catch(e){}
+    this.setState({me:null,csrf:''});
+  }
   async resolve(aid,ok){
     if(!this.isLive()){this.setState(s=>({resolved:{...s.resolved,[aid]:ok?'ALLOW':'DENY'}}));return;}
+    if(!this.state.csrf){this.setState({apErr:'Sign in as an approver to approve or reject.'});return;}
     this.setState({apErr:''});
     try{await this.post('/approvals/'+encodeURIComponent(aid),{decision:ok?'approve':'reject'});}
     catch(e){this.setState({apErr:'Approval failed · '+this.errText(e)});}
@@ -1251,7 +1289,7 @@ class Component extends DCLogic {
       rows,noRows:!rows.length,emptyText:s.conn==='noreplay'?'NO EVENTS · REPLAY LOG MISSING':live?(s.conn==='open'?'CONNECTED · WAITING FOR GATEWAY EVENTS':'DISCONNECTED · WAITING FOR THE GATEWAY'):'REPLAY STARTING',
       drawerOpen:!!P&&(P!=='detail'||!!de),panelTitle:titles[P]||'',closePanel:()=>this.setState({panel:null}),
       isDetail:P==='detail'&&!!de,d,
-      isApprovals:P==='approvals',approvals,...M('ap',cSm(apSt,s.apErr)[0],cSm(apSt,s.apErr)[1]),hasMismatch:mismatches.length>0,mismatches,
+      isApprovals:P==='approvals',approvals,apLive:live,apSignedOut:!s.me,apSignedIn:!!s.me,apWho:s.me?('Signed in as '+s.me.username+' · '+s.me.role):'',apAuthErr:s.authErr,apHasAuthErr:!!s.authErr,apUserRef:el=>{this.apUser=el;},apPassRef:el=>{this.apPass=el;},apSignIn:()=>this.signIn(),apSignOut:()=>this.signOut(),...M('ap',cSm(apSt,s.apErr)[0],cSm(apSt,s.apErr)[1]),hasMismatch:mismatches.length>0,mismatches,
       isVoice:P==='voice',v,issueNonce:()=>this.issueNonce(),...M('nonce',s.nonceErr?'error':'ok',s.nonceErr),
       isPurpose:P==='purpose',consent,...M('consent',cSt[0]==='ok'&&s.cErr?'error':cSt[0],[cSt[1],s.cErr].filter(Boolean).join(' ')),...M('report',s.repErr?'error':'ok',s.repErr),downloadReport:()=>this.downloadReport(),
       isProof:P==='proof',proveLive:()=>this.prove('live'),proveUnsafe:()=>this.prove('unsafe_fixture'),proveLiveLabel:s.proofBusy==='live'?'PROVING…':'PROVE LIVE POLICY',proveUnsafeLabel:s.proofBusy==='unsafe_fixture'?'PROVING…':'PROVE UNSAFE FIXTURE',

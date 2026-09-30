@@ -145,32 +145,31 @@ def test_xss_payload_is_delivered_verbatim_as_data_never_interpreted(wall) -> No
 
 
 def test_public_route_gating_and_operator_routes(tmp_path: Path, monkeypatch) -> None:
+    """The public route is the audience app on its own port; the main API only keeps an
+    operator-only submit and rejects everything else without the bearer token."""
+    from trishul.redteam.app import build_redteam_app
+
     gw, *_ = make_env_sync(tmp_path)
+    audience = build_redteam_app(gw.backend.redteam_submit)
+    with TestClient(audience, client=("203.0.113.9", 5000)) as remote:
+        monkeypatch.delenv("TRISHUL_REDTEAM_PUBLIC", raising=False)
+        assert remote.post("/submit", json={"text": ATTACK}).status_code == 403  # not public
+        monkeypatch.setenv("TRISHUL_REDTEAM_PUBLIC", "1")
+        assert remote.post("/submit", json={"text": ATTACK}).status_code == 200
     app = gw.api(allowed_origins=["null"])
     with TestClient(app, client=("203.0.113.9", 5000)) as remote:
-        monkeypatch.delenv("TRISHUL_REDTEAM_PUBLIC", raising=False)
-        assert submit(remote, ATTACK).status_code == 403  # not public, not localhost
-        monkeypatch.setenv("TRISHUL_REDTEAM_PUBLIC", "1")
-        assert submit(remote, ATTACK).status_code == 200
+        no_token = {"authorization": ""}
+        # the main API no longer has a public submit: no token, no entry
+        assert (
+            remote.post("/redteam/submit", headers=no_token, json={"text": ATTACK}).status_code
+            == 401
+        )
         # operator mutations need the bearer token (none sent)
+        assert remote.post("/redteam/kill", headers=no_token, json={"on": True}).status_code == 401
+        assert remote.post("/mode", headers=no_token, json={"mode": "off"}).status_code == 401
+        assert remote.post("/demo/reset", headers=no_token, json={"seed": 42}).status_code == 401
         assert (
-            remote.post(
-                "/redteam/kill", headers={"authorization": ""}, json={"on": True}
-            ).status_code
-            == 401
-        )
-        assert (
-            remote.post("/mode", headers={"authorization": ""}, json={"mode": "off"}).status_code
-            == 401
-        )
-        assert (
-            remote.post("/demo/reset", headers={"authorization": ""}, json={"seed": 42}).status_code
-            == 401
-        )
-        assert (
-            remote.post(
-                "/approvals/x", headers={"authorization": ""}, json={"decision": "approve"}
-            ).status_code
+            remote.post("/approvals/x", headers=no_token, json={"decision": "approve"}).status_code
             == 401
         )
         assert gw.pipeline.mode() == "on"

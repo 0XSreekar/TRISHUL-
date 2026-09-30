@@ -27,9 +27,14 @@ class ShowcaseMixin:
     loop: Any
     mcp: Any
     redteam: Any
+    auth: Any
     _control_seen: int
 
     def _run(self, fn: Any) -> Any: ...  # pragma: no cover - provided by Backend
+
+    def record_operator_action(  # pragma: no cover - provided by Backend
+        self, action: str, actor: str, params: dict[str, Any]
+    ) -> None: ...
 
     # --- mode -----------------------------------------------------------------------------
     def mode(self) -> dict[str, Any]:
@@ -289,7 +294,7 @@ class ShowcaseMixin:
                 log.exception("control poll failed")
 
     # --- demo reset ------------------------------------------------------------------------
-    def demo_reset(self, seed: int = 42) -> dict[str, Any]:
+    def demo_reset(self, seed: int = 42, actor: str = "operator") -> dict[str, Any]:
         if isinstance(seed, bool) or not isinstance(seed, int):
             raise ValueError("seed must be an integer")
         if seed != self.p.ids.seed:
@@ -305,8 +310,16 @@ class ShowcaseMixin:
                 "INSERT OR REPLACE INTO meta(key, value) VALUES ('id_counter', ?)",
                 (str(ids.counter),),
             )
+            accounts = self.auth.provision_demo_accounts()
+            self.record_operator_action("demo_reset", actor, {"data_seed": seed})  # first leaf
             self._after_reset()
-            return {"reset": True, "seed": seed, "ids_issued": ids.counter, **self.p.mode_info()}
+            return {
+                "reset": True,
+                "seed": seed,
+                "ids_issued": ids.counter,
+                "accounts": accounts,
+                **self.p.mode_info(),
+            }
 
         return self._run(go)  # type: ignore[no-any-return]
 

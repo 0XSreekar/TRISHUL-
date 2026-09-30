@@ -20,6 +20,7 @@ from fastmcp import Client
 
 from trishul.approvals import ApprovalError
 from trishul.audit.verify import verify
+from trishul.auth import AuthService
 from trishul.contracts.calls import ToolCategory
 from trishul.domains.dpdp import dpdp_report
 from trishul.domains.purposelock import ConsentRecord, ConsentRegistry
@@ -43,6 +44,7 @@ class Backend(ShowcaseMixin):
         self.loop: asyncio.AbstractEventLoop | None = None
         self.mcp: Any = None  # the gateway's FastMCP (set by build_gateway)
         self.registry = ConsentRegistry(pipeline.conn, pipeline.clock)
+        self.auth = AuthService(pipeline.conn)
         self.redteam = RedTeam(pipeline, self._attack)
         self.control_baseline()
 
@@ -209,10 +211,12 @@ class Backend(ShowcaseMixin):
             self.p.audit.append(
                 {
                     "domain": "payshield",
-                    "type": "approval",
+                    "type": "approval_resolved",
                     "approval_id": aid,
                     "decision": "approved" if decision == "approve" else "rejected",
                     "approver": approver,
+                    "approver_id": approver,
+                    "kid": self.p.approvals.key_id,
                     "tool": row["tool"],
                     "task_id": row["task_id"],
                     "call_digest": row["call_digest"],
@@ -235,6 +239,26 @@ class Backend(ShowcaseMixin):
             }
 
         return self._run(go)
+
+    # --- operator actions ----------------------------------------------------------------
+    def record_operator_action(self, action: str, actor: str, params: dict[str, Any]) -> None:
+        """Append ``{type: operator_action, action, actor, params}``. Raises if the audit log is
+        unavailable, so callers refuse the action (fail closed)."""
+
+        def go() -> None:
+            self.p.audit.append(
+                {
+                    "domain": "core",
+                    "type": "operator_action",
+                    "action": action,
+                    "actor": actor,
+                    "params": params,
+                    "ts": iso(self.p.clock()),
+                    "session": self.p.session,
+                }
+            )
+
+        self._run(go)
 
     # --- tasks / voice / verification ----------------------------------------------------
     def bind_task(self, payload: dict[str, Any]) -> dict[str, Any]:

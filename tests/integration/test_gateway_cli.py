@@ -64,7 +64,7 @@ def test_verify_exit_codes_and_tamper(tmp_path: Path, capsys: pytest.CaptureFixt
     run(capsys, "task", "bind", "--db", str(db), "--purpose", "order_support", "--text", "x")
     run(capsys, "ml", "off", "--db", str(db))
     code, out = run(capsys, "verify", "--db", str(db))
-    assert code == 0 and out["ok"] is True and out["size"] == 2
+    assert code == 0 and out["ok"] is True and out["size"] == 4  # reset, bind, ml action, ml state
     conn = connect(db)
     payload = bytes(conn.execute("SELECT payload FROM audit_leaves WHERE idx=1").fetchone()[0])
     conn.execute("UPDATE audit_leaves SET payload=? WHERE idx=1", (payload[:-2] + b"X}",))
@@ -79,8 +79,9 @@ def test_prove_unavailable_until_t6(capsys: pytest.CaptureFixture[str], tmp_path
 
 
 async def test_approve_reject_and_report_via_cli(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("TRISHUL_APPROVER_PASSWORD", "cli-approver-pw-123")
     db = tmp_path / "c.db"
     run(capsys, "demo", "reset", "--seed", "42", "--db", str(db))
     conn = connect(db)

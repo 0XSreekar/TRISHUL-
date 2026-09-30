@@ -13,11 +13,22 @@ decision latency p99 1.754 ms in-process). Never quote a number that is not in t
 ## 2. Startup order
 1. `ollama serve` (optional; only for AgentDojo/local LLM, not the scripted path).
 2. `bash scripts/prewarm.sh` (skips anything absent; safe to run repeatedly).
-3. `uv run trishul demo reset --seed 42`
+3. Set the account passwords (12+ characters, never committed; see `.env.example`):
+   `export TRISHUL_APPROVER_PASSWORD=...` and `export TRISHUL_OPERATOR_PASSWORD=...`, then
+   `uv run trishul demo reset --seed 42`. Reset creates the `approver` and `operator` accounts from
+   those variables (argon2id; passwords are never printed or logged). An unset variable means that
+   account is not created and the command says which variable to set; approvals then fail closed
+   with 401.
 4. `uv run trishul start --seed 42 --port 8787 --mcp-port 8788` (prints `readiness:` JSON; voice/ollama are
    informational and never block the core demo).
 5. `curl -s localhost:8787/healthz` -> `{"ok":true}`; `curl -s localhost:8787/readyz`.
 6. Open the console; header must show connected, TRISHUL ON, ML state.
+7. Approver login: open the APPROVALS drawer, sign in as `approver` with
+   `TRISHUL_APPROVER_PASSWORD`. Approve and reject only work while signed in (session cookie plus
+   `X-CSRF-Token`); the operator token (`#op=`) cannot approve. `trishul approve|reject ID` asks for the
+   same password (`--user`, `TRISHUL_APPROVER_PASSWORD`, or a prompt).
+8. Audience page: `http://localhost:8789/` (`--redteam-port`); this is the only page to put on a
+   projector or tunnel. It has exactly `GET /` and `POST /submit`.
 
 ## 3. Warm-up
 `scripts/prewarm.sh` pings Ollama (`keep_alive` 30 min) and runs one silent clip through mlx-whisper and
@@ -93,7 +104,9 @@ Say: "Every decision is in a signed Merkle log. Flip one byte and we tell you wh
 takes effect immediately and the DPDP report is generated from the same log."
 
 ## 7. Red-team fallback and kill switch
-- Public submissions require `TRISHUL_REDTEAM_PUBLIC=1`; otherwise localhost only. With no network or no
+- Audience submissions go to the separate app on :8789 (`POST /submit`); they require
+  `TRISHUL_REDTEAM_PUBLIC=1`, otherwise localhost only. The main API's `/redteam/submit` is operator-only
+  (the console's own test box). With no network or no
   audience, use the 20 deterministic fallback submissions (`trishul/redteam/queue.json`, events labelled
   `source:"fallback_queue"`). Say so on stage.
 - Kill switch: `uv run trishul redteam kill` (or `POST /redteam/kill {on:true}` / console button). Resume with
@@ -125,6 +138,7 @@ network; use the fallback queue.
 | Tool server subprocess fails | `uv run trishul start --in-process` |
 | Voice moment slow or models unavailable | `bash scripts/prewarm.sh`; else use the labelled deterministic path |
 | Red-team abuse or slow | `uv run trishul redteam kill` |
+| Approve returns 401 / 403 | Sign in as approver in the drawer (401 = no session or no account; 403 = wrong role or expired CSRF, sign in again) |
 | DB corrupt | `cp trishul.db.bak trishul.db` or `demo reset` |
 | Docker container unhealthy | `docker compose restart gateway` (or run natively) |
 | Everything down | Play backup video; switch to standby laptop |
@@ -149,6 +163,13 @@ Docker) and prints only its path. Or set `TRISHUL_OPERATOR_TOKEN`. All mutating 
 `Authorization: Bearer <token>` from every client, including localhost. Open the console as
 `http://localhost:8787/console/Trishul-Console.dc.html#op=<token>`.
 
-**Tunnel (Cloudflare etc.).** Set `TRISHUL_REDTEAM_PUBLIC=1` and `TRISHUL_TRUSTED_PROXY=1` (rate limit keyed
-on `CF-Connecting-IP`; never used for auth). Only the red-team submit route is public; every operator
-route stays token-protected, so never share the `#op=` URL or the token file through the tunnel.
+**Accounts and sessions.** `TRISHUL_APPROVER_PASSWORD` / `TRISHUL_OPERATOR_PASSWORD` (12+ characters) are
+read by `demo reset` and `trishul start`. Login is `POST /auth/login` (5 attempts per minute per client;
+sessions idle out after 30 min, hard-expire after 8 h). Set `TRISHUL_COOKIE_SECURE=1` when serving over
+HTTPS. Roles do not overlap: an approver session cannot run operator actions and an operator session or
+the bearer token cannot approve.
+
+**Tunnel (Cloudflare etc.).** Tunnel only the audience app (port 8789), never 8787. Set
+`TRISHUL_REDTEAM_PUBLIC=1` and `TRISHUL_TRUSTED_PROXY=1` (rate limit keyed on `CF-Connecting-IP`; never used
+for auth). The audience app has no cookies and no route to approvals, policy, ML, reset or audit; the main
+API stays token/session-protected, so never share the `#op=` URL or the token file through the tunnel.

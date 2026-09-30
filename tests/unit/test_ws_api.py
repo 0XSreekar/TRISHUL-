@@ -1,14 +1,63 @@
+import sqlite3
+
 import pytest
 from starlette.testclient import TestClient
 
+from trishul.auth import AuthService
 from trishul.telemetry.api import DEFAULT_ORIGINS, build_api
 from trishul.telemetry.events import EventBus
 from trishul.telemetry.otel import setup_tracing, stage_span
+
+APPROVER_PW = "approver-password-1"
+OPERATOR_PW = "operator-password-1"
+
+
+def make_auth() -> AuthService:
+    conn = sqlite3.connect(":memory:", check_same_thread=False, isolation_level=None)
+    conn.row_factory = sqlite3.Row
+    auth = AuthService(conn)
+    auth.provision_demo_accounts(
+        {"TRISHUL_APPROVER_PASSWORD": APPROVER_PW, "TRISHUL_OPERATOR_PASSWORD": OPERATOR_PW}
+    )
+    return auth
+
+
+def login(c, username="approver", password=APPROVER_PW):
+    """Log in (cookie lands in the client's jar) and return the CSRF header for POSTs."""
+    r = c.post("/auth/login", json={"username": username, "password": password})
+    assert r.status_code == 200, r.text
+    return {"X-CSRF-Token": r.json()["csrf"]}
 
 
 class FakeBackend:
     def __init__(self):
         self.calls = []
+        self.actions = []
+        self.mode_calls = []
+        self.auth = make_auth()
+
+    def set_mode(self, mode):
+        self.mode_calls.append(mode)
+        return {"mode": mode}
+
+    def set_ml(self, enabled):
+        return None
+
+    def redteam_kill(self, on):
+        return {"killed": on}
+
+    async def redteam_fallback(self, count=None):
+        return []
+
+    async def demo_moment(self, n, step=None):
+        return {"moment": n}
+
+    def record_operator_action(self, action, actor, params):
+        self.actions.append((action, actor, params))
+
+    def demo_reset(self, seed, actor="operator"):
+        self.actions.append(("demo_reset", actor, {"seed": seed}))
+        return {"reset": True, "seed": seed}
 
     def list_consent(self):
         return [{"id": "k1", "status": "active"}]
@@ -40,6 +89,12 @@ class FakeBackend:
         return {"ok": True}
 
 
+def user_id(be, username):
+    return be.auth.conn.execute(
+        "SELECT user_id FROM users WHERE username=?", (username,)
+    ).fetchone()[0]
+
+
 @pytest.fixture
 def env():
     bus = EventBus()
@@ -47,6 +102,7 @@ def env():
     be = FakeBackend()
     app = build_api(bus, metrics, be, allowed_origins=["null", "http://localhost"])
     with TestClient(app) as c:
+        c.headers.update(login(c))
         yield c, bus, metrics, be, provider
 
 
@@ -73,7 +129,7 @@ def test_rest_routes(env):
     )
     assert c.get("/approvals").json() == {"approvals": [{"id": "a1"}]}
     assert c.post("/approvals/a1", json={"decision": "approve"}).json()["decision"] == "approve"
-    assert be.calls == [("a1", "approve", "console")]
+    assert be.calls == [("a1", "approve", user_id(be, "approver"))]
     assert c.post("/prove", headers={"Content-Type": "application/json"}).json() == {"proved": True}
     assert c.post("/tasks", json={"goal": "x"}).json() == {"task": {"goal": "x"}}
     assert c.post("/voice/nonce", json={"session": "s1"}).json() == {"nonce": "n-s1"}
@@ -165,6 +221,7 @@ def csrf():
             EventBus(), metrics, be, allowed_origins=[*DEFAULT_ORIGINS, "http://localhost:8787"]
         )
     ) as c:
+        c.headers.update(login(c))
         yield c, be
 
 
