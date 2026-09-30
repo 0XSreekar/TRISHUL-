@@ -1265,7 +1265,7 @@ class Component extends DCLogic {
       auVerOn:!!ver,auVerText:ver?(ver.error?'Verify failed · '+ver.error:ver.ok?'CHAIN INTACT · '+ver.size+' leaves verified'+(ver.invalid_sths&&ver.invalid_sths.length?' · invalid signed heads '+ver.invalid_sths.join(','):''):'TAMPERED · first bad leaf index '+ver.bad_index):'',auVerCol:ver&&ver.ok&&!(ver.error)?C.blue:C.red,
       auConOn:!!con,auConText:con?(con.error?'Consistency failed · '+con.error:'consistency '+con.first+' → '+con.second+' · server verified '+yes(con.verified)+' · '+(con.path||[]).length+' proof nodes'):'',auConCol:con&&con.verified?C.blue:C.red,
       auIncOn:!!inc,auIncText:inc?(inc.error?'Inclusion failed for #'+inc.index+' · '+inc.error:'inclusion #'+inc.index+' in tree of '+inc.tree_size+' · server verified '+yes(inc.verified)+' · payload intact '+yes(inc.payload_intact)+' · '+(inc.path||[]).length+' proof nodes'+(inc.sth?' · covered by signed head of size '+inc.sth.size:'')):'',auIncCol:inc&&inc.verified&&inc.payload_intact?C.blue:C.red,
-      auRange:lvd?('#'+lvd.from+' – #'+(lvd.from+(lvd.leaves||[]).length-1)+' of '+lvd.size):'—',auLeaves:leaves,
+      auRange:lvd?((lvd.leaves||[]).length?'#'+lvd.from+' – #'+(lvd.from+lvd.leaves.length-1)+' of '+lvd.size:'none of '+lvd.size):'—',auLeaves:leaves,
       auPrev:()=>this.loadLeaves(Math.max(0,(s.au.from||0)-PAGE)),auNext:()=>{if(lvd&&(s.au.from||0)+PAGE<lvd.size)this.loadLeaves((s.au.from||0)+PAGE);},...M('au',auSt[0],auSt[1]),
       isPay:P==='pay',mandates,...M('pay',paySt[0],paySt[1]),
       isBench:P==='bench',benchSections,...M('bench',benchSt[0],benchSt[1]),
