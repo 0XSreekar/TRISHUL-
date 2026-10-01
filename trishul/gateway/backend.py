@@ -27,10 +27,13 @@ from trishul.domains.dpdp import dpdp_report
 from trishul.domains.purposelock import ConsentRecord, ConsentRegistry
 from trishul.finbot import FinBot
 from trishul.finbot.moments import run_moment
+from trishul.finbot.owner import MAX_CHARS as OWNER_MAX_CHARS
+from trishul.finbot.owner import owner_request
 from trishul.gateway.pipeline import Pipeline
 from trishul.gateway.showcase import ShowcaseMixin
 from trishul.gateway.taint import Task
 from trishul.observability.redaction import redact_args
+from trishul.redteam.errors import RedTeamError
 from trishul.redteam.service import RedTeam
 from trishul.store.db import DEMO_PRINCIPAL, iso, parse_iso
 
@@ -70,6 +73,19 @@ class Backend(ShowcaseMixin):
             bot = FinBot(client, self, self.p.bus, agent="finbot")
             out: dict[str, Any] = await run_moment(self, bot, n, step)
             return out
+
+    async def owner_request(self, text: object, client_ip: str) -> dict[str, Any]:
+        """Audience page, owner tab: the typed sentence is the user's own (trusted) request."""
+        if self.redteam.killed():
+            raise RedTeamError("killed", 503)
+        if not isinstance(text, str) or not text.strip():
+            raise RedTeamError("empty", 400)
+        if len(text) > OWNER_MAX_CHARS:
+            raise RedTeamError("too_long", 413)
+        self.redteam._admit(client_ip)
+        async with self.finbot_client() as client:
+            bot = FinBot(client, self, self.p.bus, agent="owner")
+            return await owner_request(self, bot, text.strip())
 
     async def redteam_submit(self, text: object, client_ip: str) -> dict[str, Any]:
         res: dict[str, Any] = await self.redteam.submit(text, client_ip)

@@ -507,7 +507,7 @@ def _start(args: argparse.Namespace) -> int:
 
         audience = uvicorn.Server(
             uvicorn.Config(
-                build_redteam_app(gw.backend.redteam_submit),
+                build_redteam_app(gw.backend.redteam_submit, gw.backend.owner_request),
                 host=args.host,
                 port=args.redteam_port,
                 log_level="warning",

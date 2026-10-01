@@ -68,6 +68,7 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-10-01 | bench/results.json regenerated at clean commit a924c5b | ✅ Complete | India ASR 0.0 (0/49), AgentDojo banking 8x4 subset ASR 0.2188 -> 0.0, decision p99 1.754 ms |
 | 2026-10-01 | Live Chrome verification of console with operator token (moments 1-6, kill switch, XSS) | ✅ Complete | All moments correct; fixed moment-4 progress, [object Object] redacted args, empty audit label (98a5b6a, c26d287) |
 | 2026-10-01 | Plain-English rule explanations in call detail | ✅ Complete | Console drawer shows what each rule hit means (RULE_TEXT map); 649 tests pass; commit 2941a1e |
+| 2026-10-01 | Audience page (8789): Account owner vs Attacker modes | ✅ Complete | POST /owner binds the typed request as the user's trusted task; gateway decides ALLOW/STEP_UP/DENY; plain-English results + friendly errors; 656 tests pass; live-checked |
 
 ---
 
