@@ -975,13 +975,17 @@ const WIN=15*60000;
 const PAGE=20;
 const DEF_API='http://localhost:8787', DEF_WS='ws://localhost:8787/events';
 const OP_HINT='Operator token required (open console via URL printed by `trishul start`)';
-let OP_TOKEN='';  /* in-memory only: read once from #op=..., stripped from the URL, never stored/logged/rendered */
+let OP_TOKEN='';  /* read from #op=..., stripped from the URL, never logged/rendered */
+/* kept in this tab's sessionStorage so a refresh keeps it; closing the tab drops it */
+const OP_KEY='trishul.op';
 /* accepted: #op=TOKEN, #op=TOKEN&route=/demo/moments, #/demo/moments&op=TOKEN. The token is stripped; any route is kept. */
-try{const segs=(location.hash||'').replace(/^#/,'').split('&');let route='',found=false;
+try{const segs=(location.hash||'').replace(/^#/,'').split('&').map(g=>g.replace(/^amp;/,''));let route='',found=false;
   for(const g of segs){if(g.startsWith('op=')){OP_TOKEN=decodeURIComponent(g.slice(3));found=true;}
     else if(g.startsWith('route=')){const r=decodeURIComponent(g.slice(6));if(r)route=r.charAt(0)==='/'?r:'/'+r;}
     else if(g.charAt(0)==='/')route=g;}
   if(found)history.replaceState(null,'',location.pathname+location.search+(route?'#'+route:''));}catch(e){}
+try{if(OP_TOKEN)sessionStorage.setItem(OP_KEY,OP_TOKEN);else OP_TOKEN=sessionStorage.getItem(OP_KEY)||'';}catch(e){}
+const forgetOp=()=>{OP_TOKEN='';try{sessionStorage.removeItem(OP_KEY);}catch(e){}};
 const OP_PATH=/^\/(mode|ml|prove|redteam\/(submit|kill|fallback)|demo\/|consent\/)/;
 const AP_PATH=/^\/approvals\//;  /* approver session cookie + X-CSRF-Token, never the operator token */
 const BENCH_URLS=['/bench/results.json','bench/results.json'];
@@ -1244,7 +1248,10 @@ class Component extends DCLogic {
     if(isPost&&AP_PATH.test(path)&&this.state.csrf)opts={...opts,headers:{...(opts.headers||{}),'X-CSRF-Token':this.state.csrf}};
     let r;try{r=await fetch(this.base()+path,opts);}catch(e){const x=new Error('gateway unreachable');x.status=0;throw x;}
     let j=null;try{j=await r.json();}catch(e){}
-    if(!r.ok){const x=new Error((j&&j.error)||('http_'+r.status));x.status=r.status;throw x;}
+    if(!r.ok){
+      /* a stored token from before a server restart is stale: drop it so the chip says so */
+      if(r.status===401&&j&&j.error==='operator_token_required'&&OP_TOKEN){forgetOp();this.setState({});}
+      const x=new Error((j&&j.error)||('http_'+r.status));x.status=r.status;throw x;}
     return j;
   }
   post(path,body){return this.api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});}
