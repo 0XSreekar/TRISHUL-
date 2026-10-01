@@ -212,11 +212,16 @@ def make_m4(chunk: int) -> StepFn:
 
 # --- 5: ML off, proofs -------------------------------------------------------------------------
 async def m5_1(backend: Any, bot: FinBot, auto: bool) -> dict[str, Any]:
+    """ML off only for these five attacks, then back on, so the detectors are never left off
+    by accident (step 4 still switches ML on explicitly for the presenter)."""
     backend.set_ml(False)
-    done = await backend.redteam.fallback(5, 0)
+    try:
+        done = await backend.redteam.fallback(5, 0)
+    finally:
+        backend.set_ml(True)
     return {
         "status": "ok",
-        "ml": "off",
+        "ml": "off during these attacks, back on after",
         "results": [{k: r[k] for k in ("id", "decision", "succeeded")} for r in done],
     }
 

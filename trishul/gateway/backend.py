@@ -26,6 +26,7 @@ from trishul.contracts.calls import ToolCategory
 from trishul.domains.dpdp import dpdp_report
 from trishul.domains.purposelock import ConsentRecord, ConsentRegistry
 from trishul.finbot import FinBot
+from trishul.finbot.analyse import analyse
 from trishul.finbot.moments import run_moment
 from trishul.finbot.owner import MAX_CHARS as OWNER_MAX_CHARS
 from trishul.finbot.owner import owner_request
@@ -74,18 +75,29 @@ class Backend(ShowcaseMixin):
             out: dict[str, Any] = await run_moment(self, bot, n, step)
             return out
 
-    async def owner_request(self, text: object, client_ip: str) -> dict[str, Any]:
-        """Audience page, owner tab: the typed sentence is the user's own (trusted) request."""
+    async def analyse_request(self, text: object, client_ip: str) -> dict[str, Any]:
+        """Audience page: analyse the typed text first (injection model + red-flag rules).
+        Flagged text runs as untrusted content (red-team path, denied on taint); clean text runs
+        as a plain payment request, and the gateway's mandate and caps decide."""
         if self.redteam.killed():
             raise RedTeamError("killed", 503)
         if not isinstance(text, str) or not text.strip():
             raise RedTeamError("empty", 400)
         if len(text) > OWNER_MAX_CHARS:
             raise RedTeamError("too_long", 413)
+        text = text.strip()
+        use_model = self.p.ml_enabled() and "classifier" in self.p.ml_components
+        found = await analyse(text, self.p._clf() if use_model else None)
+        if found.flagged:
+            out = await self.redteam.submit(text, client_ip)
+            return {**out, "path": "untrusted", "analysis": found.to_dict()}
+        if self.p.mode() != "on":
+            raise RedTeamError("mode_off", 409)
         self.redteam._admit(client_ip)
         async with self.finbot_client() as client:
-            bot = FinBot(client, self, self.p.bus, agent="owner")
-            return await owner_request(self, bot, text.strip())
+            bot = FinBot(client, self, self.p.bus, agent="user")
+            res = await owner_request(self, bot, text)
+        return {**res, "path": "request", "analysis": found.to_dict()}
 
     async def redteam_submit(self, text: object, client_ip: str) -> dict[str, Any]:
         res: dict[str, Any] = await self.redteam.submit(text, client_ip)
