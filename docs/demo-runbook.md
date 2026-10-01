@@ -1,8 +1,9 @@
 # Demo runbook
 
 All commands run from the repo root with `uv run`. Numbers quoted here come from `bench/results.json`
-(India suite: 49 attacks / 34 benign; with TRISHUL attack success 0.0 = 0/49, utility 0.8529 = 29/34; gate
-decision latency p99 1.754 ms in-process). Never quote a number that is not in that file.
+(India suite: 49 attacks / 34 benign; with TRISHUL attack success 0.0 = 0/49, utility 0.8529 = 29/34; without TRISHUL (`suites.india.without.asr`)
+attack success 0.9167 over 36 measured attacks; total in-process latency p50 1.214 ms / p99 14.639 ms with ML on, p50 1.017 ms / p99
+2.181 ms with ML off — `latency.ml_on.total`, `latency.ml_off.total`). Never quote a number that is not in that file.
 
 ## 1. Hardware and browser
 - Apple Silicon Mac (measured on Apple M5), 16 GB+ RAM, charger connected, Do Not Disturb on.
