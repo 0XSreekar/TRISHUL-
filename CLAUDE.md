@@ -70,6 +70,7 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-10-01 | Plain-English rule explanations in call detail | ✅ Complete | Console drawer shows what each rule hit means (RULE_TEXT map); 649 tests pass; commit 2941a1e |
 | 2026-10-01 | Audience page (8789): Account owner vs Attacker modes | ✅ Complete | POST /owner binds the typed request as the user's trusted task; gateway decides ALLOW/STEP_UP/DENY; plain-English results + friendly errors; 656 tests pass; live-checked |
 | 2026-10-01 | Console keeps operator token across refresh | ✅ Complete | Token kept in tab sessionStorage (cleared on tab close, dropped on 401 after server restart); `&amp;` links tolerated; browser-checked |
+| 2026-10-01 | Moment 1 no longer leaves TRISHUL OFF | ✅ Complete | m1 switches OFF for the one unguarded payment then back ON (try/finally); operator token pinned in private .env so restarts keep the console link; 656 tests pass; live-checked |
 
 ---
 

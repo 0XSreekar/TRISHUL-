@@ -54,7 +54,17 @@ def _brief(res: dict[str, Any]) -> dict[str, Any]:
 
 # --- 1: OFF ------------------------------------------------------------------------------------
 async def m1_off(backend: Any, bot: FinBot, auto: bool) -> dict[str, Any]:
+    """OFF only for this one unguarded run, then straight back ON, so the presenter can never
+    leave the gateway unprotected by accident (the audience page refuses while OFF)."""
     info = backend.set_mode("off")
+    try:
+        out = await _m1_unguarded(backend, bot, info)
+    finally:
+        restored = backend.set_mode("on")
+    return {**out, "mode_restored": restored}
+
+
+async def _m1_unguarded(backend: Any, bot: FinBot, info: Any) -> dict[str, Any]:
     doc = await bot.call("files_read_document", {"doc_id": _doc_id(backend, "inv_injected.html")})
     content = str(doc["body"].get("content", ""))
     vpa = HIDDEN_VPA.search(content)

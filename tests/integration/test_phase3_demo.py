@@ -230,10 +230,13 @@ async def test_moment_1_off_pays_hidden_vpa_into_demo_off_only(env: Env) -> None
     assert step["effect"]["namespace"] == "demo_off" and step["decision"] == "UNGUARDED"
     assert protected_snapshot(env) == before
     assert env.conn.execute("SELECT COUNT(*) FROM ns_ledger").fetchone()[0] == 1
+    # OFF only for that one run: protection is back ON straight after
+    assert step["mode_restored"]["mode"] == "on"
+    assert env.gw.backend.mode()["mode"] == "on"
 
 
-async def test_moment_3_after_moment_1_forces_on_and_never_runs_unguarded(env: Env) -> None:
-    await env.gw.backend.demo_moment(1)  # leaves the gateway OFF; presenter skips moment 2
+async def test_moment_3_while_off_forces_on_and_never_runs_unguarded(env: Env) -> None:
+    env.gw.backend.set_mode("off")  # presenter left the gateway OFF from the controls
     out = await env.gw.backend.demo_moment(3)
     assert out["mode_forced_on"]["mode"] == "on"
     by = {s["name"]: s for s in out["steps"]}
