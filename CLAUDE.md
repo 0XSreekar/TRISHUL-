@@ -78,6 +78,7 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-10-01 | Fix: voice player vanished after Step 2 | ✅ Complete | Clip kept in its own state (cleared on reset) and auto-plays after Step 1; browser-checked playing + still shown after Step 2 |
 | 2026-10-01 | Browser click-through: 2 bugs fixed | ✅ Complete | (1) audio `controls` attr dropped by template → player was 0×0; now visible + "▶ Play the cloned voice" button + auto-scroll; (2) pasting the #op= link into an open tab only fired hashchange → token ignored and shown as "Unknown route op=…"; token now taken on hashchange too. Screenshot-verified |
 | 2026-10-01 | VoiceTrust full test in real Chrome | ✅ Complete | Moment 6 steps 1-3 (DENY spoof, DENY replay, audit OK), voice auto-plays + Play button, Live calls, detail panel, Liveness challenge (new phrase per click), Detector pins all OK. Fixed: single-step runs overwrote earlier step results (now merged) |
+| 2026-10-01 | Ollama live: red-team reader on qwen3:8b | ✅ Complete | `ollama serve` started; /readyz ollama=available, redteam_reader=llm (invoice reader stays deterministic for a repeatable demo). Audience page re-checked: attacks DENY, clean pay ALLOW, ~4 s (10 s first call). Voice nonce TTL left at 10 s (spec security setting) |
 
 ---
 
