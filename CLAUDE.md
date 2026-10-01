@@ -67,6 +67,7 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-10-01 | Real-voice evaluation (LibriSpeech + FLEURS hi/te + owner clip vs content-matched TTS) | ✅ Complete | bench/voice_eer.json: DF_Arena 1B real flagged 2.2 % clean / 19.4 % phone (hi/te 40 %); Telugu auto-ASR detects Tamil, forced language CER 0.22 |
 | 2026-10-01 | bench/results.json regenerated at clean commit a924c5b | ✅ Complete | India ASR 0.0 (0/49), AgentDojo banking 8x4 subset ASR 0.2188 -> 0.0, decision p99 1.754 ms |
 | 2026-10-01 | Live Chrome verification of console with operator token (moments 1-6, kill switch, XSS) | ✅ Complete | All moments correct; fixed moment-4 progress, [object Object] redacted args, empty audit label (98a5b6a, c26d287) |
+| 2026-10-01 | Plain-English rule explanations in call detail | ✅ Complete | Console drawer shows what each rule hit means (RULE_TEXT map); 649 tests pass; commit 2941a1e |
 
 ---
 
