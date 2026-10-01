@@ -933,7 +933,12 @@ const PAGE=20;
 const DEF_API='http://localhost:8787', DEF_WS='ws://localhost:8787/events';
 const OP_HINT='Operator token required (open console via URL printed by `trishul start`)';
 let OP_TOKEN='';  /* in-memory only: read once from #op=..., stripped from the URL, never stored/logged/rendered */
-try{const m=/(?:^#|&)op=([^&]*)/.exec(location.hash||'');if(m){OP_TOKEN=decodeURIComponent(m[1]);history.replaceState(null,'',location.pathname+location.search);}}catch(e){}
+/* accepted: #op=TOKEN, #op=TOKEN&route=/demo/moments, #/demo/moments&op=TOKEN. The token is stripped; any route is kept. */
+try{const segs=(location.hash||'').replace(/^#/,'').split('&');let route='',found=false;
+  for(const g of segs){if(g.startsWith('op=')){OP_TOKEN=decodeURIComponent(g.slice(3));found=true;}
+    else if(g.startsWith('route=')){const r=decodeURIComponent(g.slice(6));if(r)route=r.charAt(0)==='/'?r:'/'+r;}
+    else if(g.charAt(0)==='/')route=g;}
+  if(found)history.replaceState(null,'',location.pathname+location.search+(route?'#'+route:''));}catch(e){}
 const OP_PATH=/^\/(mode|ml|prove|redteam\/(submit|kill|fallback)|demo\/|consent\/)/;
 const AP_PATH=/^\/approvals\//;  /* approver session cookie + X-CSRF-Token, never the operator token */
 const BENCH_URLS=['/bench/results.json','bench/results.json'];
@@ -1015,7 +1020,8 @@ const summary=e=>{const a=e.args||{};let s=e.tool;
 const tagOf=e=>e.tag||(((e.rules||[])[0]||'DENY')+' '+String(e.tool).toUpperCase());
 const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;};
 const pctl=(arr,p)=>arr.length?arr[Math.min(arr.length-1,Math.floor(p*arr.length))]:null;
-const effectText=e=>{const f=e.effect;if(!f)return '';if(f.summary)return f.summary+(f.balance_after!=null?' · balance after '+inr(f.balance_after):'');
+/* Only an effect carrying a txn_id was executed (unguarded OFF demo namespace). The ON path's effect is the dry-run preview: never present it as a payment or a real balance. */
+const effectText=e=>{const f=e.effect;if(!f)return '';if(f.summary&&f.txn_id==null)return 'PREVIEW (not executed) · '+f.summary+(f.balance_after!=null?' · balance would be '+inr(f.balance_after)+' if executed':'');
   return [f.simulated?'PREVIEW (simulated)':'EXECUTED',f.namespace,f.txn_id,f.balance_after!=null?'balance after '+money(f.balance_after):''].filter(Boolean).join(' · ');};
 const STATE_COL={error:C.red,disconnected:C.amber};
 /* flatten a JSON document into label/value lines (text only, capped) */
@@ -1128,7 +1134,8 @@ class Component extends DCLogic {
   base(){const p=this.props.apiBase;if(p&&p!==DEF_API)return p;return this.http()?location.origin:DEF_API;}
   wsUrl(){const p=this.props.wsUrl;if(p&&p!==DEF_WS)return p;return this.http()?location.origin.replace(/^http/,'ws')+'/events':DEF_WS;}
   speed(){return Number(this.props.replaySpeed??8)||8;}
-  decOf(e){const r=this.state.resolved[e.id];return e.decision==='STEP_UP'&&r?r:e.decision;}
+  decOf(e){return e.decision;}  /* the gate's decision is never relabelled; an approval resolution is shown beside it */
+  resolOf(e){const r=this.state.resolved[e.id];return e.decision==='STEP_UP'&&r?(r==='ALLOW'?'approval: APPROVED (this call stays STEP_UP; the retry is a separate call)':'approval: REJECTED'):'';}
   pass(e){const f=FILTERS[this.state.filter];return f==='all'||e.feature===f;}
   isLive(){return this.state.mode==='live';}
 
@@ -1162,7 +1169,7 @@ class Component extends DCLogic {
     else if(k==='proof/bench')this.loadBench();
     else if(k.startsWith('redteam/'))this.load('rtStats','/redteam/stats').then(j=>{if(j)this.setState({rtStats:j});});
     else if(k==='demo/system'){this.load('readyz','/readyz');this.load('head','/audit/head');}
-    else if(k==='demo/controls')this.load('mode','/mode').then(j=>{if(j)this.setState({tmode:j.mode,tdisabled:j.disabled||[],tns:j.namespace||''});});
+    else if(k==='demo/controls')this.load('mode','/mode').then(j=>{if(j){const p={tmode:j.mode,tdisabled:j.disabled||[],tns:j.namespace||''};if(typeof j.ml==='boolean')p.ml=j.ml;this.setState(p);}});
   }
   async loadApLeaves(){
     const h=await this.load('head','/audit/head');if(!h)return;
@@ -1209,7 +1216,7 @@ class Component extends DCLogic {
     if(!this.isLive())return;
     this.load('approvals','/approvals');this.load('consent','/consent');this.load('mandates','/mandates');this.load('head','/audit/head');this.load('metrics','/metrics');
     this.load('rtStats','/redteam/stats').then(j=>{if(j)this.setState({rtStats:j});});
-    this.load('mode','/mode').then(j=>{if(j)this.setState({tmode:j.mode,tdisabled:j.disabled||[],tns:j.namespace||''});});
+    this.load('mode','/mode').then(j=>{if(j){const p={tmode:j.mode,tdisabled:j.disabled||[],tns:j.namespace||''};if(typeof j.ml==='boolean')p.ml=j.ml;this.setState(p);}});
     this.verify(true);this.restoreMe();this.onRoute(this.state.route);
   }
   flush(){
@@ -1253,6 +1260,8 @@ class Component extends DCLogic {
     let resolved=null,rtNew=[],demoNew=[],proofNew=[];
     for(const e of list){
       switch(e.type){
+        case 'reset':calls.length=0;patch._reset=1;this.seen=new Set();this.anims=[];this.arr={};
+          Object.assign(patch,{resolved:{},proofs:{},digests:[],demoRes:{},demoEv:{},demoErr:'',nonce:null});resolved=null;rtNew=[];demoNew=[];proofNew=[];dirty.all=1;break;
         case 'ml_state':patch.ml=!!(e.enabled!=null?e.enabled:e.ml);break;
         case 'mode':patch.tmode=e.mode;patch.tdisabled=e.disabled||[];patch.tns=e.namespace||'';break;
         case 'audit_verify':patch.audit={ok:!!e.ok,bad:e.ok?null:(e.bad_index!=null?e.bad_index:e.bad_id),known:true};dirty.head=1;break;
@@ -1274,9 +1283,10 @@ class Component extends DCLogic {
     if(resolved)patch.resolved=resolved;
     calls.forEach((e,i)=>{const t=T+i*110;this.arr[e.id]=t;this.anims.push({e,t});if(e.decision==='DENY')this.lastAttack=t;});
     if(this.anims.length>90)this.anims.splice(0,this.anims.length-90);
-    this.setState(s=>{const out={...patch};
-      if(calls.length)out.events=s.events.concat(calls).slice(-4000);
-      if(rtNew.length){const seenIds=new Set(s.rt.map(x=>x.id));out.rt=s.rt.concat(rtNew.filter(x=>!seenIds.has(x.id))).slice(-200);}
+    this.setState(s=>{const out={...patch};const rs0=out._reset;delete out._reset;
+      if(rs0){out.events=[];out.rt=[];}
+      if(calls.length)out.events=(rs0?[]:s.events).concat(calls).slice(-4000);
+      if(rtNew.length){const seenIds=new Set((rs0?[]:s.rt).map(x=>x.id));out.rt=(rs0?[]:s.rt).concat(rtNew.filter(x=>!seenIds.has(x.id))).slice(-200);}
       if(demoNew.length){const d={...s.demoEv};demoNew.forEach(x=>{d[x.moment]=x;});out.demoEv=d;}
       if(proofNew.length){const p={...s.proofs};proofNew.forEach(x=>{const cur=p[x.policy];if(!cur||cur._ws)p[x.policy]={...x,_ws:true};});out.proofs=p;}
       return out;});
@@ -1502,7 +1512,7 @@ class Component extends DCLogic {
       hasEffect:!!de.effect,effect:effectText(de),
       hasLineage:nodes.length>0,noLineage:!nodes.length,lineage:nodes.map((n,i)=>({text:n.kind+' · '+short(n.ref||n.id,44)+' · '+((n.label||{}).level||'?'),col:lvCol((n.label||{}).level),op:full||i<s.linStep?1:.12,arrow:i<nodes.length-1?'→':''})),
       edges:(((de.lineage||{}).edges)||[]).map(e=>({text:e.op+': '+short(refOf[e.src]||e.src,40)+' → '+short(refOf[e.dst]||e.dst,40)})),
-      hasExtra:!!extra,extra,
+      hasExtra:!!(extra||this.resolOf(de)),extra:[extra,this.resolOf(de)].filter(Boolean).join(' · '),
       reason:de.reason||'',hash:de.audit_hash||(live?'—':'— (replay)')};
   }
 
@@ -1521,7 +1531,7 @@ class Component extends DCLogic {
     const opNote=OP_HINT+'. Until then this action is disabled.';
     const rev=ev.slice().reverse();
     const rowOf=(e)=>{const d=dec(e),iso=e.ts||'';return{id:e.id,href:'#/call/'+encodeURIComponent(e.id),time:iso.slice(11,19),summary:summary(e),decision:d,feat:FNAME[e.feature]||(e.feature||'').toUpperCase(),
-      reason:(e.reason||'').replace(/\.$/,''),rulesTxt:(e.rules||[]).length?' · '+e.rules.join(', '):'',reasonTxt:e.reason?' · '+e.reason.replace(/\.$/,''):'',effect:effectText(e)||(d==='DENY'?'denied at the gate · nothing executed':'no effect recorded'+(e.namespace?' · '+e.namespace:''))};};
+      reason:(e.reason||'').replace(/\.$/,''),rulesTxt:(e.rules||[]).length?' · '+e.rules.join(', '):'',reasonTxt:e.reason?' · '+e.reason.replace(/\.$/,''):'',effect:[effectText(e)||(d==='DENY'?'denied at the gate · nothing executed':'no effect recorded'+(e.namespace?' · '+e.namespace:'')),this.resolOf(e)].filter(Boolean).join(' · ')};};
 
     /* ---- agents, graph ---- */
     const agents=AGENTS.map((a,i)=>{
