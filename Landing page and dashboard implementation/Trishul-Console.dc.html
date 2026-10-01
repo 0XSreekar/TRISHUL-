@@ -883,32 +883,38 @@ textarea.field{height:96px;padding:var(--s3);resize:vertical;width:100%}
       <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
         <div class="stack" style="gap:var(--s5)">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="dec d-{{ d.decision }}" data-trishul="decision-badge" data-decision="{{ d.decision }}">{{ d.decision }}</span><span class="mono" style="font-size:16px;overflow-wrap:anywhere">{{ d.tool }}</span></div>
-          <div class="kv">
-            <div><span class="cap">Agent</span><span>{{ d.agent }}</span></div>
-            <div><span class="cap">Feature</span><span>{{ d.feature }}</span></div>
-            <div><span class="cap">Time</span><span class="mono" style="color:var(--teal)">{{ d.ts }}</span></div>
-            <div><span class="cap">Latency</span><span>{{ d.latency }}</span></div>
+          <div class="card stack" style="gap:8px;border-color:{{ d.col }}" data-trishul="plain-summary"><span class="cap">What happened, in plain English</span>
+            <p style="font-size:15px;line-height:1.55;margin:0">{{ d.story }}</p>
+            <p style="font-size:15px;line-height:1.55;margin:0;color:{{ d.col }};font-weight:600">{{ d.verdict }}</p>
+            <sc-if value="{{ d.hasSourceText }}" hint-placeholder-val="{{ false }}"><p style="font-size:14px;line-height:1.55;margin:0">{{ d.sourceText }}</p></sc-if>
+            <sc-if value="{{ d.hasWhy }}" hint-placeholder-val="{{ false }}"><p style="font-size:14px;line-height:1.55;margin:0"><b>Why:</b> {{ d.why }}</p></sc-if>
           </div>
-          <div class="stack" style="gap:8px"><span class="cap">Arguments</span>
+          <div class="kv">
+            <div><span class="cap">AI agent</span><span>{{ d.agent }}</span></div>
+            <div><span class="cap">Protection</span><span>{{ d.feature }}</span></div>
+            <div><span class="cap">Time</span><span class="mono" style="color:var(--teal)">{{ d.ts }}</span></div>
+            <div><span class="cap">Time to decide</span><span>{{ d.latency }}</span></div>
+          </div>
+          <div class="stack" style="gap:8px"><span class="cap">What the agent asked for</span>
             <sc-for list="{{ d.args }}" as="g" hint-placeholder-count="2"><div class="argrow"><span class="k">{{ g.key }}</span><span class="v">{{ g.value }}</span><span class="tag" style="--c:{{ g.lc }}">{{ g.label }}</span></div></sc-for>
           </div>
-          <div class="stack" style="gap:10px"><span class="cap">Rules hit · what each one means</span>
+          <div class="stack" style="gap:10px"><span class="cap">Rules that fired · in plain English</span>
             <sc-for list="{{ d.rules }}" as="rl" hint-placeholder-count="1"><div class="stack" style="gap:4px" data-trishul="rule-why"><span class="tag" style="align-self:flex-start">{{ rl.id }}</span><span style="font-size:13px;line-height:1.5">{{ rl.text }}</span></div></sc-for><sc-if value="{{ d.noRules }}" hint-placeholder-val="{{ false }}"><span class="small muted">None</span></sc-if>
           </div>
-          <div class="stack" style="gap:8px"><span class="cap">ML scores</span>
+          <div class="stack" style="gap:8px"><span class="cap">AI detector scores</span>
             <sc-for list="{{ d.scores }}" as="sc" hint-placeholder-count="1"><div style="display:flex;align-items:center;gap:12px;font-size:12px"><span class="muted" style="width:80px">{{ sc.key }}</span><span class="bar2" style="flex:1"><i style="width:{{ sc.pct }}%;background:{{ sc.col }}"></i></span><span class="mono" style="width:40px;text-align:right">{{ sc.val }}</span></div></sc-for>
             <sc-if value="{{ d.noScores }}" hint-placeholder-val="{{ false }}"><span class="small muted">{{ d.noScoresText }}</span></sc-if>
           </div>
-          <sc-if value="{{ d.hasEffect }}" hint-placeholder-val="{{ false }}"><div class="stack" style="gap:6px"><span class="cap">Effect preview</span><span style="font-size:15px;overflow-wrap:anywhere">{{ d.effect }}</span></div></sc-if>
+          <sc-if value="{{ d.hasEffect }}" hint-placeholder-val="{{ false }}"><div class="stack" style="gap:6px"><span class="cap">What would have happened</span><span style="font-size:15px;overflow-wrap:anywhere">{{ d.effect }}</span></div></sc-if>
           <sc-if value="{{ d.hasLineage }}" hint-placeholder-val="{{ false }}">
-            <div class="stack" style="gap:8px" data-trishul="lineage-detail"><span class="cap">Lineage · source → derive → sink</span>
+            <div class="stack" style="gap:8px" data-trishul="lineage-detail"><span class="cap">Data trail · where each value came from (technical)</span>
               <div class="chain"><sc-for list="{{ d.lineage }}" as="ln" hint-placeholder-count="3"><span class="n" style="opacity:{{ ln.op }}"><span class="tag" style="--c:{{ ln.col }}">{{ ln.text }}</span><span class="muted small">{{ ln.arrow }}</span></span></sc-for></div>
               <sc-for list="{{ d.edges }}" as="eg" hint-placeholder-count="2"><span class="mono muted small" style="overflow-wrap:anywhere">{{ eg.text }}</span></sc-for>
             </div>
           </sc-if>
-          <sc-if value="{{ d.hasExtra }}" hint-placeholder-val="{{ false }}"><div class="stack" style="gap:6px"><span class="cap">Mode · approval · mandate</span><span class="mono small" style="overflow-wrap:anywhere">{{ d.extra }}</span></div></sc-if>
-          <div class="stack" style="gap:6px"><span class="cap">Reason</span><p style="font-size:14px;line-height:1.55">{{ d.reason }}</p></div>
-          <div class="stack" style="gap:6px"><span class="cap">Audit leaf</span><span class="mono small" style="color:var(--teal);overflow-wrap:anywhere">{{ d.hash }}</span></div>
+          <sc-if value="{{ d.hasExtra }}" hint-placeholder-val="{{ false }}"><div class="stack" style="gap:6px"><span class="cap">Settings in force (mode · approval · user authorisation)</span><span class="mono small" style="overflow-wrap:anywhere">{{ d.extra }}</span></div></sc-if>
+          <div class="stack" style="gap:6px"><span class="cap">Gateway's own reason</span><p style="font-size:14px;line-height:1.55">{{ d.reason }}</p></div>
+          <div class="stack" style="gap:6px"><span class="cap">Tamper-proof log record ID</span><span class="mono small" style="color:var(--teal);overflow-wrap:anywhere">{{ d.hash }}</span></div>
         </div>
       </sc-if>
       <sc-if value="{{ callMissing }}" hint-placeholder-val="{{ false }}"><div class="empty">{{ callMissingText }}</div></sc-if>
@@ -966,6 +972,36 @@ const RULE_TEXT={
   'CORE.HANDLE.UNKNOWN':'The call referred to data TRISHUL does not know about.',
   'CORE.TOOL.UNKNOWN':'The agent tried to use a tool that is not allowed.'
 };
+/* plain names for tool arguments, shown in the call detail */
+const ARG_NAME={payee_vpa:'Pay to',amount_paise:'Amount',amount:'Amount',note:'Note',vpa:'Payee account',name:'Payee name',
+  customer_ids:'Customers',destination:'Send data to',to:'Email to',subject:'Subject',body:'Message',doc_id:'Document',
+  handle:'Data reference',field:'Field',clip_id:'Voice clip',nonce_id:'Challenge phrase',transcript:'What was said'};
+/* one-paragraph plain-English story of a call: what was asked, what TRISHUL did, and why */
+function plainStory(de,dd){
+  const a=de.args||{},t=String(de.tool||'').replace(/^(upi|crm|mail|files|voice)_/,''),who=de.agent==='redteam'?'An attacker\'s text made the agent try to ':'The AI agent tried to ';
+  const list=v=>Array.isArray(v)?v.join(', '):String(v??'?');
+  const act=t==='pay_upi'?'pay '+money(a.amount_paise)+' to '+list(a.payee_vpa)
+    :t==='add_payee'?'add '+list(a.vpa)+' as a new payee'
+    :t==='export_records'?'export the records of customer '+list(a.customer_ids)+' to '+list(a.destination)
+    :t==='send_email'?'send an email with customer details to '+list(a.to)
+    :t==='read_document'?'read a document'
+    :t==='extract_field'?'pull a value ('+list(a.field)+') out of a document'
+    :/voice|speak|confirm/.test(t)?'act on a voice command'
+    :'use the tool '+(de.tool||'?');
+  const verdict=dd==='DENY'?'TRISHUL BLOCKED it. Nothing was executed.'
+    :dd==='ALLOW'?'TRISHUL ALLOWED it. It matched what the user asked for and authorised.'
+    :dd==='STEP_UP'?'TRISHUL PAUSED it and asked a human to approve it first.'
+    :dd==='UNGUARDED'?'TRISHUL was switched OFF, so this ran with no protection.'
+    :'Decision: '+dd+'.';
+  const SRC={payee_vpa:'payee account',amount_paise:'amount',amount:'amount',vpa:'payee account',customer_ids:'customer IDs',
+    destination:'destination address',to:'email address',body:'email text',subject:'email subject',note:'note'};
+  const labels=de.labels||{},untrusted=Object.keys(labels).filter(k=>String(labels[k]).startsWith('UNTRUSTED')).map(k=>SRC[k]||(ARG_NAME[k]||k).toLowerCase());
+  const joined=untrusted.length>1?untrusted.slice(0,-1).join(', ')+' and '+untrusted[untrusted.length-1]:untrusted[0];
+  const sourceText=untrusted.length?'The '+joined+' came from a message or document the agent read, not from the user, so TRISHUL did not trust '+(untrusted.length>1?'them':'it')+'.'
+    :Object.keys(labels).length?'Every value came directly from the user.':'';
+  const why=(de.rules||[]).map(ruleText).filter((x,i,arr)=>arr.indexOf(x)===i).join(' ');
+  return {story:who+act+'.',verdict,hasSourceText:!!sourceText,sourceText,hasWhy:!!why&&dd!=='ALLOW',why};
+}
 const ruleText=id=>RULE_TEXT[id]||(/^CORE\.SCHEMA\./.test(id)?'The request was malformed. It does not match the tool\'s expected inputs.':/^CORE\.FAILSAFE/.test(id)||/INTERNAL/.test(id)?'An internal check failed, so TRISHUL blocked the call to stay safe.':'Blocked by the TRISHUL policy.');
 const FILTERS=['all','payshield','purposelock','voicetrust'];
 /* graph geometry in SVG user units (viewBox VW x VH) */
@@ -1555,10 +1591,11 @@ class Component extends DCLogic {
     const lvCol=l=>String(l).startsWith('UNTRUSTED')?C.red:l==='TRUSTED_USER'?C.user:C.blue;
     const extra=[de.mode?'mode '+de.mode:'',de.namespace?'namespace '+de.namespace:'',de.approval?'approval '+de.approval.id+' ('+de.approval.state+')':'',de.mandate?'mandate '+de.mandate.id+' ('+de.mandate.state+')':''].filter(Boolean).join(' · ');
     return {has:true,none:false,href:'#/call/'+encodeURIComponent(de.id),decision:dd,col:DCOL[dd]||C.blue,tool:de.tool,agent:de.agent,feature:FNAME[de.feature]||de.feature,ts:de.ts,latency:de.latency_ms!=null?de.latency_ms+' ms':'—',
-      args:Object.entries(de.args||{}).map(([k,v])=>{const l=(de.labels||{})[k];const un=l&&String(l).startsWith('UNTRUSTED');return{key:k,value:k==='amount_paise'?money(v):k==='amount'?inr(v):short(typeof v==='object'?JSON.stringify(v):String(v),120),label:l?String(l).replace('UNTRUSTED_EXTERNAL:','UNTRUSTED · '):'USER',lc:un?C.red:l?C.muted:C.user};}),
+      ...plainStory(de,dd),
+      args:Object.entries(de.args||{}).map(([k,v])=>{const l=(de.labels||{})[k];const un=l&&String(l).startsWith('UNTRUSTED');return{key:ARG_NAME[k]||k,value:k==='amount_paise'?money(v):k==='amount'?inr(v):short(typeof v==='object'?JSON.stringify(v):String(v),120),label:un?'NOT TRUSTED · from a message or document':l==='TRUSTED_USER'||!l?'TRUSTED · from the user':String(l),lc:un?C.red:l&&l!=='TRUSTED_USER'?C.muted:C.user};}),
       rules:(de.rules||[]).map(id=>({id,text:ruleText(id)})),noRules:!(de.rules||[]).length,
       scores:sc.map(([k,v])=>({key:k,val:Number(v).toFixed(2),pct:Math.round(v*100),col:v>=.5?C.red:C.blue})),noScores:!sc.length,
-      noScoresText:de.mode==='off'?'TRISHUL is OFF: nothing was scored.':de.ml==='off'?'Classifier off. Rules decided alone.':'No ML scores reported for this call.',
+      noScoresText:de.mode==='off'?'TRISHUL was OFF, so nothing was checked.':de.ml==='off'?'The AI detector was switched off. The rules decided on their own.':'The AI detector did not need to score this call. The rules decided.',
       hasEffect:!!de.effect,effect:effectText(de),
       hasLineage:nodes.length>0,noLineage:!nodes.length,lineage:nodes.map((n,i)=>({text:n.kind+' · '+short(n.ref||n.id,44)+' · '+((n.label||{}).level||'?'),col:lvCol((n.label||{}).level),op:full||i<s.linStep?1:.12,arrow:i<nodes.length-1?'→':''})),
       edges:(((de.lineage||{}).edges)||[]).map(e=>({text:e.op+': '+short(refOf[e.src]||e.src,40)+' → '+short(refOf[e.dst]||e.dst,40)})),
