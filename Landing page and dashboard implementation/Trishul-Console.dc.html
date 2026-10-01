@@ -266,6 +266,7 @@ textarea.field{height:96px;padding:var(--s3);resize:vertical;width:100%}
       <a class="chip hide-sm" href="#/demo/controls" data-trishul="mode-toggle" data-state="{{ modeState }}">TRISHUL {{ modeLabel }}</a>
       <span class="chip hide-sm hide-md">{{ mlLabel }}</span>
       <a class="chip hide-md" href="#/proof/audit" data-trishul="audit-root" data-state="{{ auditState }}" style="animation:{{ auditAnim }}">AUDIT <b style="font-weight:400;color:{{ auditColor }}">{{ auditText }}</b> <span class="mono" style="color:{{ rootColor }}">{{ root }}</span></a>
+      <sc-if value="{{ opChip }}" hint-placeholder-val="{{ false }}"><a class="chip amber hide-xs" href="#/demo/controls" data-trishul="operator-chip" title="Operator token required (open console via URL printed by `trishul start`)">No operator token</a></sc-if>
       <a class="chip amber" href="#/approvals/pending" data-trishul="approval-state">Approvals · {{ pending }}</a>
       <a class="chip hide-sm hide-md" href="#/approvals/pending">{{ apChip }}</a>
     </div>
@@ -1571,7 +1572,6 @@ class Component extends DCLogic {
     if(live&&s.conn!=='open'){const lost=s.conn==='lost',bad=s.conn==='error';statusText=bad?'CONNECTION ERROR · RETRYING · '+this.wsUrl():lost?'STREAM LOST · RECONNECTING':'CONNECTING · '+this.wsUrl();statusKind='err';}
     else if(live&&s.modeErr){statusText=s.modeErr;statusKind='err';}
     else if(off){statusText='TRISHUL IS OFF · UNGUARDED DEMO · DISABLED: '+((s.tdisabled||[]).join(' · ').toUpperCase()||'EVERYTHING')+' · CALLS EXECUTE IN THE ISOLATED '+(s.tns||'demo_off')+' NAMESPACE, NEVER THE PROTECTED LEDGER';statusKind='off';}
-    else if(live&&!OP_TOKEN){statusText=OP_HINT;statusKind='warn';}
     else if(live&&s.gap&&Date.now()-s.gap<9000){statusText='STREAM GAP · RESYNCED FROM THE GATEWAY';statusKind='warn';}
     else if(!live){if(s.conn==='noreplay'){statusText='REPLAY LOG NOT FOUND · replay/demo-session.json';statusKind='info';}else{statusText='DEV REPLAY — synthetic data · '+s.logName+' · '+this.speed()+'×';statusKind='warn';}}
 
@@ -1763,7 +1763,7 @@ class Component extends DCLogic {
       pending:pend,apChip:live?(s.me?'Approver · '+s.me.username:'Approver · signed out'):'Approvals simulated',
       isReplay:!live,replayCls:'on',goReplay:()=>{if(this.state.conn==='noreplay'||!this.src)this.startReplay();},goLive:()=>{try{location.href=location.pathname;}catch(e){}},
       showStatus:!!statusText,statusText,statusKind,hasNotice:!!s.notice,notice:s.notice,
-      opLock,opNote,
+      opLock,opNote,opChip:opLock,
       /* overview */
       isOverview:feature==='overview',calls:ev.length.toLocaleString('en-IN'),blocked:den,attacks:att,p99:fmt(p99),p99u:p99==null?'':' ms',latState:p99==null?'unavailable':live?'measured':'synthetic',
       featCards,agents,gAgents:agents,tools,paths,filters,bars,apmMax:String(ymax),mlOff:live&&!s.ml,
