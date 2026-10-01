@@ -53,6 +53,13 @@
       "revision": "90c9989b1a342275dd0d1a95aad283c04e075671",
       "threshold": 0.5
     },
+    "llm": {
+      "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "hf_id": "Qwen/Qwen3-8B",
+      "ollama_tag": "qwen3:8b",
+      "reader": "deterministic-fallback",
+      "selected_by": "ram >= 16GiB (16 GiB detected)"
+    },
     "os": "macOS-26.6.2-arm64-arm-64bit",
     "packages": {
       "cryptography": "50.0.1",
@@ -96,99 +103,99 @@
       "mode": "on"
     }
   ],
-  "generated_at": "2026-09-30T23:58:21Z",
-  "git_commit": "b8ef17bdf7061538f9123cc877701ab6d1c36aeb",
-  "git_dirty": true,
+  "generated_at": "2026-10-01T01:13:06Z",
+  "git_commit": "11c5d2599990985f4581e779063fbf3987fb75b6",
+  "git_dirty": false,
   "latency": {
     "ml_off": {
       "audit": {
-        "p50": 0.306,
-        "p99": 0.522
+        "p50": 0.23,
+        "p99": 0.367
       },
       "decision": {
-        "p50": 0.01,
-        "p99": 0.119
+        "p50": 0.008,
+        "p99": 0.083
       },
       "guards": {
-        "p50": 0.202,
-        "p99": 0.938
+        "p50": 0.092,
+        "p99": 0.693
       },
       "handles": {
-        "p50": 0.022,
-        "p99": 0.035
+        "p50": 0.017,
+        "p99": 0.025
       },
       "ingress": {
-        "p50": 0.045,
-        "p99": 0.076
+        "p50": 0.092,
+        "p99": 0.267
       },
       "ml": {
-        "p50": 0.023,
-        "p99": 0.034
+        "p50": 0.018,
+        "p99": 0.022
       },
       "policy": {
-        "p50": 0.143,
-        "p99": 0.204
+        "p50": 0.11,
+        "p99": 0.133
       },
       "preview": {
-        "p50": 0.016,
-        "p99": 0.09
+        "p50": 0.012,
+        "p99": 0.061
       },
       "provenance": {
-        "p50": 0.07,
-        "p99": 0.432
+        "p50": 0.049,
+        "p99": 0.081
       },
       "total": {
-        "p50": 1.017,
-        "p99": 2.181
+        "p50": 0.777,
+        "p99": 1.582
       }
     },
     "ml_on": {
       "audit": {
-        "p50": 0.369,
-        "p99": 0.905
+        "p50": 0.237,
+        "p99": 0.821
       },
       "decision": {
-        "p50": 0.012,
-        "p99": 0.284
+        "p50": 0.008,
+        "p99": 0.249
       },
       "guards": {
-        "p50": 0.265,
-        "p99": 1.243
+        "p50": 0.146,
+        "p99": 0.838
       },
       "handles": {
-        "p50": 0.025,
-        "p99": 0.044
+        "p50": 0.018,
+        "p99": 0.027
       },
       "ingress": {
-        "p50": 0.063,
-        "p99": 0.092
+        "p50": 0.054,
+        "p99": 0.289
       },
       "ml": {
-        "p50": 0.035,
-        "p99": 11.583
+        "p50": 0.022,
+        "p99": 9.28
       },
       "policy": {
-        "p50": 0.167,
-        "p99": 0.309
+        "p50": 0.11,
+        "p99": 0.282
       },
       "preview": {
-        "p50": 0.018,
-        "p99": 0.108
+        "p50": 0.012,
+        "p99": 0.062
       },
       "provenance": {
-        "p50": 0.087,
-        "p99": 0.486
+        "p50": 0.049,
+        "p99": 0.111
       },
       "total": {
-        "p50": 1.214,
-        "p99": 14.639
+        "p50": 0.788,
+        "p99": 11.641
       }
     },
     "note": "in-process pipeline stage timings over the India suite (scripted ASR/spoof)",
     "repeats": 5,
     "samples": 750
   },
-  "p99_latency_ms": 14.639,
+  "p99_latency_ms": 11.641,
   "schema_version": 1,
   "seed": 42,
   "suite": "India attack suite (india_v1)",
