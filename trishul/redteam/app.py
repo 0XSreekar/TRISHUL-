@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Audience Red-Team app: its own Starlette app on its own port (default 8789).
 
 Exactly two routes: ``GET /`` (a static submit form, no data) and ``POST /submit {text}``. It

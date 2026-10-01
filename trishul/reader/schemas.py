@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Typed extraction schemas. ``extra="forbid"`` + strict types: anything the model adds, omits
 or mistypes is invalid output and the call is denied."""
 

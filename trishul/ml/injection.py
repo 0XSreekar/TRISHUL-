@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Prompt-injection classifier service (``protectai/deberta-v3-base-prompt-injection-v2``).
 
 Long text is cut into 512-token windows (stride 64); the signal is the MAX injection probability

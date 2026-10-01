@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Wiring for the reader: default reader for the gateway, and the ``trishul start`` hook that
 logs the chosen model, records the ``system_start`` audit leaf and attaches the live reader to
 the red-team wall."""

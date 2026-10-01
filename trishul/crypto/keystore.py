@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """On-disk key store: random Ed25519 keys under ``<TRISHUL_HOME>/keys`` (dir 0700, files 0600).
 
 Layout: ``<kid>.key`` (base64url raw private key), ``<kid>.pub`` (base64url raw public key) and

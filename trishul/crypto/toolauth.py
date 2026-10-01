@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Gateway -> tool-server call tokens (gateway bypass protection, acceptance test 1).
 
 After the gateway decides ALLOW it signs a short-lived token bound to exactly one call and

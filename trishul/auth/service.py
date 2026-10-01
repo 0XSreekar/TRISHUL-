@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Users, roles and server-side sessions stored in the shared SQLite database.
 
 Roles: ``approver`` (may approve/reject step-up approvals) and ``operator`` (may run operator

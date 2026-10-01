@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Local LLM for the quarantined reader: RAM-based model selection, pin check, Ollama client.
 
 Fail closed: a missing server, a digest that differs from the pin, or any transport error means

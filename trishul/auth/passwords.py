@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """argon2id password hashing. Passwords are never logged, echoed or stored."""
 
 from argon2 import PasswordHasher, Type

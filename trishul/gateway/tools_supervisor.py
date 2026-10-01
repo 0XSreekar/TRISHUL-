@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Run the four demo tool servers over HTTP in one container (the Docker ``tools`` service).
 
 ``python -m trishul.gateway.tools_supervisor --db DB --keys PUBDIR --host H --port 9000`` starts

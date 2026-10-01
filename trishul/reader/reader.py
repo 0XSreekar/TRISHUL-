@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """``QuarantinedReader``: raw text + JSON schema in, validated typed fields out.
 
 The model gets no tools, no planner context and a fresh conversation each call (temperature 0,

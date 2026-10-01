@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Approver / operator authentication (argon2id users, server-side sessions)."""
 
 from trishul.auth.passwords import MIN_PASSWORD_LENGTH, hash_password, verify_password
