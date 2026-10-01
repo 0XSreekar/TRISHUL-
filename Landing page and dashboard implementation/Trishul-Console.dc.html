@@ -826,7 +826,8 @@ textarea.field{height:96px;padding:var(--s3);resize:vertical;width:100%}
                   <div class="card stack" style="gap:8px;border-color:var(--red,#e06c6c)" data-trishul="voice-clip">
                     <span class="cap">Moment 6 · play the attacker's voice</span>
                     <p style="margin:0;font-size:14px;line-height:1.55">This is the exact recording TRISHUL judged: an {{ vc.source }} saying the challenge phrase “{{ vc.phrase }}”. The words were right, but the voice-clone detector caught it. Decision: <b>{{ vc.decision }}</b>.</p>
-                    <audio controls preload="auto" src="{{ vc.src }}" style="width:100%"></audio>
+                    <div class="btns"><button class="btn pri" onClick="{{ playVoice }}" data-trishul="play-voice">▶ Play the cloned voice</button></div>
+                    <audio controls="controls" preload="auto" src="{{ vc.src }}" style="width:100%;min-height:40px;display:block"></audio>
                   </div>
                 </sc-if>
                 <div class="lines"><sc-for list="{{ demoLines }}" as="dl" hint-placeholder-count="0"><div class="line" style="flex-direction:column;align-items:stretch;gap:3px"><span class="mono" style="overflow-wrap:anywhere">{{ dl.a }}</span><span class="mono small" style="color:{{ dl.col }};overflow-wrap:anywhere">{{ dl.b }}</span></div></sc-for></div>
@@ -1031,12 +1032,20 @@ let OP_TOKEN='';  /* read from #op=..., stripped from the URL, never logged/rend
 /* kept in this tab's sessionStorage so a refresh keeps it; closing the tab drops it */
 const OP_KEY='trishul.op';
 /* accepted: #op=TOKEN, #op=TOKEN&route=/demo/moments, #/demo/moments&op=TOKEN. The token is stripped; any route is kept. */
-try{const segs=(location.hash||'').replace(/^#/,'').split('&').map(g=>g.replace(/^amp;/,''));let route='',found=false;
-  for(const g of segs){if(g.startsWith('op=')){OP_TOKEN=decodeURIComponent(g.slice(3));found=true;}
-    else if(g.startsWith('route=')){const r=decodeURIComponent(g.slice(6));if(r)route=r.charAt(0)==='/'?r:'/'+r;}
-    else if(g.charAt(0)==='/')route=g;}
-  if(found)history.replaceState(null,'',location.pathname+location.search+(route?'#'+route:''));}catch(e){}
-try{if(OP_TOKEN)sessionStorage.setItem(OP_KEY,OP_TOKEN);else OP_TOKEN=sessionStorage.getItem(OP_KEY)||'';}catch(e){}
+/* runs on load AND on every hashchange: pasting the link into an already-open tab only changes
+   the hash (no reload), and the token must still be taken and stripped, never routed or shown */
+function takeOpFromHash(){
+  try{const segs=(location.hash||'').replace(/^#/,'').split('&').map(g=>g.replace(/^amp;/,''));let route='',found=false;
+    for(const g of segs){if(g.startsWith('op=')){OP_TOKEN=decodeURIComponent(g.slice(3));found=true;}
+      else if(g.startsWith('route=')){const r=decodeURIComponent(g.slice(6));if(r)route=r.charAt(0)==='/'?r:'/'+r;}
+      else if(g.charAt(0)==='/')route=g;}
+    if(!found)return false;
+    history.replaceState(null,'',location.pathname+location.search+'#'+(route||'/'));
+    try{sessionStorage.setItem(OP_KEY,OP_TOKEN);}catch(e){}
+    return true;}catch(e){return false;}
+}
+takeOpFromHash();
+try{if(!OP_TOKEN)OP_TOKEN=sessionStorage.getItem(OP_KEY)||'';}catch(e){}
 const forgetOp=()=>{OP_TOKEN='';try{sessionStorage.removeItem(OP_KEY);}catch(e){}};
 const OP_PATH=/^\/(mode|ml|prove|redteam\/(submit|kill|fallback)|demo\/|consent\/)/;
 const AP_PATH=/^\/approvals\//;  /* approver session cookie + X-CSRF-Token, never the operator token */
@@ -1218,7 +1227,7 @@ class Component extends DCLogic {
     this.anims=[];this.parts=[];this.flashes=[];this.arr={};this.geoC={};this.src=null;
     this.seen=new Set();this.dirty={};this.lastFlush=0;this.timers=[];this.lastSession='sess_console';
     /* routing starts here, after the #op= token (module top) has been read and stripped from the URL */
-    this.onHash=()=>this.applyRoute();
+    this.onHash=()=>{takeOpFromHash();this.applyRoute();};
     this.onKey=e=>{if(e.key==='Escape'){if(this.state.callId)this.closeCall();else if(this.state.navOpen)this.setState({navOpen:false});}};
     addEventListener('hashchange',this.onHash);addEventListener('keydown',this.onKey);
     this.applyRoute();
@@ -1507,7 +1516,8 @@ class Component extends DCLogic {
       /* keep the cloned-voice clip after later steps replace this moment's result, and play it */
       const vs=((j&&j.steps)||[]).find(st=>st.clip_audio_b64);
       this.setState(s=>({demoBusy:null,demoRes:{...s.demoRes,[n]:j},voiceClip:vs||s.voiceClip||null}));
-      if(vs)this.later(()=>{const au=document.querySelector('[data-trishul="voice-clip"] audio');if(au){au.load();au.play().catch(()=>{});}},150);}
+      if(vs)this.later(()=>{const box=document.querySelector('[data-trishul="voice-clip"]');if(box)box.scrollIntoView({block:'center'});
+        const au=box&&box.querySelector('audio');if(au){au.load();au.play().catch(()=>{});}},150);}
     catch(e){this.setState({demoBusy:null,demoErr:'Moment '+n+' failed · '+this.errText(e)});}
     this.loadAll();
   }
@@ -1927,7 +1937,8 @@ class Component extends DCLogic {
       rtCol:rst&&rst.succeeded>0?C.red:C.blue,rtKilled:killed,rtKillLabel:killed?'RESUME SUBMISSIONS':'KILL SWITCH',rtRef:el=>{this.rtEl=el;},rtSubmit:()=>this.rtSubmit(),rtFallback:()=>this.rtFallback(),rtToggleKill:()=>this.rtKill(),
       rtOn:!!rtSt[1],rtState:rtSt[0],rtCol2:STATE_COL[rtSt[0]]||C.muted,rtMsg:rtSt[1],rtCards:rtEvents,rtEmpty:!rtEvents.length,rtEmptyText,rtRules,noRtRules:!rtRules.length,rtDecs,audienceUrl,
       /* demo */
-      moments,demoLines,noDemoLines:!demoLines.length,hasVoiceClip:!!voiceClip,vc:voiceClip||{src:'',phrase:'',decision:'',source:''},demoReset:()=>this.demoReset(),...M('demo',demoSt[0],demoSt[1]),
+      moments,demoLines,noDemoLines:!demoLines.length,hasVoiceClip:!!voiceClip,vc:voiceClip||{src:'',phrase:'',decision:'',source:''},
+      playVoice:()=>{const au=document.querySelector('[data-trishul="voice-clip"] audio');if(au){au.currentTime=0;au.play().catch(()=>{});}},demoReset:()=>this.demoReset(),...M('demo',demoSt[0],demoSt[1]),
       onCls:s.tmode==='on'?'on':'',offCls:s.tmode==='off'?'on':'',setOn:()=>this.setMode('on'),setOff:()=>this.setMode('off'),
       modeDetail:live?(s.tmode==='off'?'Namespace '+(s.tns||'demo_off')+'. Disabled: '+((s.tdisabled||[]).join(', ')||'everything')+'.':s.tmode==='on'?'Protected namespace '+(s.tns||'—')+'.':'Mode not reported yet.'):'Unavailable in DEV REPLAY.',
       mlOnCls:live&&s.ml?'on':'',mlOffCls:live&&!s.ml?'on':'',mlOn:()=>this.setMl(true),mlOffGo:()=>this.setMl(false),

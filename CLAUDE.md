@@ -76,6 +76,7 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-10-01 | VoiceTrust call detail in plain English | ✅ Complete | Voice story ("A caller's voice said …"), voice-specific trust label, plain arg + detector names; Moment 6 steps 1-2 run live (DENY SPOOF.HIGH / LIVENESS.MISMATCH) |
 | 2026-10-01 | Moment 6: play the cloned voice in the console | ✅ Complete | m6 step 1 returns the judged clip; Results shows an audio player (macOS `say` writes to a file, nothing was audible before); browser-checked 1.1 s WAV; 659 tests pass |
 | 2026-10-01 | Fix: voice player vanished after Step 2 | ✅ Complete | Clip kept in its own state (cleared on reset) and auto-plays after Step 1; browser-checked playing + still shown after Step 2 |
+| 2026-10-01 | Browser click-through: 2 bugs fixed | ✅ Complete | (1) audio `controls` attr dropped by template → player was 0×0; now visible + "▶ Play the cloned voice" button + auto-scroll; (2) pasting the #op= link into an open tab only fired hashchange → token ignored and shown as "Unknown route op=…"; token now taken on hashchange too. Screenshot-verified |
 
 ---
 
