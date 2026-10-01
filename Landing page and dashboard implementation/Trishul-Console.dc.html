@@ -1363,7 +1363,7 @@ class Component extends DCLogic {
     for(const e of list){
       switch(e.type){
         case 'reset':calls.length=0;patch._reset=1;this.seen=new Set();this.anims=[];this.arr={};
-          Object.assign(patch,{resolved:{},proofs:{},digests:[],demoRes:{},demoEv:{},demoErr:'',nonce:null});resolved=null;rtNew=[];demoNew=[];proofNew=[];dirty.all=1;break;
+          Object.assign(patch,{resolved:{},proofs:{},digests:[],demoRes:{},demoEv:{},demoErr:'',nonce:null,voiceClip:null});resolved=null;rtNew=[];demoNew=[];proofNew=[];dirty.all=1;break;
         case 'ml_state':patch.ml=!!(e.enabled!=null?e.enabled:e.ml);break;
         case 'mode':patch.tmode=e.mode;patch.tdisabled=e.disabled||[];patch.tns=e.namespace||'';break;
         case 'audit_verify':patch.audit={ok:!!e.ok,bad:e.ok?null:(e.bad_index!=null?e.bad_index:e.bad_id),known:true};dirty.head=1;break;
@@ -1503,14 +1503,18 @@ class Component extends DCLogic {
   async moment(n,step){
     if(!this.isLive()||this.state.demoBusy)return;
     this.setState(s=>({demoBusy:n,demoErr:'',demoRes:{...s.demoRes,[n]:null}}));
-    try{const j=await this.post('/demo/moment/'+n,step?{step}:{});this.setState(s=>({demoBusy:null,demoRes:{...s.demoRes,[n]:j}}));}
+    try{const j=await this.post('/demo/moment/'+n,step?{step}:{});
+      /* keep the cloned-voice clip after later steps replace this moment's result, and play it */
+      const vs=((j&&j.steps)||[]).find(st=>st.clip_audio_b64);
+      this.setState(s=>({demoBusy:null,demoRes:{...s.demoRes,[n]:j},voiceClip:vs||s.voiceClip||null}));
+      if(vs)this.later(()=>{const au=document.querySelector('[data-trishul="voice-clip"] audio');if(au){au.load();au.play().catch(()=>{});}},150);}
     catch(e){this.setState({demoBusy:null,demoErr:'Moment '+n+' failed · '+this.errText(e)});}
     this.loadAll();
   }
   async demoReset(){
     if(!this.isLive())return;
     try{await this.post('/demo/reset',{});this.anims=[];this.arr={};this.seen=new Set();
-      this.setState({events:[],resolved:{},proofs:{},digests:[],rt:[],demoRes:{},demoEv:{},demoErr:'',nonce:null});this.loadAll();}
+      this.setState({events:[],resolved:{},proofs:{},digests:[],rt:[],demoRes:{},demoEv:{},demoErr:'',nonce:null,voiceClip:null});this.loadAll();}
     catch(e){this.setState({demoErr:'Reset failed · '+this.errText(e)});}
   }
   async issueNonce(){
@@ -1837,7 +1841,7 @@ class Component extends DCLogic {
           b:Object.entries(st).filter(([k,x])=>!['step','name','status','diff','clip_audio_b64'].includes(k)&&x!=null).map(([k,x])=>k+' '+(k==='amount_paise'?money(x):short(typeof x==='object'?JSON.stringify(x):String(x),140))).join(' · ')});
         if(st.auto_approved)demoLines.push({a:'AUTO-APPROVED BY DEMO SCRIPT · approver '+(st.approved_by||'demo-script'),b:st.auto_approval_note||'',col:C.amber});
         if(st.diff){demoLines.push({a:'− '+st.diff.remove,b:'',col:C.red});demoLines.push({a:'+ '+st.diff.add,b:'',col:C.blue});}});});
-    const voiceStep=((s.demoRes[6]||{}).steps||[]).find(st=>st.clip_audio_b64);
+    const voiceStep=s.voiceClip;
     const voiceClip=voiceStep?{src:'data:audio/wav;base64,'+voiceStep.clip_audio_b64,phrase:voiceStep.phrase_challenge||'',decision:voiceStep.decision||'',
       source:/^tts:/.test(voiceStep.clip_source||'')?'AI-generated voice (macOS text-to-speech)':'test tone'}:null;
     const demoSt=s.demoErr?['error',s.demoErr]:!live?['unavailable','UNAVAILABLE in DEV REPLAY · demo moments need the live gateway']:s.conn!=='open'?['disconnected','DISCONNECTED · waiting for the gateway']:s.demoBusy?['loading','Running moment '+s.demoBusy+'…']:['ok',''];
