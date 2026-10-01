@@ -902,7 +902,7 @@ textarea.field{height:96px;padding:var(--s3);resize:vertical;width:100%}
             <sc-for list="{{ d.rules }}" as="rl" hint-placeholder-count="1"><div class="stack" style="gap:4px" data-trishul="rule-why"><span class="tag" style="align-self:flex-start">{{ rl.id }}</span><span style="font-size:13px;line-height:1.5">{{ rl.text }}</span></div></sc-for><sc-if value="{{ d.noRules }}" hint-placeholder-val="{{ false }}"><span class="small muted">None</span></sc-if>
           </div>
           <div class="stack" style="gap:8px"><span class="cap">AI detector scores</span>
-            <sc-for list="{{ d.scores }}" as="sc" hint-placeholder-count="1"><div style="display:flex;align-items:center;gap:12px;font-size:12px"><span class="muted" style="width:80px">{{ sc.key }}</span><span class="bar2" style="flex:1"><i style="width:{{ sc.pct }}%;background:{{ sc.col }}"></i></span><span class="mono" style="width:40px;text-align:right">{{ sc.val }}</span></div></sc-for>
+            <sc-for list="{{ d.scores }}" as="sc" hint-placeholder-count="1"><div style="display:flex;align-items:center;gap:12px;font-size:12px"><span class="muted" style="width:170px">{{ sc.key }}</span><span class="bar2" style="flex:1"><i style="width:{{ sc.pct }}%;background:{{ sc.col }}"></i></span><span class="mono" style="width:40px;text-align:right">{{ sc.val }}</span></div></sc-for>
             <sc-if value="{{ d.noScores }}" hint-placeholder-val="{{ false }}"><span class="small muted">{{ d.noScoresText }}</span></sc-if>
           </div>
           <sc-if value="{{ d.hasEffect }}" hint-placeholder-val="{{ false }}"><div class="stack" style="gap:6px"><span class="cap">What would have happened</span><span style="font-size:15px;overflow-wrap:anywhere">{{ d.effect }}</span></div></sc-if>
@@ -975,10 +975,13 @@ const RULE_TEXT={
 /* plain names for tool arguments, shown in the call detail */
 const ARG_NAME={payee_vpa:'Pay to',amount_paise:'Amount',amount:'Amount',note:'Note',vpa:'Payee account',name:'Payee name',
   customer_ids:'Customers',destination:'Send data to',to:'Email to',subject:'Subject',body:'Message',doc_id:'Document',
-  handle:'Data reference',field:'Field',clip_id:'Voice clip',nonce_id:'Challenge phrase',transcript:'What was said'};
+  handle:'Data reference',field:'Field',clip_id:'Voice recording',nonce_id:'Challenge ID',transcript:'What was said',
+  clip_sha256:'Recording fingerprint',clip_b64:'Voice recording'};
+const SCORE_NAME={spoof:'Voice-clone detector',injection:'Prompt-injection detector',anomaly:'Unusual-behaviour detector',hidden_text:'Hidden-text detector'};
 /* one-paragraph plain-English story of a call: what was asked, what TRISHUL did, and why */
 function plainStory(de,dd){
-  const a=de.args||{},t=String(de.tool||'').replace(/^(upi|crm|mail|files|voice)_/,''),who=de.agent==='redteam'?'An attacker\'s text made the agent try to ':'The AI agent tried to ';
+  const a=de.args||{},raw=String(de.tool||''),t=raw.replace(/^(upi|crm|mail|files)_/,''),who=de.agent==='redteam'?'An attacker\'s text made the agent try to ':'The AI agent tried to ';
+  const isVoice=de.feature==='voicetrust'||/^voice_/.test(raw);
   const list=v=>Array.isArray(v)?v.join(', '):String(v??'?');
   const act=t==='pay_upi'?'pay '+money(a.amount_paise)+' to '+list(a.payee_vpa)
     :t==='add_payee'?'add '+list(a.vpa)+' as a new payee'
@@ -997,10 +1000,16 @@ function plainStory(de,dd){
     destination:'destination address',to:'email address',body:'email text',subject:'email subject',note:'note'};
   const labels=de.labels||{},untrusted=Object.keys(labels).filter(k=>String(labels[k]).startsWith('UNTRUSTED')).map(k=>SRC[k]||(ARG_NAME[k]||k).toLowerCase());
   const joined=untrusted.length>1?untrusted.slice(0,-1).join(', ')+' and '+untrusted[untrusted.length-1]:untrusted[0];
-  const sourceText=untrusted.length?'The '+joined+' came from a message or document the agent read, not from the user, so TRISHUL did not trust '+(untrusted.length>1?'them':'it')+'.'
+  let sourceText=untrusted.length?'The '+joined+' came from a message or document the agent read, not from the user, so TRISHUL did not trust '+(untrusted.length>1?'them':'it')+'.'
     :Object.keys(labels).length?'Every value came directly from the user.':'';
   const why=(de.rules||[]).map(ruleText).filter((x,i,arr)=>arr.indexOf(x)===i).join(' ');
-  return {story:who+act+'.',verdict,hasSourceText:!!sourceText,sourceText,hasWhy:!!why&&dd!=='ALLOW',why};
+  let story=who+act+'.';
+  if(isVoice){
+    const said=a.transcript?'“'+a.transcript+'”':'something';
+    story='A caller\'s voice said '+said+' and asked the agent to act on it. TRISHUL checked whether the voice is a live human (not a clone) and whether they said the fresh challenge phrase.';
+    sourceText='A voice recording is not trusted until it proves it is a live, real person.';
+  }
+  return {story,verdict,hasSourceText:!!sourceText,sourceText,hasWhy:!!why&&dd!=='ALLOW',why};
 }
 const ruleText=id=>RULE_TEXT[id]||(/^CORE\.SCHEMA\./.test(id)?'The request was malformed. It does not match the tool\'s expected inputs.':/^CORE\.FAILSAFE/.test(id)||/INTERNAL/.test(id)?'An internal check failed, so TRISHUL blocked the call to stay safe.':'Blocked by the TRISHUL policy.');
 const FILTERS=['all','payshield','purposelock','voicetrust'];
@@ -1592,9 +1601,9 @@ class Component extends DCLogic {
     const extra=[de.mode?'mode '+de.mode:'',de.namespace?'namespace '+de.namespace:'',de.approval?'approval '+de.approval.id+' ('+de.approval.state+')':'',de.mandate?'mandate '+de.mandate.id+' ('+de.mandate.state+')':''].filter(Boolean).join(' · ');
     return {has:true,none:false,href:'#/call/'+encodeURIComponent(de.id),decision:dd,col:DCOL[dd]||C.blue,tool:de.tool,agent:de.agent,feature:FNAME[de.feature]||de.feature,ts:de.ts,latency:de.latency_ms!=null?de.latency_ms+' ms':'—',
       ...plainStory(de,dd),
-      args:Object.entries(de.args||{}).map(([k,v])=>{const l=(de.labels||{})[k];const un=l&&String(l).startsWith('UNTRUSTED');return{key:ARG_NAME[k]||k,value:k==='amount_paise'?money(v):k==='amount'?inr(v):short(typeof v==='object'?JSON.stringify(v):String(v),120),label:un?'NOT TRUSTED · from a message or document':l==='TRUSTED_USER'||!l?'TRUSTED · from the user':String(l),lc:un?C.red:l&&l!=='TRUSTED_USER'?C.muted:C.user};}),
+      args:Object.entries(de.args||{}).map(([k,v])=>{const l=(de.labels||{})[k];const un=l&&String(l).startsWith('UNTRUSTED');return{key:ARG_NAME[k]||k,value:k==='amount_paise'?money(v):k==='amount'?inr(v):short(typeof v==='object'?JSON.stringify(v):String(v),120),label:un?(de.feature==='voicetrust'?'NOT TRUSTED · from the voice recording':'NOT TRUSTED · from a message or document'):l==='TRUSTED_USER'||!l?'TRUSTED · from the user':String(l),lc:un?C.red:l&&l!=='TRUSTED_USER'?C.muted:C.user};}),
       rules:(de.rules||[]).map(id=>({id,text:ruleText(id)})),noRules:!(de.rules||[]).length,
-      scores:sc.map(([k,v])=>({key:k,val:Number(v).toFixed(2),pct:Math.round(v*100),col:v>=.5?C.red:C.blue})),noScores:!sc.length,
+      scores:sc.map(([k,v])=>({key:SCORE_NAME[k]||k,val:Number(v).toFixed(2),pct:Math.round(v*100),col:v>=.5?C.red:C.blue})),noScores:!sc.length,
       noScoresText:de.mode==='off'?'TRISHUL was OFF, so nothing was checked.':de.ml==='off'?'The AI detector was switched off. The rules decided on their own.':'The AI detector did not need to score this call. The rules decided.',
       hasEffect:!!de.effect,effect:effectText(de),
       hasLineage:nodes.length>0,noLineage:!nodes.length,lineage:nodes.map((n,i)=>({text:n.kind+' · '+short(n.ref||n.id,44)+' · '+((n.label||{}).level||'?'),col:lvCol((n.label||{}).level),op:full||i<s.linStep?1:.12,arrow:i<nodes.length-1?'→':''})),
