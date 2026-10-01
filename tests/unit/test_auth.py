@@ -283,3 +283,6 @@ def test_redaction_covers_hashes_and_session_cookie() -> None:
     h = hash_password("another-long-pw")
     assert h not in scrub_text(f"hash={h}") and "REDACTED:password_hash" in scrub_text(h)
     assert "abc123" not in scrub_text("Cookie: trishul_session=abc123xyz")
+
+
+pytestmark = pytest.mark.acceptance(8)

@@ -58,6 +58,7 @@ def test_allowed_purpose(conn) -> None:  # type: ignore[no-untyped-def]
     }
 
 
+@pytest.mark.acceptance(9)
 def test_disallowed_purpose(conn) -> None:  # type: ignore[no-untyped-def]
     f = facts(conn, read_call(), "marketing")  # C-1042 only consented to order_support
     assert f["consent_active"] is False and f["sink_allowed_for_purpose"] is False
@@ -73,6 +74,7 @@ def test_unknown_purpose_is_unknown_fact(conn) -> None:  # type: ignore[no-untyp
     }
 
 
+@pytest.mark.acceptance(9)
 def test_agent_supplied_purpose_is_ignored() -> None:
     args = {"customer_id": "C-1042", "purpose": "marketing", "Purpose": "x"}
     clean, ignored = strip_agent_purpose(args)

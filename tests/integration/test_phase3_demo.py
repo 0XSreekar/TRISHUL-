@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from starlette.testclient import TestClient
 
 from tests.integration.test_gateway_harness import Env, make_env_sync
@@ -45,6 +46,7 @@ def protected_snapshot(env: Env) -> tuple[int, int, int, int]:
 
 
 # --- AT-11 -------------------------------------------------------------------------------------
+@pytest.mark.acceptance("S-OFF")
 async def test_at11_off_mode_executes_only_in_demo_off_and_is_audited(env: Env) -> None:
     before = protected_snapshot(env)
     info = env.gw.backend.set_mode("off")
@@ -80,6 +82,7 @@ async def test_at11_off_mode_executes_only_in_demo_off_and_is_audited(env: Env) 
     assert env.call_events()[-1].get("mode") != "off"
 
 
+@pytest.mark.acceptance("S-OFF")
 async def test_at11_off_audit_failure_refuses_the_call(env: Env) -> None:
     env.gw.backend.set_mode("off")
 
@@ -102,6 +105,7 @@ async def test_mode_default_on_and_reset_restores_on(env: Env) -> None:
 
 
 # --- AT-12 -------------------------------------------------------------------------------------
+@pytest.mark.acceptance(5)
 async def test_at12_ml_off_top_attacks_still_denied(env: Env) -> None:
     before = protected_snapshot(env)
     env.gw.backend.set_ml(False)
@@ -141,6 +145,7 @@ async def test_redteam_refused_when_mode_off(env: Env) -> None:
 
 
 # --- AT-15 -------------------------------------------------------------------------------------
+@pytest.mark.acceptance(16)
 async def test_at15_cli_tamper_reports_exact_bad_index_and_proofs_verify(
     env: Env, capsys: Any
 ) -> None:

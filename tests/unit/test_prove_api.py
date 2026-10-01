@@ -3,6 +3,7 @@ swapped (digest equal before/after) and still denies afterwards."""
 
 from pathlib import Path
 
+import pytest
 from starlette.testclient import TestClient
 
 from tests.integration.test_gateway_harness import make_env_sync
@@ -18,6 +19,7 @@ def test_unsafe_fixture_is_compiled_separately_from_live() -> None:
     assert compile_files([UNSAFE_DIR]).digest != live.digest
 
 
+@pytest.mark.acceptance(15)
 def test_at13_unsafe_fixture_sat_with_counterexample_and_live_untouched(tmp_path: Path) -> None:
     gw, *_ = make_env_sync(tmp_path)
     live_before = gw.pipeline.policy.digest

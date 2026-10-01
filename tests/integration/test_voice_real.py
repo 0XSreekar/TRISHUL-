@@ -85,6 +85,7 @@ def test_b_replayed_clip_against_fresh_nonce_denied(tmp_path: Path) -> None:
     assert "VOICETRUST.LIVENESS.MISMATCH" in replay.rule_ids
 
 
+@pytest.mark.acceptance(12)
 def test_c_spoof_adapter_ran_with_numeric_score_and_flags_tts(tmp_path: Path) -> None:
     x = vad_trim(
         load_wav(say_clip("Please check the status of my order.", tmp_path / "e.wav")).samples  # type: ignore[arg-type]
@@ -106,6 +107,7 @@ async def real_env(tmp_path: Path) -> AsyncIterator[tuple[Env, VoiceTrust]]:
     conn.close()
 
 
+@pytest.mark.acceptance(13)
 async def test_d_live_voice_never_allows_high_risk_sink(
     real_env: tuple[Env, VoiceTrust], tmp_path: Path
 ) -> None:
@@ -138,6 +140,7 @@ async def test_d_live_voice_never_allows_high_risk_sink(
     assert env.ledger_rows() == 0
 
 
+@pytest.mark.acceptance(12)
 async def test_d2_real_spoof_detector_blocks_tts_through_gateway(
     tmp_path: Path,
 ) -> None:

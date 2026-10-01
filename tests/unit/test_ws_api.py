@@ -300,6 +300,7 @@ def _dbpath(conn) -> str:
     return next(r[2] for r in conn.execute("PRAGMA database_list") if r[1] == "main")
 
 
+@pytest.mark.acceptance("S-WS")
 def test_at17_ws_reconnect_resumes_after_last_seq(tmp_path):
     from tests.integration.test_gateway_harness import make_env_sync
 
@@ -319,6 +320,7 @@ def test_at17_ws_reconnect_resumes_after_last_seq(tmp_path):
         assert got[0]["type"] == "ml_state" and got[0]["enabled"] is False
 
 
+@pytest.mark.acceptance("S-WS")
 def test_at17_cli_ml_off_is_pushed_live_via_control_table(tmp_path, capsys):
     from tests.integration.test_gateway_harness import make_env_sync
     from trishul.cli.main import main
@@ -341,6 +343,7 @@ def test_at17_cli_ml_off_is_pushed_live_via_control_table(tmp_path, capsys):
         assert m["enabled"] is True
 
 
+@pytest.mark.acceptance("S-WS")
 async def test_at17_control_poller_task_publishes_within_interval(tmp_path):
     import asyncio
 

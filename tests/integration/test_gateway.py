@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from tests.integration.test_gateway_harness import Env
 from trishul.audit.verify import verify
 
@@ -98,6 +100,7 @@ async def test_approval_token_expires(env: Env) -> None:
     assert late["decision"] == "STEP_UP" and env.ledger_rows() == 0
 
 
+@pytest.mark.acceptance(4)
 async def test_audit_failure_denies_and_never_executes(env: Env) -> None:
     bind_pay(env)
 

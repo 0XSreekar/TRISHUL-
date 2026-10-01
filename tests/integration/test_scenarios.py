@@ -38,6 +38,7 @@ async def read_invoice(env: Env, name: str) -> tuple[str, str, str]:
 
 
 # 1 ------------------------------------------------------------------------------------------
+@pytest.mark.acceptance(3)
 async def test_1_injected_invoice_denied_with_lineage(env: Env) -> None:
     env.gw.bind_task(purpose="payment_processing", category="PAYMENT", text="Pay invoice INV-1002")
     raw = await env.client.call_tool(
@@ -82,6 +83,7 @@ async def test_2_trusted_invoice_allowed_ledger_changes_only_after_execution(env
 
 
 # 3 + 4 --------------------------------------------------------------------------------------
+@pytest.mark.acceptance(7)
 async def test_3_over_cap_step_up_approve_exact_retry(env: Env) -> None:
     env.gw.bind_task(
         purpose="payment_processing",
@@ -123,6 +125,7 @@ async def test_3b_concurrent_retries_spend_once(env: Env) -> None:
     assert env.ledger_rows() == 1 and env.balance() == 4_250_000
 
 
+@pytest.mark.acceptance(8)
 async def test_4_amount_changed_after_approval_denied_on_binding(env: Env) -> None:
     env.gw.bind_task(
         purpose="payment_processing",
@@ -140,6 +143,7 @@ async def test_4_amount_changed_after_approval_denied_on_binding(env: Env) -> No
 
 
 # 5 ------------------------------------------------------------------------------------------
+@pytest.mark.acceptance(11)
 async def test_5_crm_pii_to_disallowed_email_sink_denied(env: Env) -> None:
     env.gw.bind_task(purpose="order_support", category="COMMUNICATION", text="Help customer C-1042")
     record = await env.call("crm_read_customer_data", {"customer_id": "C-1042", "fields": ["name"]})
@@ -168,6 +172,7 @@ async def test_5_crm_pii_to_disallowed_email_sink_denied(env: Env) -> None:
 
 
 # 6 ------------------------------------------------------------------------------------------
+@pytest.mark.acceptance(10)
 async def test_6_withdrawn_consent_denied_immediately(env: Env) -> None:
     env.gw.bind_task(purpose="order_support", category="READ", text="Help customer C-1042")
     args = {"customer_id": "C-1042", "fields": ["name"]}
@@ -221,6 +226,7 @@ def voice_args(env: Env, asr: PhraseASR, wav: str = "tone_clean_3s.wav") -> dict
     return {"clip_b64": clip(wav), "clip_id": "clip_1", "nonce_id": nonce["nonce_id"]}
 
 
+@pytest.mark.acceptance(14)
 async def test_7_replayed_voice_nonce_denied(tmp_path: Path) -> None:
     env, asr, client = await voice_env(tmp_path)
     try:
@@ -267,6 +273,7 @@ async def test_8b_suspicious_spoof_score_is_step_up(tmp_path: Path) -> None:
 
 
 # 9 ------------------------------------------------------------------------------------------
+@pytest.mark.acceptance(6)
 async def test_9_tampered_mandate_signature_denied(env: Env) -> None:
     env.gw.bind_task(
         purpose="payment_processing",
@@ -285,6 +292,7 @@ async def test_9_tampered_mandate_signature_denied(env: Env) -> None:
 
 
 # 10 -----------------------------------------------------------------------------------------
+@pytest.mark.acceptance(16)
 async def test_10_tampered_audit_payload_reports_exact_index(env: Env) -> None:
     env.gw.bind_task(purpose="payment_processing", category="READ", text="balance")
     for _ in range(5):
@@ -306,6 +314,7 @@ async def test_10_tampered_audit_payload_reports_exact_index(env: Env) -> None:
 
 
 # extras -------------------------------------------------------------------------------------
+@pytest.mark.acceptance(9)
 async def test_agent_purpose_argument_is_ignored_and_audited(env: Env) -> None:
     env.gw.bind_task(purpose="order_support", category="READ", text="Help C-1042")
     await env.call(
@@ -319,6 +328,7 @@ async def test_agent_purpose_argument_is_ignored_and_audited(env: Env) -> None:
     assert "purpose_ignored" in kinds
 
 
+@pytest.mark.acceptance(5)
 async def test_ml_anomaly_step_up_and_toggle_persisted(env: Env) -> None:
     env.gw.bind_task(
         purpose="payment_processing",
@@ -408,6 +418,7 @@ async def test_voice_command_holds_lock_except_during_assess(tmp_path: Path) -> 
         await client.__aexit__(None, None, None)
 
 
+@pytest.mark.acceptance(13)
 async def test_voice_payment_always_needs_out_of_band_approval(tmp_path: Path) -> None:
     env, asr, client = await voice_env(tmp_path, spoof=FixedSpoof(0.01), category="PAYMENT")
     try:

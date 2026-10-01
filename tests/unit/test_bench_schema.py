@@ -4,6 +4,7 @@ import json
 import re
 from pathlib import Path
 
+import pytest
 from jsonschema import Draft202012Validator
 
 from trishul.bench.agentdojo_adapter import not_run
@@ -38,6 +39,7 @@ def test_schema_is_valid_json_schema() -> None:
     _validator()
 
 
+@pytest.mark.acceptance(17)
 def test_results_validate_against_schema() -> None:
     errors = sorted(_validator().iter_errors(_results()), key=lambda e: list(e.path))
     assert not errors, "; ".join(f"{list(e.path)}: {e.message}" for e in errors[:5])
@@ -87,6 +89,7 @@ def _ui_violations() -> list[str]:
     return hits
 
 
+@pytest.mark.acceptance(17)
 def test_ui_has_no_hardcoded_metric_literals() -> None:
     assert _ui_violations() == []
 

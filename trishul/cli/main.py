@@ -155,6 +155,10 @@ def build_parser() -> argparse.ArgumentParser:
         _db_arg(ap)
         ap.add_argument("approval_id")
         ap.add_argument("--user", default="approver", help="approver account username")
+    acc = top.add_parser("acceptance", help="run the acceptance suite AT-01..AT-17")
+    acc.add_argument("--only", nargs="*", help="criteria to run, e.g. 3 AT-05 S-WS")
+    acc.add_argument("--evidence", type=Path, default=Path("docs/acceptance-evidence.md"))
+    acc.add_argument("--strict", action="store_true", help="exit non-zero on NOT RUN too")
     task = top.add_parser("task", help="task binding").add_subparsers(dest="cmd", required=True)
     bind = task.add_parser("bind", help="bind the active task (trusted channel)")
     _db_arg(bind)
@@ -507,6 +511,22 @@ def _start(args: argparse.Namespace) -> int:
     return 0
 
 
+def _acceptance(only: list[str] | None, evidence: Path, strict: bool) -> int:
+    root = Path.cwd()
+    if not (root / "tests" / "acceptance.py").is_file():
+        print("trishul acceptance must run from the repository root", file=sys.stderr)
+        return 2
+    sys.path.insert(0, str(root))
+    acc = importlib.import_module("tests.acceptance")
+    outcomes = acc.run_all(root, only)
+    print(acc.render_table(outcomes))
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    evidence.write_text(acc.render_evidence(outcomes) + "\n")
+    print(f"evidence written to {evidence}")
+    bad = {acc.FAIL, acc.NOT_RUN} if strict else {acc.FAIL}
+    return 1 if any(o.status in bad for o in outcomes) else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     match args.group:
@@ -540,6 +560,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _resolve(args.db, args.approval_id, "approve", args.user)
         case "reject":
             return _resolve(args.db, args.approval_id, "reject", args.user)
+        case "acceptance":
+            return _acceptance(args.only, args.evidence, args.strict)
         case "task":
             return _task_bind(args)
         case "bench":

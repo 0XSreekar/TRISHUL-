@@ -5,10 +5,13 @@ markup; it never receives red-team, invoice, transcript or tool-argument text.)"
 import re
 from pathlib import Path
 
+import pytest
+
 UI = Path(__file__).resolve().parents[2] / "Landing page and dashboard implementation"
 SINKS = re.compile(r"dangerouslySetInnerHTML|\.innerHTML\b|insertAdjacentHTML|document\.write\(")
 
 
+@pytest.mark.acceptance("S-RT")
 def test_console_and_landing_have_no_html_injection_sinks() -> None:
     files = [UI / "Trishul-Console.dc.html", UI / "Trishul-Landing.dc.html"]
     assert all(f.is_file() for f in files)

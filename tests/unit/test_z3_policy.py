@@ -22,6 +22,7 @@ from trishul.verify.z3_policy import path_var_name
 UNSAFE_DIR = Path(__file__).resolve().parents[2] / "trishul" / "fixtures" / "unsafe_policy"
 
 
+@pytest.mark.acceptance(15)
 def test_real_policies_proofs(policy: ast.CompiledPolicy) -> None:
     out = prove_all(policy)
     assert out["solver"] == "z3" and out["property"]
@@ -42,6 +43,7 @@ def test_real_policies_proofs(policy: ast.CompiledPolicy) -> None:
     assert all(r["result"] == "UNSAT" for r in out["per_invariant"] if r["id"] == "I2")
 
 
+@pytest.mark.acceptance(15)
 def test_unsafe_fixture_gives_pay_upi_counterexample() -> None:
     out = prove_all(compile_files([UNSAFE_DIR]))
     row = next(r for r in out["per_invariant"] if (r["id"], r["tool"]) == ("I1", "pay_upi"))

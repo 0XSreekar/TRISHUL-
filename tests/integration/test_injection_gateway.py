@@ -157,3 +157,6 @@ async def test_ml_never_lowers_an_existing_decision(tmp_path: Path) -> None:
         st.reasons.append(reason("X.DENY", Stage.INTERNAL, Decision.DENY, "x"))
         await env.gw.pipeline._ml(st)
         assert st.decision == Decision.DENY
+
+
+pytestmark = pytest.mark.acceptance(5)

@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastmcp import Client
 from fastmcp.exceptions import ToolError
 from hypothesis import HealthCheck, given, settings
@@ -72,6 +73,7 @@ def test_baseline_is_allowed_without_faults() -> None:
     big=st.booleans(),
     approved=st.booleans(),
 )
+@pytest.mark.acceptance(4)
 def test_fault_in_any_stage_never_allows_or_executes(
     stages: set[str], exc: BaseException, big: bool, approved: bool
 ) -> None:
@@ -88,6 +90,7 @@ def test_fault_in_any_stage_never_allows_or_executes(
     assert body["decision"] == FAILSAFE_DECISION[first].name
 
 
+@pytest.mark.acceptance(4)
 def test_stage_timeout_fails_closed() -> None:
     async def slow() -> None:
         await asyncio.sleep(5)

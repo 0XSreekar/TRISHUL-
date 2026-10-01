@@ -89,3 +89,6 @@ async def test_operator_actions_and_reset_are_leaves(
         assert first["type"] == "operator_action" and first["action"] == "demo_reset"
         assert first["actor"] == operator_id and first["params"] == {"data_seed": 42}
         assert c.get("/auth/me").json()["role"] == "operator"  # accounts/sessions survive reset
+
+
+pytestmark = pytest.mark.acceptance(8)
