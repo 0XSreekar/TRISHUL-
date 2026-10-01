@@ -1511,11 +1511,15 @@ class Component extends DCLogic {
   }
   async moment(n,step){
     if(!this.isLive()||this.state.demoBusy)return;
-    this.setState(s=>({demoBusy:n,demoErr:'',demoRes:{...s.demoRes,[n]:null}}));
+    const prevRes=this.state.demoRes[n];
+    this.setState(s=>({demoBusy:n,demoErr:'',demoRes:{...s.demoRes,[n]:step?prevRes:null}}));
     try{const j=await this.post('/demo/moment/'+n,step?{step}:{});
       /* keep the cloned-voice clip after later steps replace this moment's result, and play it */
       const vs=((j&&j.steps)||[]).find(st=>st.clip_audio_b64);
-      this.setState(s=>({demoBusy:null,demoRes:{...s.demoRes,[n]:j},voiceClip:vs||s.voiceClip||null}));
+      /* a single step keeps the moment's earlier step results (re-running a step replaces only that step) */
+      const merge=(prev)=>{if(!step||!prev||!j)return j;const fresh=new Set((j.steps||[]).map(x=>x.step));
+        return {...j,steps:[...(prev.steps||[]).filter(x=>!fresh.has(x.step)),...(j.steps||[])].sort((a,b)=>a.step-b.step)};};
+      this.setState(s=>({demoBusy:null,demoRes:{...s.demoRes,[n]:merge(prevRes)},voiceClip:vs||s.voiceClip||null}));
       if(vs)this.later(()=>{const box=document.querySelector('[data-trishul="voice-clip"]');if(box)box.scrollIntoView({block:'center'});
         const au=box&&box.querySelector('audio');if(au){au.load();au.play().catch(()=>{});}},150);}
     catch(e){this.setState({demoBusy:null,demoErr:'Moment '+n+' failed · '+this.errText(e)});}
