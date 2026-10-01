@@ -1730,8 +1730,9 @@ class Component extends DCLogic {
     Object.keys(s.demoRes).sort().forEach(n=>{const r=s.demoRes[n];if(!r)return;
       demoLines.push({a:'MOMENT '+n,b:(r.steps||[]).length+' steps',col:C.muted});
       (r.steps||[]).forEach(st=>{
-        demoLines.push({a:'#'+st.step+' '+st.name+' · '+st.status,col:st.status==='ok'?C.blue:C.red,
+        demoLines.push({a:'#'+st.step+' '+st.name+' · '+st.status,col:st.status==='ok'?C.blue:(st.status==='awaiting_approval'||st.status==='skipped')?C.amber:C.red,
           b:Object.entries(st).filter(([k,x])=>!['step','name','status','diff'].includes(k)&&x!=null).map(([k,x])=>k+' '+(k==='amount_paise'?money(x):short(typeof x==='object'?JSON.stringify(x):String(x),140))).join(' · ')});
+        if(st.auto_approved)demoLines.push({a:'AUTO-APPROVED BY DEMO SCRIPT · approver '+(st.approved_by||'demo-script'),b:st.auto_approval_note||'',col:C.amber});
         if(st.diff){demoLines.push({a:'− '+st.diff.remove,b:'',col:C.red});demoLines.push({a:'+ '+st.diff.add,b:'',col:C.blue});}});});
     const demoSt=s.demoErr?['error',s.demoErr]:!live?['unavailable','UNAVAILABLE in DEV REPLAY · demo moments need the live gateway']:s.conn!=='open'?['disconnected','DISCONNECTED · waiting for the gateway']:s.demoBusy?['loading','Running moment '+s.demoBusy+'…']:['ok',''];
 
