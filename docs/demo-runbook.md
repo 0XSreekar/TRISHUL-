@@ -56,7 +56,7 @@ same call ids each run.
 Backup/recovery: the state is one SQLite file (default `./trishul.db`, or `$TRISHUL_DB`; in Docker
 `/data/trishul.db`). Stop the gateway, `cp trishul.db trishul.db.bak` (also copy `-wal`/`-shm` if present,
 or copy after a clean stop). Recover with `cp trishul.db.bak trishul.db` or simply
-`uv run trishul demo reset --seed 42` (re-derives keys from the seed). Docker:
+`uv run trishul demo reset --seed 42` (demo data comes from the seed; signing keys are random and stay in `.trishul/keys/`, so back that directory up too). Docker:
 `docker compose cp gateway:/data/trishul.db ./trishul.db.bak`.
 
 ## 6. Scripted 5-minute sequence and presenter script
