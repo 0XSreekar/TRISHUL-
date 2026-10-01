@@ -892,8 +892,8 @@ textarea.field{height:96px;padding:var(--s3);resize:vertical;width:100%}
           <div class="stack" style="gap:8px"><span class="cap">Arguments</span>
             <sc-for list="{{ d.args }}" as="g" hint-placeholder-count="2"><div class="argrow"><span class="k">{{ g.key }}</span><span class="v">{{ g.value }}</span><span class="tag" style="--c:{{ g.lc }}">{{ g.label }}</span></div></sc-for>
           </div>
-          <div class="stack" style="gap:8px"><span class="cap">Rules hit</span>
-            <div class="btns"><sc-for list="{{ d.rules }}" as="rl" hint-placeholder-count="1"><span class="tag">{{ rl.id }}</span></sc-for><sc-if value="{{ d.noRules }}" hint-placeholder-val="{{ false }}"><span class="small muted">None</span></sc-if></div>
+          <div class="stack" style="gap:10px"><span class="cap">Rules hit · what each one means</span>
+            <sc-for list="{{ d.rules }}" as="rl" hint-placeholder-count="1"><div class="stack" style="gap:4px" data-trishul="rule-why"><span class="tag" style="align-self:flex-start">{{ rl.id }}</span><span style="font-size:13px;line-height:1.5">{{ rl.text }}</span></div></sc-for><sc-if value="{{ d.noRules }}" hint-placeholder-val="{{ false }}"><span class="small muted">None</span></sc-if>
           </div>
           <div class="stack" style="gap:8px"><span class="cap">ML scores</span>
             <sc-for list="{{ d.scores }}" as="sc" hint-placeholder-count="1"><div style="display:flex;align-items:center;gap:12px;font-size:12px"><span class="muted" style="width:80px">{{ sc.key }}</span><span class="bar2" style="flex:1"><i style="width:{{ sc.pct }}%;background:{{ sc.col }}"></i></span><span class="mono" style="width:40px;text-align:right">{{ sc.val }}</span></div></sc-for>
@@ -924,6 +924,49 @@ const AGENTS=[{id:'finbot',name:'FinBot',role:'Payments',glyph:'₹'},{id:'suppo
 const TOOLS=['pay_upi','add_payee','get_balance','read_customer_data','export_records','send_email','read_document','voice_command'];
 const GLYPH={pay_upi:'₹',get_balance:'₹',add_payee:'₹+',read_customer_data:'DB',export_records:'DB',send_email:'✉',read_document:'DOC',voice_command:'MIC'};
 const FNAME={payshield:'PAYSHIELD',purposelock:'PURPOSELOCK',voicetrust:'VOICETRUST'};
+/* plain-English meaning of each rule id, shown under "Why" in the call detail */
+const RULE_TEXT={
+  'PAYSHIELD.MANDATE.PAYEE':'This payee is not on the list the user authorised the agent to pay.',
+  'PAYSHIELD.MANDATE.CATEGORY':'This kind of payment is outside what the user authorised.',
+  'PAYSHIELD.MANDATE.TIME':'The user\'s authorisation has expired or is not active yet.',
+  'PAYSHIELD.MANDATE.SIGNATURE':'The authorisation\'s cryptographic signature is invalid, so it may be forged.',
+  'PAYSHIELD.MANDATE.REPLAY':'This authorisation was already used. It cannot be reused.',
+  'PAYSHIELD.TAINT.UNTRUSTED_AMOUNT':'The amount came from untrusted content (a document or message), not from the user.',
+  'PAYSHIELD.TAINT.UNTRUSTED_PAYEE':'The account to pay came from untrusted content, not from the user.',
+  'PAYSHIELD.TAINT.UNTRUSTED_NEW_PAYEE':'The agent tried to add a new payee taken from untrusted content.',
+  'PAYSHIELD.CAP.PER_TXN':'The amount exceeds the per-payment limit.',
+  'PAYSHIELD.CAP.DAILY':'This payment would exceed the daily spending limit.',
+  'PAYSHIELD.CAP.PAYEE':'The amount exceeds the limit for this payee.',
+  'PAYSHIELD.APPROVAL.BINDING_MISMATCH':'The payment changed after a human approved it, so the approval no longer applies.',
+  'PURPOSELOCK.CONSENT.READ_WITHOUT_CONSENT':'The agent tried to read personal data without the person\'s consent.',
+  'PURPOSELOCK.EGRESS.EXPORT_WITHOUT_CONSENT':'The agent tried to export data without consent for that purpose.',
+  'PURPOSELOCK.EGRESS.PII_WITHOUT_CONSENT':'The agent tried to send personal data without consent.',
+  'PURPOSELOCK.PURPOSE.IGNORED_AGENT_VALUE':'The agent claimed its own purpose. TRISHUL ignored it and used the real task purpose.',
+  'PURPOSELOCK.TAINT.UNTRUSTED_EMAIL_CONTENT':'The email body came from untrusted content.',
+  'PURPOSELOCK.TAINT.UNTRUSTED_EXPORT_DESTINATION':'The export destination came from untrusted content.',
+  'PURPOSELOCK.TAINT.UNTRUSTED_RECIPIENT':'The recipient came from untrusted content, not from the user.',
+  'VOICETRUST.SPOOF.HIGH':'The voice is very likely AI-generated or cloned.',
+  'VOICETRUST.SPOOF.SUSPECT':'The voice may be AI-generated. Extra confirmation is needed.',
+  'VOICETRUST.SPOOF.NOT_RUN':'The voice-clone check could not run, so the request is not trusted.',
+  'VOICETRUST.LIVENESS.MISMATCH':'The speaker did not say the live challenge phrase, which suggests a replayed recording.',
+  'VOICETRUST.LIVENESS.EXPIRED':'The challenge phrase expired before the answer arrived.',
+  'VOICETRUST.LIVENESS.UNKNOWN':'This challenge was never issued or was already used.',
+  'VOICETRUST.QUALITY.INSUFFICIENT':'The audio is too short or too noisy to verify.',
+  'VOICETRUST.ASR.NOT_RUN':'Speech recognition could not run, so the phrase could not be checked.',
+  'VOICETRUST.SINK.HIGH_RISK':'A high-risk action requested by voice needs extra verification.',
+  'CORE.APPROVAL.REPLAY':'This human approval was already used. Each approval works only once.',
+  'CORE.APPROVAL.CLOSE_ACCOUNT':'Closing an account always needs a human approval.',
+  'CORE.CAP.LARGE_REFUND':'Large refunds need a human approval.',
+  'CORE.TAINT.UNTRUSTED_ACCOUNT':'The account came from untrusted content, not from the user.',
+  'CORE.TASK.UNBOUND':'This call is not tied to any task the user started.',
+  'CORE.ML.CLASSIFIER':'The prompt-injection detector flagged the content.',
+  'CORE.ML.SIGNAL':'The machine-learning detectors flagged this call as risky.',
+  'CORE.READER.INVALID':'The text could not be safely read into a valid request.',
+  'CORE.LABEL.MISSING':'A value had no trust label. Unknown origin is treated as unsafe.',
+  'CORE.HANDLE.UNKNOWN':'The call referred to data TRISHUL does not know about.',
+  'CORE.TOOL.UNKNOWN':'The agent tried to use a tool that is not allowed.'
+};
+const ruleText=id=>RULE_TEXT[id]||(/^CORE\.SCHEMA\./.test(id)?'The request was malformed. It does not match the tool\'s expected inputs.':/^CORE\.FAILSAFE/.test(id)||/INTERNAL/.test(id)?'An internal check failed, so TRISHUL blocked the call to stay safe.':'Blocked by the TRISHUL policy.');
 const FILTERS=['all','payshield','purposelock','voicetrust'];
 /* graph geometry in SVG user units (viewBox VW x VH) */
 const AGY=i=>60+i*130, TLY=i=>48+i*50;
@@ -1506,7 +1549,7 @@ class Component extends DCLogic {
     const extra=[de.mode?'mode '+de.mode:'',de.namespace?'namespace '+de.namespace:'',de.approval?'approval '+de.approval.id+' ('+de.approval.state+')':'',de.mandate?'mandate '+de.mandate.id+' ('+de.mandate.state+')':''].filter(Boolean).join(' · ');
     return {has:true,none:false,href:'#/call/'+encodeURIComponent(de.id),decision:dd,col:DCOL[dd]||C.blue,tool:de.tool,agent:de.agent,feature:FNAME[de.feature]||de.feature,ts:de.ts,latency:de.latency_ms!=null?de.latency_ms+' ms':'—',
       args:Object.entries(de.args||{}).map(([k,v])=>{const l=(de.labels||{})[k];const un=l&&String(l).startsWith('UNTRUSTED');return{key:k,value:k==='amount_paise'?money(v):k==='amount'?inr(v):short(typeof v==='object'?JSON.stringify(v):String(v),120),label:l?String(l).replace('UNTRUSTED_EXTERNAL:','UNTRUSTED · '):'USER',lc:un?C.red:l?C.muted:C.user};}),
-      rules:(de.rules||[]).map(id=>({id})),noRules:!(de.rules||[]).length,
+      rules:(de.rules||[]).map(id=>({id,text:ruleText(id)})),noRules:!(de.rules||[]).length,
       scores:sc.map(([k,v])=>({key:k,val:Number(v).toFixed(2),pct:Math.round(v*100),col:v>=.5?C.red:C.blue})),noScores:!sc.length,
       noScoresText:de.mode==='off'?'TRISHUL is OFF: nothing was scored.':de.ml==='off'?'Classifier off. Rules decided alone.':'No ML scores reported for this call.',
       hasEffect:!!de.effect,effect:effectText(de),
