@@ -59,6 +59,7 @@ def test_request_pending_then_approved_is_valid_and_single_use() -> None:
         pay(amount=100).model_copy(update={"principal": "eve"}),
     ],
 )
+@pytest.mark.acceptance(8)
 def test_argument_swap_is_binding_mismatch(swapped: ToolCall) -> None:
     svc, _ = setup()
     svc.approve(svc.request(pay()), "sreekar")

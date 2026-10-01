@@ -5,6 +5,8 @@ import contextlib
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from tests.integration.test_scenarios import FixedSpoof, PhraseASR, clip, voice_args, voice_env
 from trishul.domains.voicetrust import NonceService
 from trishul.gateway.pipeline import Pipeline
@@ -42,6 +44,7 @@ async def test_a_concurrent_approved_retries_exactly_one_allow(tmp_path: Path) -
         await client.__aexit__(None, None, None)
 
 
+@pytest.mark.acceptance(14)
 async def test_b_replay_after_consume_denied_mismatch_no_approval(tmp_path: Path) -> None:
     env, _asr, client, args = await _approved_args(tmp_path)
     try:
@@ -54,6 +57,7 @@ async def test_b_replay_after_consume_denied_mismatch_no_approval(tmp_path: Path
         await client.__aexit__(None, None, None)
 
 
+@pytest.mark.acceptance(14)
 async def test_c_other_clip_or_clip_id_same_nonce_denied(tmp_path: Path) -> None:
     for change in ({"clip_b64": clip("tone_noisy_3s.wav")}, {"clip_id": "clip_other"}):
         sub = tmp_path / ("a" if "clip_b64" in change else "b")

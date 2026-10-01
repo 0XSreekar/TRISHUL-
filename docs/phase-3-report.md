@@ -87,6 +87,15 @@ do not present the ML as contributing to these numbers.
 The 17-test list was defined in Phase 3 (`docs/phase-3-plan.md` section 5) because no earlier canonical list
 existed. AT-01..AT-10 are the Phase-2 integration scenarios 1-10.
 
+> **Renumbering note (Phase 4).** The AT-01..AT-17 IDs below are the Phase-3 numbering and are kept
+> as written. Phase 4 defines the canonical list in `docs/phase-4-plan.md` section 7, run by
+> `trishul acceptance` and recorded in `docs/acceptance-evidence.md`. Mapping from Phase 3 to
+> Phase 4: old AT-01 -> AT-03, AT-03 -> AT-07, AT-04 -> AT-08, AT-05 -> AT-11, AT-06 -> AT-10,
+> AT-07 -> AT-14, AT-08 -> AT-13 (real-model variants also AT-12), AT-09 -> AT-06, AT-10 and AT-15
+> -> AT-16, AT-12 -> AT-05, AT-13 -> AT-15, AT-16 -> AT-17. Old AT-02 (trusted invoice allowed) has
+> no Phase-4 number. Old AT-11 (OFF mode), AT-14 (red-team) and AT-17 (WS) are now supplementary
+> tests `S-OFF`, `S-RT` and `S-WS`.
+
 | ID | Test | File::test | Result |
 |---|---|---|---|
 | AT-01 | Injected invoice denied with lineage | `tests/integration/test_scenarios.py::test_1_injected_invoice_denied_with_lineage` | PASS |

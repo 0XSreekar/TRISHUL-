@@ -60,6 +60,7 @@ def test_proofs_against_log_and_sth() -> None:
     assert keys.verify(old.key_id, old.signed_payload(), old.sig)
 
 
+@pytest.mark.acceptance(16)
 def test_leaf_tamper_reports_exact_index_and_covering_sths() -> None:
     log, conn, keys = make_log(4)
     fill(log, 10)
