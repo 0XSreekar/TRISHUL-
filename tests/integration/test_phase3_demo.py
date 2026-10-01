@@ -310,7 +310,12 @@ async def test_health_mode_mandates_and_dpdp_endpoints(env: Env) -> None:
         assert ready.status_code == 200 and body["ready"] is True
         assert {"db", "policy", "audit", "voice_models", "ollama"} == set(body["checks"])
         assert body["checks"]["voice_models"] in {"available", "unavailable"}
-        assert c.get("/mode").json() == {"mode": "on", "namespace": "protected", "disabled": []}
+        assert c.get("/mode").json() == {
+            "mode": "on",
+            "namespace": "protected",
+            "disabled": [],
+            "ml": True,
+        }
         assert c.post("/mode", json={"mode": "maybe"}).status_code == 400
         assert c.post("/mode", json={"mode": "off"}).json()["namespace"] == "demo_off"
         assert c.post("/mode", json={"mode": "on"}).json()["mode"] == "on"

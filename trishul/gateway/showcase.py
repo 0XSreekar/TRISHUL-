@@ -15,7 +15,7 @@ from trishul.audit import merkle
 from trishul.audit.verify import verify
 from trishul.domains.payshield import SignedMandate, spent_today
 from trishul.ollama import ollama_endpoint
-from trishul.store.db import DEMO_NOW, iso, parse_iso
+from trishul.store.db import iso, parse_iso
 from trishul.verify.showcase import prove_policy
 
 log = logging.getLogger("trishul.gateway")
@@ -39,7 +39,8 @@ class ShowcaseMixin:
 
     # --- mode -----------------------------------------------------------------------------
     def mode(self) -> dict[str, Any]:
-        return self._run(self.p.mode_info)  # type: ignore[no-any-return]
+        """Mode plus the live ML switch, so a console opened after a restart shows the truth."""
+        return self._run(lambda: {**self.p.mode_info(), "ml": self.p.ml_enabled()})  # type: ignore[no-any-return]
 
     def set_mode(self, mode: str) -> dict[str, Any]:
         if mode not in ("on", "off"):
@@ -61,7 +62,7 @@ class ShowcaseMixin:
             checks["policy"] = "ok" if getattr(self.p.policy, "digest", "") else "fail"
             try:
                 self.p.audit.root()
-                checks["audit"] = "ok"
+                checks["audit"] = "ok" if verify(self.p.conn, self.p.keys).ok else "fail"
             except Exception:
                 checks["audit"] = "fail"
             try:
@@ -284,8 +285,12 @@ class ShowcaseMixin:
         row = self.p.conn.execute("SELECT value FROM meta WHERE key='id_counter'").fetchone()
         self.p.reset_runtime(int(row["value"]) if row else 0)
         self.redteam.reset_limits()
+        for attr in ("demo_state", "_last_voice_args"):
+            if hasattr(self, attr):
+                delattr(self, attr)
         self.control_baseline()
         bus = self.p.bus
+        bus.reset()  # drop seen-call ids + ring; consoles clear feeds and reload via REST
         bus.publish({"type": "mode", **self.p.mode_info()})
         enabled = self.p.ml_enabled()
         bus.publish({"type": "ml_state", "ml": enabled, "enabled": enabled})
@@ -311,8 +316,9 @@ class ShowcaseMixin:
             from trishul.gateway.app import seed_demo_mandate
             from trishul.store.db import reset
 
-            ids = reset(self.p.conn, seed=seed)
-            seed_demo_mandate(self.p.conn, self.p.keys, now=DEMO_NOW)
+            now = self.p.clock()  # fixed in tests/bench, wall-clock on the live server
+            ids = reset(self.p.conn, seed=seed, now=now)
+            seed_demo_mandate(self.p.conn, self.p.keys, now=now)
             self.p.conn.execute(
                 "INSERT OR REPLACE INTO meta(key, value) VALUES ('id_counter', ?)",
                 (str(ids.counter),),

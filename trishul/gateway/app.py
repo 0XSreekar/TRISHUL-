@@ -6,11 +6,12 @@ the tests use. ``trishul start`` builds the same gateway over stdio subprocess s
 ``create_proxy(MCPConfig)`` (see ``build_stdio_gateway``).
 """
 
+import os
 import sqlite3
 import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -50,7 +51,19 @@ POLICY_DIR = Path(__file__).resolve().parents[2] / "policies"
 
 
 def demo_clock() -> datetime:
+    """Fixed clock: tests, bench and replay stay deterministic."""
     return DEMO_NOW
+
+
+def live_clock() -> datetime:
+    """Wall-clock time for the live server (``trishul start``)."""
+    return datetime.now(UTC)
+
+
+def runtime_clock() -> Callable[[], datetime]:
+    """Clock for the live server and its operator CLI: real time, unless ``TRISHUL_FIXED_CLOCK``
+    pins the deterministic demo clock."""
+    return demo_clock if os.environ.get("TRISHUL_FIXED_CLOCK") else live_clock
 
 
 @dataclass
@@ -203,7 +216,9 @@ def _demo_servers(
     }
 
 
-def stdio_config(db: Path, public_keys: Path, id_base: int = 0) -> dict[str, Any]:
+def stdio_config(
+    db: Path, public_keys: Path, id_base: int = 0, *, live: bool = False
+) -> dict[str, Any]:
     """MCPConfig for the four servers as stdio subprocesses (``trishul.gateway.server_main``).
     ``public_keys`` is a directory with public keys only (never the private key store)."""
     return {
@@ -220,6 +235,7 @@ def stdio_config(db: Path, public_keys: Path, id_base: int = 0) -> dict[str, Any
                     str(public_keys),
                     "--id-base",
                     str(id_base + (i + 1) * 1_000_000),
+                    *(["--clock", "live"] if live else []),
                 ],
             }
             for i, ns in enumerate(NAMESPACES)
@@ -256,7 +272,8 @@ def build_stdio_gateway(
     The servers only ever see ``public_keys_dir`` (public keys exported from ``keys``)."""
     public = public_keys_dir if public_keys_dir is not None else db.parent / "public-keys"
     write_public(keys, public)
-    config = http_config(tools_url) if tools_url else stdio_config(db, public)
+    live = kwargs.get("clock") is live_clock
+    config = http_config(tools_url) if tools_url else stdio_config(db, public, live=live)
     proxy = create_proxy(config, name="trishul-gateway")
     return build_gateway(conn, ids, base=proxy, keys=keys, **kwargs)
 

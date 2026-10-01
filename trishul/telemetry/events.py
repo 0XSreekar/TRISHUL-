@@ -159,6 +159,15 @@ class EventBus:
             self._deliver(sub, clean)
         return seq
 
+    def reset(self) -> int:
+        """Forget the replay ring and the seen-call ids (a demo reset reissues the same ids),
+        then broadcast a ``reset`` event so connected consoles clear their state. ``seq`` stays
+        monotonic so existing subscribers keep accepting events."""
+        with self._lock:
+            self._ring.clear()
+            self._calls.clear()
+        return self.publish({"type": "reset"})
+
     @staticmethod
     def _deliver(sub: Subscription, event: dict[str, object]) -> None:
         try:

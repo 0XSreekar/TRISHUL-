@@ -2,8 +2,12 @@
 """The six scripted demo moments (spec section 3). Each step is real traffic through the gateway;
 results are plain dicts, and every step also publishes a ``demo`` WS event."""
 
+import asyncio
 import base64
 import re
+import shutil
+import subprocess
+import tempfile
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
@@ -16,6 +20,10 @@ ACME = "acme@okaxis"
 HIDDEN_VPA = re.compile(r"pay to ([A-Za-z0-9._-]+@[A-Za-z0-9._-]+)", re.I)
 AMOUNT = re.compile(r"Amount:</strong>\s*(?:₹|Rs\.?|INR)?\s*([\d,]+)(?:\.(\d{1,2}))?", re.I)
 
+DEMO_APPROVER = "demo-script"
+AUTO_NOTE = "auto-approved by demo script (Run all steps); step-by-step runs need a real approver"
+_AUTO = {"auto_approved": True, "approved_by": DEMO_APPROVER, "auto_approval_note": AUTO_NOTE}
+
 StepFn = Callable[[Any, FinBot, bool], Awaitable[dict[str, Any]]]
 
 
@@ -24,6 +32,15 @@ def _doc_id(backend: Any, name: str) -> str:
     if row is None:
         raise KeyError(name)
     return str(row["doc_id"])
+
+
+def _demo_state(backend: Any) -> dict[str, Any]:
+    """Per-gateway scratch for multi-step moments; cleared on demo reset."""
+    st = getattr(backend, "demo_state", None)
+    if st is None:
+        st = {}
+        backend.demo_state = st
+    return st
 
 
 def _brief(res: dict[str, Any]) -> dict[str, Any]:
@@ -97,8 +114,12 @@ async def m3_3(backend: Any, bot: FinBot, auto: bool) -> dict[str, Any]:
     res = await bot.call("upi_pay_upi", args)
     out: dict[str, Any] = {"status": "awaiting_approval", **_brief(res)}
     if auto and res.get("approval_id"):
-        backend.resolve_approval(res["approval_id"], "approve", "console")
-        out["auto_approved"] = True
+        backend.resolve_approval(res["approval_id"], "approve", DEMO_APPROVER)
+        out.update(_AUTO)
+    elif res.get("approval_id"):
+        out["note"] = (
+            "Awaiting a real approver: approve it in Approvals > Pending, then run step 4."
+        )
     return out
 
 
@@ -108,7 +129,36 @@ async def m3_4(backend: Any, bot: FinBot, auto: bool) -> dict[str, Any]:
 
 
 async def m3_5(backend: Any, bot: FinBot, auto: bool) -> dict[str, Any]:
-    bot.bind(
+    """Approve one exact call, then change the amount. Step by step a real approver must approve
+    in between (first run returns awaiting_approval; the second run changes the amount). Only
+    "Run all steps" approves itself, and says so."""
+    state = _demo_state(backend)
+    pending = state.get("m3_5")
+    if pending is not None and not auto:
+        row = backend.p.approvals.get(pending["approval_id"])
+        status = None if row is None else str(row["status"])
+        latest = backend.p.conn.execute(
+            "SELECT task_id FROM task_bindings ORDER BY rowid DESC LIMIT 1"
+        ).fetchone()
+        if status == "pending":
+            return {
+                "status": "awaiting_approval",
+                "approval_id": pending["approval_id"],
+                "note": "Still pending: approve it in Approvals > Pending, then run step 5 again.",
+            }
+        if status != "approved" or latest is None or latest["task_id"] != pending["task_id"]:
+            state.pop("m3_5", None)
+            return {
+                "status": "error",
+                "approval_id": pending["approval_id"],
+                "note": f"approval is {status}, or another task was bound since: run step 5 again "
+                "from the start",
+            }
+        state.pop("m3_5")
+        changed = await bot.call("upi_pay_upi", {"payee_vpa": ACME, "amount_paise": 760_000})
+        return {"status": "ok", "approver": row["approver"], **_brief(changed)}
+    state.pop("m3_5", None)
+    task_id = bot.bind(
         purpose="payment_processing",
         category="PAYMENT",
         text="Pay Acme",
@@ -118,9 +168,17 @@ async def m3_5(backend: Any, bot: FinBot, auto: bool) -> dict[str, Any]:
     approval = first.get("approval_id")
     if not approval:  # already within every cap: nothing to bind an approval to
         return {"status": "skipped", "note": "no step-up raised", **_brief(first)}
-    backend.resolve_approval(approval, "approve", "console")
+    if not auto:
+        state["m3_5"] = {"approval_id": approval, "task_id": task_id}
+        return {
+            "status": "awaiting_approval",
+            "note": "Approve it in Approvals > Pending (within 120 s), then run step 5 again: "
+            "it will change the amount to 7600 and the approval will not match.",
+            **_brief(first),
+        }
+    backend.resolve_approval(approval, "approve", DEMO_APPROVER)
     changed = await bot.call("upi_pay_upi", {"payee_vpa": ACME, "amount_paise": 760_000})
-    return {"status": "ok", **_brief(changed)}
+    return {"status": "ok", **_AUTO, **_brief(changed)}
 
 
 # --- 4: red-team wall --------------------------------------------------------------------------
@@ -179,28 +237,64 @@ def _clip(name: str) -> str:
     return base64.b64encode((AUDIO / name).read_bytes()).decode()
 
 
+async def _warm_voice(voice: Any) -> None:
+    """Models must be warm BEFORE the 10 s nonce is issued: a cold first inference can take far
+    longer than the TTL. Waits for an in-flight warm-up; never raises (decisions fail closed)."""
+    if getattr(voice, "warm_state", "warm") in ("cold", "failed"):
+        await asyncio.to_thread(voice.warmup)
+    for _ in range(600):  # another thread (server start) may be warming: wait up to 60 s
+        if getattr(voice, "warm_state", "warm") != "warming":
+            return
+        await asyncio.sleep(0.1)
+
+
+def _tts_clip(phrase: str) -> tuple[str, str] | None:
+    """Real synthetic speech of the challenge phrase (macOS ``say``), as base64 16 kHz WAV, or
+    None when no TTS engine is available on this host."""
+    say, conv = shutil.which("say"), shutil.which("afconvert")
+    if say is None or conv is None:
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        aiff, wav = f"{tmp}/c.aiff", f"{tmp}/c.wav"
+        try:
+            subprocess.run(  # noqa: S603
+                [say, "-v", "Samantha", "-o", aiff, phrase], check=True, timeout=20
+            )
+            subprocess.run(  # noqa: S603
+                [conv, "-f", "WAVE", "-d", "LEI16@16000", "-c", "1", aiff, wav],
+                check=True,
+                timeout=20,
+            )
+            return base64.b64encode(Path(wav).read_bytes()).decode(), "tts:macos-say-Samantha"
+        except (OSError, subprocess.SubprocessError):
+            return None
+
+
 async def m6_1(backend: Any, bot: FinBot, auto: bool) -> dict[str, Any]:
     bot.bind(purpose="order_support", category="VOICE", text="voice request")
+    await _warm_voice(backend.p.voice)
     nonce = backend.issue_voice_nonce(backend.p.session)
-    args = {
-        "clip_b64": _clip("tone_clean_3s.wav"),
-        "clip_id": "clip_demo_1",
-        "nonce_id": nonce["nonce_id"],
-    }
+    # the spoofer speaks the challenge with a TTS voice; the real anti-spoof detector judges it
+    tts = await asyncio.to_thread(_tts_clip, nonce["phrase"])
+    clip, source = tts if tts is not None else (_clip("tone_clean_3s.wav"), "fixture:tone")
+    args = {"clip_b64": clip, "clip_id": "clip_demo_1", "nonce_id": nonce["nonce_id"]}
     res = await bot.call("voice_command", args)
     backend._last_voice_args = args
     adapter = type(backend.p.voice.spoof).__name__
     out: dict[str, Any] = {
         "status": "ok",
         "spoof_adapter": adapter,
+        "clip_source": source,
         "phrase_challenge": nonce["phrase"],
         **_brief(res),
     }
     if auto and res.get("approval_id"):  # genuine challenge answered: approve, run, consume
-        backend.resolve_approval(res["approval_id"], "approve", "console")
+        backend.resolve_approval(res["approval_id"], "approve", DEMO_APPROVER)
         done = await bot.call("voice_command", args)
-        out["auto_approved"] = True
+        out.update(_AUTO)
         out["after_approval"] = {"decision": done.get("decision"), "ok": done.get("ok")}
+    elif res.get("approval_id"):
+        out["note"] = "Awaiting a real approver: approve it in Approvals > Pending."
     return out
 
 

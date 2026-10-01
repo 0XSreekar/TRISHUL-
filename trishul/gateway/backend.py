@@ -361,7 +361,22 @@ class Backend(ShowcaseMixin):
         return self._run(go)
 
     def dpdp(self) -> dict[str, Any]:
-        return self._run(lambda: dpdp_report(self.p.conn, self.p.keys))
+        def go() -> dict[str, Any]:
+            report = dpdp_report(self.p.conn, self.p.keys)
+            try:
+                result = verify(self.p.conn, self.p.keys)
+                ok, bad = result.ok, result.bad_index
+            except Exception:
+                ok, bad = False, None
+            head: dict[str, Any] = {"audit_verified": ok}
+            if not ok:
+                where = "" if bad is None else f" at index {bad}"
+                head["warning"] = (
+                    f"AUDIT LOG FAILED VERIFICATION{where}: this report cannot be relied on"
+                )
+            return {**head, **report}
+
+        return self._run(go)
 
     def set_ml(self, enabled: bool) -> None:
         self._run(lambda: self.p.set_ml(enabled))

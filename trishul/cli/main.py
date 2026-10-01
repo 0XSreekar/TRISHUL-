@@ -189,11 +189,12 @@ def _open(db: Path) -> tuple[Any, int]:
 def _gateway(db: Path, **kw: Any) -> Any:
     """A gateway object for operator actions. Its id generator starts far above anything the
     running gateway issues, so ids (approvals, tokens, tasks) cannot collide across processes."""
-    from trishul.gateway.app import build_gateway
+    from trishul.gateway.app import build_gateway, runtime_clock
     from trishul.store.ids import IdGen
 
     conn, seed = _open(db)
     ids = IdGen(seed, start=100_000_000 + int(time.time() * 1000) % 100_000_000)
+    kw.setdefault("clock", runtime_clock())
     return build_gateway(conn, ids, seed=seed, keys=load_or_create(), **kw)
 
 
@@ -312,10 +313,11 @@ def _refresh_public_keys() -> None:
 
 def _demo_reset(db: Path, seed: int, rotate_keys: bool = False) -> int:
     from trishul.crypto.keys import PURPOSES
-    from trishul.gateway.app import seed_demo_mandate
-    from trishul.store.db import DEMO_NOW, connect, iso, reset
+    from trishul.gateway.app import runtime_clock, seed_demo_mandate
+    from trishul.store.db import connect, iso, reset
     from trishul.store.ids import IdGen
 
+    now = runtime_clock()()
     if rotate_keys:
         load_or_create()  # make sure a key set exists, then add a new active kid per purpose
         for purpose in PURPOSES:
@@ -323,14 +325,14 @@ def _demo_reset(db: Path, seed: int, rotate_keys: bool = False) -> int:
     ring = load_or_create()  # random keys, generated on first use only (the seed is public)
     _refresh_public_keys()
     conn = connect(db)
-    ids = reset(conn, seed=seed)
-    mandate = seed_demo_mandate(conn, ring, now=DEMO_NOW)
+    ids = reset(conn, seed=seed, now=now)
+    mandate = seed_demo_mandate(conn, ring, now=now)
     conn.execute(
         "INSERT OR REPLACE INTO meta(key, value) VALUES ('id_counter', ?)", (str(ids.counter),)
     )
     conn.execute(
         "INSERT INTO control(key, value, origin, ts) VALUES ('reset', ?, 'cli', ?)",
-        (str(seed), iso(DEMO_NOW)),
+        (str(seed), iso(now)),
     )
     gw = _gateway(db)
     accounts = gw.backend.auth.provision_demo_accounts()
@@ -416,8 +418,15 @@ def _ensure_operator_token(db: Path) -> Path:
 def _start(args: argparse.Namespace) -> int:
     import uvicorn
 
-    from trishul.gateway.app import build_gateway, build_stdio_gateway, seed_demo_mandate
-    from trishul.store.db import DEMO_NOW, connect, reset
+    from trishul.gateway.app import (
+        build_gateway,
+        build_stdio_gateway,
+        runtime_clock,
+        seed_demo_mandate,
+    )
+    from trishul.store.db import connect, reset
+
+    clock = runtime_clock()  # real wall-clock time for the live server (fixed only if pinned)
 
     db: Path = args.db
     try:
@@ -429,8 +438,8 @@ def _start(args: argparse.Namespace) -> int:
     row = conn.execute("SELECT value FROM meta WHERE key='seed'").fetchone()
     if args.seed is not None or row is None:
         seed = DEFAULT_SEED if args.seed is None else args.seed
-        ids = reset(conn, seed=seed)
-        seed_demo_mandate(conn, ring, now=DEMO_NOW)
+        ids = reset(conn, seed=seed, now=clock())
+        seed_demo_mandate(conn, ring, now=clock())
     else:
         seed = int(row["value"])
         counter = conn.execute("SELECT value FROM meta WHERE key='id_counter'").fetchone()
@@ -440,7 +449,7 @@ def _start(args: argparse.Namespace) -> int:
     did_reset = args.seed is not None or row is None
     token_path = _ensure_operator_token(db)
     if args.in_process:
-        gw = build_gateway(conn, ids, seed=seed, keys=ring)
+        gw = build_gateway(conn, ids, seed=seed, keys=ring, clock=clock)
     else:
         public = os.environ.get("TRISHUL_PUBLIC_KEYS_DIR")
         gw = build_stdio_gateway(
@@ -451,12 +460,20 @@ def _start(args: argparse.Namespace) -> int:
             public_keys_dir=Path(public) if public else default_home() / "public-keys",
             tools_url=os.environ.get("TRISHUL_TOOLS_URL") or None,
             seed=seed,
+            clock=clock,
         )
     accounts = gw.backend.auth.provision_demo_accounts()
     if did_reset:
         gw.backend.record_operator_action("demo_reset", "cli", {"data_seed": seed})  # first leaf
     for name, status in accounts.items():
         print(f"account {name}: {status}", flush=True)
+    if not any(m["state"] == "valid" for m in gw.backend.mandates()):
+        print(
+            "warning: no spending mandate is valid at the current time (stale demo data); "
+            "run `trishul demo reset` or start with --seed to reseed",
+            file=sys.stderr,
+            flush=True,
+        )
     # Warm voice models inside the gateway process (a separate prewarm process cannot compile
     # this process's Metal kernels). Background thread: startup and non-voice calls never wait.
     from trishul.reader.runtime import start_reader

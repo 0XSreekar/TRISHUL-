@@ -10,8 +10,10 @@ socket (``unix:/path``) or a specific non-wildcard address/hostname, never ``0.0
 
 import argparse
 import ipaddress
+import os
 import sqlite3
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 
 from trishul.crypto.keystore import load_public
@@ -22,7 +24,7 @@ from trishul.servers import (
     build_mail_server,
     build_upi_server,
 )
-from trishul.store.db import connect
+from trishul.store.db import DEMO_NOW, connect
 from trishul.store.ids import IdGen
 
 _ID_COLUMNS = (("ledger", "txn_id"), ("payees", "payee_id"), ("outbox", "mail_id"))
@@ -77,6 +79,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--db", required=True)
     parser.add_argument("--id-base", type=int, default=1_000_000)
     parser.add_argument("--keys", required=True, type=Path, help="directory with public keys")
+    parser.add_argument(
+        "--clock",
+        choices=["fixed", "live"],
+        default=os.environ.get("TRISHUL_CLOCK", "fixed"),
+        help="timestamps for ledger rows: fixed demo clock (default, deterministic) or wall clock",
+    )
     parser.add_argument("--transport", choices=["stdio", "http"], default="stdio")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=0)
@@ -90,10 +98,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     keys_dir: Path = args.keys
     verifier = ToolTokenVerifier(conn, load_public(keys_dir), reload=lambda: load_public(keys_dir))
     ids = IdGen(42, start=id_start(conn, args.id_base))
+    clock = (lambda: datetime.now(UTC)) if args.clock == "live" else (lambda: DEMO_NOW)
     server = {
-        "upi": lambda: build_upi_server(conn, ids, verifier=verifier),
+        "upi": lambda: build_upi_server(conn, ids, verifier=verifier, clock=clock),
         "crm": lambda: build_crm_server(conn, verifier=verifier),
-        "mail": lambda: build_mail_server(conn, ids, verifier=verifier),
+        "mail": lambda: build_mail_server(conn, ids, verifier=verifier, clock=clock),
         "files": lambda: build_files_server(conn, verifier=verifier),
     }[args.name]()
     if args.transport == "stdio":

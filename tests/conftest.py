@@ -25,6 +25,8 @@ def _isolated_key_home(
 ) -> None:
     """Runtime keys live under TRISHUL_HOME; never let a test touch ./.trishul."""
     monkeypatch.setenv("TRISHUL_HOME", str(tmp_path_factory.mktemp("trishul_home")))
+    # tests build gateways on the fixed demo clock; the CLI must agree (live server uses real time)
+    monkeypatch.setenv("TRISHUL_FIXED_CLOCK", "1")
 
 
 @pytest.fixture(autouse=True)

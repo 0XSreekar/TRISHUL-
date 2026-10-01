@@ -58,6 +58,8 @@ services:
       - tools
       - --port
       - "9000"
+    environment:
+      TRISHUL_CLOCK: live  # ledger timestamps follow the gateway's wall clock (trishul start)
     volumes:
       - trishul-data:/data
     restart: unless-stopped

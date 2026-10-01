@@ -163,12 +163,16 @@ class FinBot:
                 }
             else:
                 data = res.structured_content if isinstance(res.structured_content, dict) else {}
-                out = {"ok": True, "decision": "ALLOW", "rules": [], "body": data}
+                # the decision is taken from the gateway's call event below; never assumed
+                out = {"ok": True, "decision": "UNKNOWN", "rules": [], "body": data}
         events = self.bus.snapshot(mark) if self.bus is not None else []
         calls = [e for e in events if e.get("type") == "call"]
         out["event_ids"] = [e["id"] for e in calls]
         if calls and out["ok"]:  # the event is authoritative for the decision label
-            out["decision"] = str(calls[-1].get("decision", out["decision"]))
+            out["decision"] = str(calls[-1].get("decision", "UNKNOWN"))
+        elif out["ok"]:  # success but no event observed: report it, never invent ALLOW
+            out["decision"] = "UNKNOWN"
+            out["error"] = "no_decision_event"
         return out
 
     def bind(
