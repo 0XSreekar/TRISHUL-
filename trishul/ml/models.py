@@ -1,8 +1,23 @@
-"""Pinned model identities. Local LLM pins live in ``LLM_PINS`` (classifier pins live in a
-separate literal so independent edits do not collide).
+# SPDX-License-Identifier: Apache-2.0
+"""Pinned model identities. Classifier pins live in ``CLASSIFIER_PINS``, local LLM pins in
+``LLM_PINS`` (separate literals so independent edits do not collide).
 
-Digests are the full sha256 that Ollama reports in ``/api/tags`` for the pulled tag.
+LLM digests are the full sha256 that Ollama reports in ``/api/tags`` for the pulled tag.
 """
+
+CLASSIFIER_PINS: dict[str, dict[str, str]] = {
+    "injection": {
+        "hf_id": "protectai/deberta-v3-base-prompt-injection-v2",
+        # resolved once with huggingface_hub.model_info(hf_id).sha (2026-10-01)
+        "revision": "90c9989b1a342275dd0d1a95aad283c04e075671",
+        "license": "Apache-2.0",
+        "onnx_file": "onnx/model.onnx",
+        "download_hint": (
+            "huggingface-cli download protectai/deberta-v3-base-prompt-injection-v2 "
+            "--revision 90c9989b1a342275dd0d1a95aad283c04e075671"
+        ),
+    },
+}
 
 LLM_PINS: dict[str, dict[str, str]] = {
     "Qwen/Qwen3-8B": {

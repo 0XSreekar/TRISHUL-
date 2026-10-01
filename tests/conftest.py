@@ -1,5 +1,6 @@
 """Shared fixtures and builders."""
 
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -24,6 +25,17 @@ def _isolated_key_home(
 ) -> None:
     """Runtime keys live under TRISHUL_HOME; never let a test touch ./.trishul."""
     monkeypatch.setenv("TRISHUL_HOME", str(tmp_path_factory.mktemp("trishul_home")))
+
+
+@pytest.fixture(autouse=True)
+def _fake_injection_classifier() -> Iterator[None]:
+    """Unit/integration tests use a deterministic fake; the real model has its own marked test."""
+    from tests.fake_classifier import FakeClassifier
+    from trishul.ml.injection import set_default_classifier
+
+    set_default_classifier(FakeClassifier())
+    yield
+    set_default_classifier(None)
 
 
 @pytest.fixture(scope="session")

@@ -70,6 +70,7 @@ from trishul.gateway.taint import (
     model_untrusted,
     system_label,
 )
+from trishul.ml.injection import InjectionClassifier, MLSignal, get_default_classifier, plain_text
 from trishul.observability.redaction import redact_args
 from trishul.policy.ast import CompiledPolicy
 from trishul.policy.evaluator import EvalContext, evaluate
@@ -129,6 +130,9 @@ INJECTION_STEP_UP = 0.5
 OFF_REAL_READS = frozenset({"read_document", "list_payees", "get_balance"})
 _VOICE_HIGH_SINK = frozenset({ToolCategory.PAYMENT, ToolCategory.VOICE})
 MAX_ARG_BYTES = 1_000_000
+ML_COMPONENTS = frozenset({"classifier", "hidden_text", "anomaly"})
+# classifier escalation into these sinks is a DENY (an approval never waives it)
+_HARD_SINKS = frozenset({ToolCategory.PAYMENT, ToolCategory.EXPORT, ToolCategory.COMMUNICATION})
 
 type Executor = Callable[[dict[str, Any]], Awaitable[ToolResult]]
 type Fault = BaseException | Callable[[], object]
@@ -241,6 +245,7 @@ class Pipeline:
         bus: EventBus,
         tracer: Tracer,
         voice: VoiceTrust | None = None,
+        classifier: InjectionClassifier | None = None,
         clock: Callable[[], datetime],
         session: str | None = None,
         faults: Mapping[str, Fault] | None = None,
@@ -255,6 +260,10 @@ class Pipeline:
         self.bus = bus
         self.tracer = tracer
         self.voice = voice or VoiceTrust()
+        self._classifier = classifier
+        # ML-stage components that are active when ML is on (bench ablation narrows this)
+        self.ml_components: frozenset[str] = ML_COMPONENTS
+        self._handle_ml: dict[str, MLSignal] = {}  # handle id -> classifier signal at creation
         self.clock = clock
         self.session = session or f"sess_{ids.seed}"
         # Side-effecting calls are serialised end to end (guards -> execution): otherwise two
@@ -901,15 +910,71 @@ class Pipeline:
         ]
         return max(scores, default=0.0)
 
+    def _clf(self) -> InjectionClassifier:
+        return self._classifier or get_default_classifier()
+
+    def _hard_sink(self, st: State) -> bool:
+        spec = self.policy.tools.get(st.tool)
+        return spec is not None and spec.category in _HARD_SINKS
+
+    async def _score_handle(self, handle: str, text: str) -> None:
+        """Classify untrusted text when it becomes a handle (before any planning)."""
+        if not self.ml_enabled() or self.mode() == "off" or "classifier" not in self.ml_components:
+            return
+        self._handle_ml[handle] = await self._clf().classify(text, timeout_s=self._clf_timeout())
+
+    def _clf_timeout(self) -> float:
+        # stay under the stage timeout so a slow model escalates itself instead of tripping it
+        return min(self._clf().timeout_s, max(0.05, self.stage_timeout_s - 0.2))
+
+    def _source_handles(self, st: State) -> list[str]:
+        out: list[str] = []
+        for h in st.handle_uses.values():
+            cur: str | None = h
+            while cur is not None:
+                m = self.handles.meta(cur)
+                if m is None or m.kind != "var":
+                    break
+                cur = m.parent
+            if cur is not None and cur not in out and cur.startswith("$DOC_"):
+                out.append(cur)
+        return out
+
+    async def _classifier_signal(self, st: State) -> MLSignal:
+        """Worst classifier signal over the untrusted handles (and voice transcript) feeding
+        this call. Re-scores at sink time; a creation-time failure is retried, never trusted."""
+        clf = self._clf()
+        if st.tool in READER_TOOLS:  # the quarantined reader is how untrusted text is read
+            return MLSignal("ok", None, clf.threshold, False, "quarantined reader")
+        if "classifier" not in self.ml_components:
+            return MLSignal("ok", None, clf.threshold, False, "classifier not in this config")
+        texts: list[str] = []
+        for h in self._source_handles(st):
+            item = self.handles.get(h)
+            if item is None or item.label.level != Level.UNTRUSTED:
+                continue
+            v = item.value
+            texts.append(v if isinstance(v, str) else json.dumps(v, default=str, sort_keys=True))
+        transcript = st.args.get("transcript")
+        if st.tool == "voice_command" and isinstance(transcript, str) and transcript:
+            texts.append(transcript)
+        if not texts:
+            return MLSignal("ok", None, clf.threshold, False, "no untrusted text")
+        sigs = [await clf.classify(plain_text(t), timeout_s=self._clf_timeout()) for t in texts]
+        failed = [x for x in sigs if x.status != "ok"]
+        if failed:
+            return failed[0]
+        return max(sigs, key=lambda x: x.score or 0.0)
+
     async def _ml(self, st: State) -> None:
         if not self.ml_enabled():
-            st.ml = {"state": "off", "signals": {}, "decision": None}
+            st.ml = {"state": "off", "signals": {}, "decision": None, "ml_signal": "disabled"}
             return
         call = st.call
         assert call is not None  # noqa: S101
         signals: dict[str, float] = {}
         decision = Decision.ALLOW
-        if st.tool == "pay_upi":
+        if st.tool == "pay_upi" and "anomaly" in self.ml_components:
             vpa, amount = call.args.get("payee_vpa"), call.args.get("amount_paise")
             if isinstance(vpa, str) and isinstance(amount, int) and not isinstance(amount, bool):
                 history = payee_history(self.conn, call.principal, vpa)
@@ -918,20 +983,45 @@ class Pipeline:
                     signals["anomaly_z"] = min(z, 1000.0)
                     if anomaly_decision(history, amount) is not None:
                         decision = Decision.combine(decision, Decision.STEP_UP)
-        injection = 0.0 if st.tool in READER_TOOLS else self._injection_score(st)
+        injection = (
+            0.0
+            if st.tool in READER_TOOLS or "hidden_text" not in self.ml_components
+            else self._injection_score(st)
+        )
         if injection > 0:
             signals["injection"] = injection
             if injection >= INJECTION_STEP_UP:
                 decision = Decision.combine(decision, Decision.STEP_UP)
         if st.voice is not None and st.voice.spoof.ran and st.voice.spoof.score is not None:
             signals["spoof"] = float(st.voice.spoof.score)
+        sig = await self._classifier_signal(st)
+        if sig.score is not None:
+            signals["classifier"] = sig.score
+        if sig.escalate:
+            # monotone: STEP_UP by default, DENY into payment / egress sinks (never waivable)
+            decision = Decision.combine(
+                decision, Decision.DENY if self._hard_sink(st) else Decision.STEP_UP
+            )
         waived = decision == Decision.STEP_UP and st.token is not None
         if waived:
             decision = Decision.ALLOW  # a human approval bound to this exact call covers it
-        st.ml = {"state": "on", "signals": signals, "decision": decision, "waived": waived}
+        st.ml = {
+            "state": "on",
+            "signals": signals,
+            "decision": decision,
+            "waived": waived,
+            "ml_signal": sig,
+        }
         if decision > st.decision:
+            rule = "CORE.ML.CLASSIFIER" if sig.escalate else "CORE.ML.SIGNAL"
             st.reasons.append(
-                reason("CORE.ML.SIGNAL", Stage.ML, decision, "ML signal tightened the decision")
+                reason(
+                    rule,
+                    Stage.ML,
+                    decision,
+                    "ML signal tightened the decision",
+                    classifier=sig.status if sig.escalate else "none",
+                )
             )
 
     # ------------------------------------------------------------------ stage 7: preview
@@ -1090,7 +1180,7 @@ class Pipeline:
                     raw = native(st)
             else:
                 raw = await execute(dict(call.args))
-            result = self._postprocess(st, raw)
+            result = await self._postprocess(st, raw)
         except Exception as exc:
             status, error = "error", type(exc).__name__
             self._audit_execution(st, before, status, error)
@@ -1170,7 +1260,7 @@ class Pipeline:
             structured_content=obj,
         )
 
-    def _postprocess(self, st: State, raw: ToolResult) -> ToolResult:
+    async def _postprocess(self, st: State, raw: ToolResult) -> ToolResult:
         """Label the result and apply handle / minimisation policy. Untrusted content is never
         returned raw: the planner receives ``{"handle", "summary"}`` only."""
         if st.server == "gateway":
@@ -1179,9 +1269,9 @@ class Pipeline:
         key = (st.server, st.tool)
         task_id = st.task.task_id if st.task else "unbound"
         if key == ("files", "read_document") and isinstance(data, dict):
-            return self._doc_handle(st, data)
+            return await self._doc_handle(st, data)
         if key == ("mail", "read_inbox") and isinstance(data, dict):
-            return self._inbox_handle(data)
+            return await self._inbox_handle(data)
         if key == ("crm", "read_customer_data") and isinstance(data, dict):
             return self._wrap(self._minimise_record(st, data))
         if key == ("crm", "export_records") and isinstance(data, dict):
@@ -1200,9 +1290,10 @@ class Pipeline:
         handle = self.handles.put_doc(
             data, label, HandleMeta(kind="doc", ref=f"{st.server}.{st.tool}")
         )
+        await self._score_handle(handle, json.dumps(data, default=str, sort_keys=True))
         return self._wrap({"handle": handle, "summary": {"kind": "opaque"}})
 
-    def _doc_handle(self, st: State, data: dict[str, Any]) -> ToolResult:
+    async def _doc_handle(self, st: State, data: dict[str, Any]) -> ToolResult:
         doc_id = str(data.get("doc_id", "unknown"))
         content = str(data.get("content", ""))
         trusted = data.get("trust") == "user_upload"
@@ -1217,6 +1308,8 @@ class Pipeline:
             label,
             HandleMeta(kind="doc", ref=doc_id, injection_score=score, hidden_text=hidden),
         )
+        if not trusted:
+            await self._score_handle(handle, content)
         return self._wrap(
             {
                 "handle": handle,
@@ -1230,7 +1323,7 @@ class Pipeline:
             }
         )
 
-    def _inbox_handle(self, data: dict[str, Any]) -> ToolResult:
+    async def _inbox_handle(self, data: dict[str, Any]) -> ToolResult:
         messages = [m for m in data.get("messages", []) if isinstance(m, dict)]
         ids_ = [str(m.get("mail_id", "?")) for m in messages]
         label = Label.make(
@@ -1249,6 +1342,9 @@ class Pipeline:
                 hidden_text=any(h for _, h in scores),
                 source_kind="email",
             ),
+        )
+        await self._score_handle(
+            handle, "\n\n".join(f"{m.get('subject', '')}\n{m.get('body', '')}" for m in messages)
         )
         return self._wrap({"handle": handle, "summary": {"count": len(messages), "mail_ids": ids_}})
 
@@ -1272,10 +1368,22 @@ class Pipeline:
         )
         return {"id": st.mandate_id, "state": "valid" if ok else "invalid"}
 
+    def _ml_signal_record(self, st: State, *, audit: bool) -> Any:
+        if not self.ml_enabled():
+            return "disabled"
+        sig = st.ml.get("ml_signal")
+        if isinstance(sig, MLSignal):
+            return sig.to_audit() if audit else sig.to_event()
+        if sig == "disabled":
+            return "disabled"
+        # the ml stage never completed (failsafe): record that, never a pass
+        return {"status": "error", "escalate": True, "reason": "ml stage did not complete"}
+
     def _ml_audit(self, st: State) -> dict[str, Any]:
         d = st.ml.get("decision")
         return {
             "state": st.ml.get("state", "off"),
+            "ml_signal": self._ml_signal_record(st, audit=True),
             "decision": d.name if isinstance(d, Decision) else None,
             "waived": bool(st.ml.get("waived", False)),
             # JCS forbids floats: signals are recorded in thousandths
@@ -1391,8 +1499,10 @@ class Pipeline:
         signals = st.ml.get("signals", {})
         if "spoof" in signals:
             scores["spoof"] = float(signals["spoof"])
-        if "injection" in signals:
-            scores["injection"] = float(signals["injection"])
+        if "injection" in signals or "classifier" in signals:
+            scores["injection"] = max(
+                float(signals.get("injection", 0.0)), float(signals.get("classifier", 0.0))
+            )
         if "anomaly_z" in signals:
             scores["anomaly"] = min(1.0, float(signals["anomaly_z"]) / 7.0)
         tree = st.tree
@@ -1430,6 +1540,7 @@ class Pipeline:
                 "resumed_after_approval": st.voice_resumed,
             },
             "ml": st.ml.get("state", "off"),
+            "ml_signal": self._ml_signal_record(st, audit=False),
         }
         if error:
             event["error"] = error

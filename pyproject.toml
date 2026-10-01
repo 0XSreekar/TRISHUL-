@@ -28,6 +28,13 @@ dev = [
 ]
 mcp = ["fastmcp>=2.9"]
 bench = ["agentdojo==0.1.35"]
+ml = [
+    "torch",
+    "transformers",
+    "huggingface_hub",
+    "onnxruntime",
+    "numpy",
+]
 voice = [
     "mlx-whisper>=0.4",
 ]
@@ -67,7 +74,7 @@ python_version = "3.12"
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["agentdojo", "agentdojo.*"]
+module = ["agentdojo", "agentdojo.*", "onnxruntime", "onnxruntime.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -77,5 +84,5 @@ markers = [
     "acceptance(n): proves acceptance test n of docs/phase-4-plan.md section 7",
     "voice_models: needs real voice models in the local HF cache; auto-skipped when absent",
     "ollama: needs a local Ollama server with the pinned model; auto-skipped when absent",
-    "acceptance(n): proves acceptance criterion n of the canonical 1-17 list",
+    "ml_models: needs the pinned injection classifier in the local HF cache; auto-skipped when absent",
 ]

@@ -32,6 +32,7 @@ from trishul.gateway.middleware import PolicyMiddleware
 from trishul.gateway.native_tools import NativeExecutor, register_native_tools
 from trishul.gateway.pipeline import NAMESPACES, Fault, Pipeline
 from trishul.gateway.taint import Task
+from trishul.ml.injection import InjectionClassifier
 from trishul.policy.ast import CompiledPolicy
 from trishul.policy.compiler import compile_files
 from trishul.servers import (
@@ -136,6 +137,7 @@ def build_gateway(
     servers: Mapping[str, FastMCP] | None = None,
     base: FastMCP | None = None,
     voice: VoiceTrust | None = None,
+    classifier: InjectionClassifier | None = None,
     bus: EventBus | None = None,
     policy_dir: Path = POLICY_DIR,
     faults: Mapping[str, Fault] | None = None,
@@ -161,6 +163,7 @@ def build_gateway(
         bus=bus,
         tracer=provider.get_tracer("trishul.gateway"),
         voice=voice,
+        classifier=classifier,
         clock=clock,
         faults=faults,
         stage_timeout_s=stage_timeout_s,

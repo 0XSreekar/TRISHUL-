@@ -29,11 +29,17 @@ ROOT = Path(__file__).resolve().parents[2]
 DATASET = ROOT / "bench" / "datasets" / "india_v1.json"
 AUDIO = ROOT / "bench" / "datasets" / "audio"
 
-ML_CONFIGS: dict[str, dict[str, bool]] = {
+ML_CONFIGS: dict[str, dict[str, Any]] = {
     # ml: the ML stage (anomaly z-score + injection score signals); spoof: anti-spoof score fed in
-    "rules_only": {"ml": False, "spoof": False},
-    "rules_classifier": {"ml": True, "spoof": False},
-    "full": {"ml": True, "spoof": True},
+    # components: which ML-stage parts run. rules_classifier = rules + DeBERTa only;
+    # full = rules + DeBERTa + hidden-text heuristic + payment anomaly + voice spoof score
+    "rules_only": {"ml": False, "spoof": False, "components": ()},
+    "rules_classifier": {"ml": True, "spoof": False, "components": ("classifier",)},
+    "full": {
+        "ml": True,
+        "spoof": True,
+        "components": ("classifier", "hidden_text", "anomaly"),
+    },
 }
 
 
@@ -110,7 +116,12 @@ class Runner:
         self.counter = 0
 
     def _build(
-        self, scenario: dict[str, Any], *, ml: bool, spoof_on: bool
+        self,
+        scenario: dict[str, Any],
+        *,
+        ml: bool,
+        spoof_on: bool,
+        components: tuple[str, ...] | None = None,
     ) -> tuple[Gateway, Any, Clock, PhraseASR, ScriptedSpoof, list[dict[str, Any]]]:
         self.counter += 1
         conn = connect(self.tmp / f"b{self.counter}.db")
@@ -137,6 +148,8 @@ class Runner:
             return original(event)
 
         gw.bus.publish = spy  # type: ignore[method-assign,assignment]
+        if components is not None:
+            gw.pipeline.ml_components = frozenset(components)
         if not ml:
             gw.pipeline.set_ml(False)
         t = scenario["task"]
@@ -146,10 +159,18 @@ class Runner:
         return gw, conn, clock, asr, spoof, events
 
     async def run(
-        self, scenario: dict[str, Any], *, mode: str, ml: bool = True, spoof_on: bool = True
+        self,
+        scenario: dict[str, Any],
+        *,
+        mode: str,
+        ml: bool = True,
+        spoof_on: bool = True,
+        components: tuple[str, ...] | None = None,
     ) -> tuple[Outcome, list[dict[str, Any]]]:
         """Run one scenario. ``mode`` is ``on`` or ``off``. Returns (outcome, call events)."""
-        gw, conn, clock, asr, spoof, events = self._build(scenario, ml=ml, spoof_on=spoof_on)
+        gw, conn, clock, asr, spoof, events = self._build(
+            scenario, ml=ml, spoof_on=spoof_on, components=components
+        )
         if mode == "off":
             gw.pipeline.set_mode("off")
         results: dict[str, dict[str, Any]] = {}  # step id -> {"ok", "data"}
@@ -309,7 +330,13 @@ def rate(num: int, den: int) -> float | None:
 
 
 async def run_suite(
-    seed: int, scenarios: list[dict[str, Any]], *, mode: str, ml: bool = True, spoof_on: bool = True
+    seed: int,
+    scenarios: list[dict[str, Any]],
+    *,
+    mode: str,
+    ml: bool = True,
+    spoof_on: bool = True,
+    components: tuple[str, ...] | None = None,
 ) -> tuple[dict[str, Outcome], list[dict[str, Any]]]:
     outcomes: dict[str, Outcome] = {}
     events: list[dict[str, Any]] = []
@@ -317,7 +344,9 @@ async def run_suite(
         runner = Runner(seed, Path(tmp))
         for sc in scenarios:
             try:
-                outcomes[sc["id"]], ev = await runner.run(sc, mode=mode, ml=ml, spoof_on=spoof_on)
+                outcomes[sc["id"]], ev = await runner.run(
+                    sc, mode=mode, ml=ml, spoof_on=spoof_on, components=components
+                )
                 events.extend(ev)
             except Exception as exc:  # harness error: recorded, never counted as a success
                 outcomes[sc["id"]] = Outcome(None, f"harness_error: {type(exc).__name__}: {exc}")
