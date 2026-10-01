@@ -74,6 +74,7 @@ TRISHUL is an AI-powered landing page and dashboard implementation project. The 
 | 2026-10-01 | Audience page: single box, analyse-then-decide (replaces owner/attacker buttons) | ✅ Complete | POST /analyse: DeBERTa injection model + red-flag rules; flagged → untrusted path (DENY on taint), clean → task-bound request (mandate/caps → ALLOW/STEP_UP/DENY). Moment 5 step 1 now restores ML on. 659 tests pass; live-checked with real model |
 | 2026-10-01 | Call detail in plain English | ✅ Complete | "What happened" summary (action, verdict, where values came from, why); plain labels (NOT TRUSTED · from a message, Pay to, Amount, Data trail, Tamper-proof log record ID); browser-checked on PurposeLock DENY + PayShield ALLOW |
 | 2026-10-01 | VoiceTrust call detail in plain English | ✅ Complete | Voice story ("A caller's voice said …"), voice-specific trust label, plain arg + detector names; Moment 6 steps 1-2 run live (DENY SPOOF.HIGH / LIVENESS.MISMATCH) |
+| 2026-10-01 | Moment 6: play the cloned voice in the console | ✅ Complete | m6 step 1 returns the judged clip; Results shows an audio player (macOS `say` writes to a file, nothing was audible before); browser-checked 1.1 s WAV; 659 tests pass |
 
 ---
 

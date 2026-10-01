@@ -822,6 +822,13 @@ textarea.field{height:96px;padding:var(--s3);resize:vertical;width:100%}
               </div>
               <div class="card stack">
                 <h2>Results</h2>
+                <sc-if value="{{ hasVoiceClip }}" hint-placeholder-val="{{ false }}">
+                  <div class="card stack" style="gap:8px;border-color:var(--red,#e06c6c)" data-trishul="voice-clip">
+                    <span class="cap">Moment 6 · play the attacker's voice</span>
+                    <p style="margin:0;font-size:14px;line-height:1.55">This is the exact recording TRISHUL judged: an {{ vc.source }} saying the challenge phrase “{{ vc.phrase }}”. The words were right, but the voice-clone detector caught it. Decision: <b>{{ vc.decision }}</b>.</p>
+                    <audio controls preload="auto" src="{{ vc.src }}" style="width:100%"></audio>
+                  </div>
+                </sc-if>
                 <div class="lines"><sc-for list="{{ demoLines }}" as="dl" hint-placeholder-count="0"><div class="line" style="flex-direction:column;align-items:stretch;gap:3px"><span class="mono" style="overflow-wrap:anywhere">{{ dl.a }}</span><span class="mono small" style="color:{{ dl.col }};overflow-wrap:anywhere">{{ dl.b }}</span></div></sc-for></div>
                 <sc-if value="{{ noDemoLines }}" hint-placeholder-val="{{ false }}"><div class="empty">Nothing run yet. Press Run all steps on a moment.</div></sc-if>
               </div>
@@ -1827,9 +1834,12 @@ class Component extends DCLogic {
       demoLines.push({a:'MOMENT '+n,b:(r.steps||[]).length+' steps',col:C.muted});
       (r.steps||[]).forEach(st=>{
         demoLines.push({a:'#'+st.step+' '+st.name+' · '+st.status,col:st.status==='ok'?C.blue:(st.status==='awaiting_approval'||st.status==='skipped')?C.amber:C.red,
-          b:Object.entries(st).filter(([k,x])=>!['step','name','status','diff'].includes(k)&&x!=null).map(([k,x])=>k+' '+(k==='amount_paise'?money(x):short(typeof x==='object'?JSON.stringify(x):String(x),140))).join(' · ')});
+          b:Object.entries(st).filter(([k,x])=>!['step','name','status','diff','clip_audio_b64'].includes(k)&&x!=null).map(([k,x])=>k+' '+(k==='amount_paise'?money(x):short(typeof x==='object'?JSON.stringify(x):String(x),140))).join(' · ')});
         if(st.auto_approved)demoLines.push({a:'AUTO-APPROVED BY DEMO SCRIPT · approver '+(st.approved_by||'demo-script'),b:st.auto_approval_note||'',col:C.amber});
         if(st.diff){demoLines.push({a:'− '+st.diff.remove,b:'',col:C.red});demoLines.push({a:'+ '+st.diff.add,b:'',col:C.blue});}});});
+    const voiceStep=((s.demoRes[6]||{}).steps||[]).find(st=>st.clip_audio_b64);
+    const voiceClip=voiceStep?{src:'data:audio/wav;base64,'+voiceStep.clip_audio_b64,phrase:voiceStep.phrase_challenge||'',decision:voiceStep.decision||'',
+      source:/^tts:/.test(voiceStep.clip_source||'')?'AI-generated voice (macOS text-to-speech)':'test tone'}:null;
     const demoSt=s.demoErr?['error',s.demoErr]:!live?['unavailable','UNAVAILABLE in DEV REPLAY · demo moments need the live gateway']:s.conn!=='open'?['disconnected','DISCONNECTED · waiting for the gateway']:s.demoBusy?['loading','Running moment '+s.demoBusy+'…']:['ok',''];
 
     /* ---- chrome ---- */
@@ -1913,7 +1923,7 @@ class Component extends DCLogic {
       rtCol:rst&&rst.succeeded>0?C.red:C.blue,rtKilled:killed,rtKillLabel:killed?'RESUME SUBMISSIONS':'KILL SWITCH',rtRef:el=>{this.rtEl=el;},rtSubmit:()=>this.rtSubmit(),rtFallback:()=>this.rtFallback(),rtToggleKill:()=>this.rtKill(),
       rtOn:!!rtSt[1],rtState:rtSt[0],rtCol2:STATE_COL[rtSt[0]]||C.muted,rtMsg:rtSt[1],rtCards:rtEvents,rtEmpty:!rtEvents.length,rtEmptyText,rtRules,noRtRules:!rtRules.length,rtDecs,audienceUrl,
       /* demo */
-      moments,demoLines,noDemoLines:!demoLines.length,demoReset:()=>this.demoReset(),...M('demo',demoSt[0],demoSt[1]),
+      moments,demoLines,noDemoLines:!demoLines.length,hasVoiceClip:!!voiceClip,vc:voiceClip||{src:'',phrase:'',decision:'',source:''},demoReset:()=>this.demoReset(),...M('demo',demoSt[0],demoSt[1]),
       onCls:s.tmode==='on'?'on':'',offCls:s.tmode==='off'?'on':'',setOn:()=>this.setMode('on'),setOff:()=>this.setMode('off'),
       modeDetail:live?(s.tmode==='off'?'Namespace '+(s.tns||'demo_off')+'. Disabled: '+((s.tdisabled||[]).join(', ')||'everything')+'.':s.tmode==='on'?'Protected namespace '+(s.tns||'—')+'.':'Mode not reported yet.'):'Unavailable in DEV REPLAY.',
       mlOnCls:live&&s.ml?'on':'',mlOffCls:live&&!s.ml?'on':'',mlOn:()=>this.setMl(true),mlOffGo:()=>this.setMl(false),

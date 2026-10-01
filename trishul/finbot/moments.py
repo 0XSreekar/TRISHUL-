@@ -302,6 +302,8 @@ async def m6_1(backend: Any, bot: FinBot, auto: bool) -> dict[str, Any]:
         "clip_source": source,
         "phrase_challenge": nonce["phrase"],
         **_brief(res),
+        # the exact clip the detector judged, so the console can play the cloned voice aloud
+        "clip_audio_b64": clip,
     }
     if auto and res.get("approval_id"):  # genuine challenge answered: approve, run, consume
         backend.resolve_approval(res["approval_id"], "approve", DEMO_APPROVER)
