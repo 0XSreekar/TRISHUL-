@@ -39,3 +39,31 @@ out/
 
 # Thumbnails and Caches
 .thumbnail
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+*.egg-info/
+*.db
+*.db-wal
+*.db-shm
+bench/audio/
+
+# operator secret written by `trishul start`
+operator.token
+
+# Phase 4: local state, secrets, models, raw data
+.trishul/
+models/
+bench/raw/
+recordings/
+data/voice/*
+!data/voice/README.md
+!data/voice/manifest.csv
+*.key
+*.pem

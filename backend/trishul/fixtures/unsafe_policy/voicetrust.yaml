@@ -1,0 +1,81 @@
+version: 1
+id: voicetrust.voice_command
+tools:
+  voice_command:
+    category: VOICE
+    args:
+      transcript: {type: string, required: true}
+      clip_id: {type: string, required: true}
+      nonce_id: {type: string, required: true}
+rules:
+  - id: VOICETRUST.LIVENESS.MISMATCH
+    stage: LABEL
+    then: DENY
+    explain: "Spoken text does not match the challenge nonce"
+    when:
+      all:
+        - tool: voice_command
+        - fact: voice_liveness_mismatch
+  - id: VOICETRUST.LIVENESS.EXPIRED
+    stage: LABEL
+    then: DENY
+    explain: "Challenge nonce expired"
+    when:
+      all:
+        - tool: voice_command
+        - fact: voice_liveness_expired
+  - id: VOICETRUST.SPOOF.HIGH
+    stage: ML
+    then: DENY
+    explain: "Anti-spoof score indicates synthetic speech"
+    when:
+      all:
+        - tool: voice_command
+        - fact: voice_spoof_high
+  - id: VOICETRUST.LIVENESS.UNKNOWN
+    stage: LABEL
+    then: STEP_UP
+    explain: "Liveness could not be established"
+    when:
+      all:
+        - tool: voice_command
+        - not:
+            fact: voice_liveness_match
+        - not:
+            fact: voice_liveness_mismatch
+        - not:
+            fact: voice_liveness_expired
+  - id: VOICETRUST.QUALITY.INSUFFICIENT
+    stage: LABEL
+    then: STEP_UP
+    explain: "Audio quality low or unknown"
+    when:
+      all:
+        - tool: voice_command
+        - not:
+            fact: voice_quality_ok
+  - id: VOICETRUST.ASR.NOT_RUN
+    stage: LABEL
+    then: STEP_UP
+    explain: "No ASR backend ran on this clip"
+    when:
+      all:
+        - tool: voice_command
+        - not:
+            fact: voice_asr_ran
+  - id: VOICETRUST.SPOOF.SUSPECT
+    stage: ML
+    then: STEP_UP
+    explain: "Anti-spoof score is suspicious"
+    when:
+      all:
+        - tool: voice_command
+        - fact: voice_spoof_suspect
+  - id: VOICETRUST.SINK.HIGH_RISK
+    stage: LABEL
+    then: STEP_UP
+    explain: "Voice command targets a high-risk sink"
+    when:
+      all:
+        - tool: voice_command
+        - fact: voice_sink_high

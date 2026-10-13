@@ -1,0 +1,55 @@
+version: 1
+id: purposelock.pii_egress
+tools:
+  read_customer_data:
+    category: READ
+    args:
+      customer_id: {type: string, required: true}
+      fields: {type: array}
+  export_records:
+    category: EXPORT
+    args:
+      customer_ids: {type: array, required: true}
+      destination: {type: string, required: true, sink: true}
+  send_email:
+    category: COMMUNICATION
+    args:
+      to: {type: string, required: true, sink: true}
+      subject: {type: string, required: true, sink: true}
+      body: {type: string, required: true, sink: true}
+  read_inbox:
+    category: READ
+    args: {}
+rules:
+  - id: PURPOSELOCK.CONSENT.READ_WITHOUT_CONSENT
+    stage: PURPOSE
+    then: DENY
+    explain: "Personal data read without an active consent covering the task purpose"
+    when:
+      all:
+        - tool: read_customer_data
+        - not: {fact: consent_active}
+  - id: PURPOSELOCK.EGRESS.PII_WITHOUT_CONSENT
+    stage: PURPOSE
+    then: DENY
+    explain: "PII sent to a communication sink without active consent and a purpose-permitted sink"
+    when:
+      all:
+        - tool: send_email
+        - any:
+            - label_has_tag: {arg: /body, tag: PII}
+            - label_has_tag: {arg: /subject, tag: PII}
+            - label_has_tag: {arg: /to, tag: PII}
+        - any:
+            - not: {fact: consent_active}
+            - not: {fact: sink_allowed_for_purpose}
+  - id: PURPOSELOCK.EGRESS.EXPORT_WITHOUT_CONSENT
+    stage: PURPOSE
+    then: DENY
+    explain: "Bulk export requires active consent and a purpose-permitted sink"
+    when:
+      all:
+        - tool: export_records
+        - any:
+            - not: {fact: consent_active}
+            - not: {fact: sink_allowed_for_purpose}
